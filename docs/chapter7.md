@@ -32,7 +32,7 @@ QA系统通常按其在回应查询时可以访问的数据领域进行分类。
 
 为了开始，让我们从Hugging Face Hub下载数据集。正如我们在第四章所做的那样，我们可以使用get_dataset_config_names()函数来找出哪些子集是可用的：
 
-```
+```python
 from datasets import get_dataset_config_names 
 domains = get_dataset_config_names("subjqa") 
 
@@ -42,7 +42,7 @@ domains ['books', 'electronics', 'grocery', 'movies', 'restaurants', 'tripadviso
 
 对于我们的用例，我们将专注于为电子领域建立一个QA系统。要下载电子学子集，我们只需要将这个值传递给load_dataset()函数的name参数：
 
-```
+```python
 from datasets import load_dataset 
 subjqa = load_dataset("subjqa", name="electronics")
 
@@ -50,7 +50,7 @@ subjqa = load_dataset("subjqa", name="electronics")
 
 像Hub上的其他问题回答数据集一样，SubjQA将每个问题的答案存储为一个嵌套的字典。例如，如果我们检查答案栏中的一行：
 
-```
+```python
 print(subjqa["train"]["answers"][1]) 
 
 {'text': ['Bass is weak as expected', 'Bass is weak as expected, even with EQ adjusted up'], 'answer_start': [1302, 1302], 'answer_subj_level': [1, 1], 'ans_subj_score': [0.5083333253860474, 0.5083333253860474], 'is_ans_subjective': [True, True]}
@@ -59,7 +59,7 @@ print(subjqa["train"]["answers"][1])
 
 我们可以看到，答案被存储在一个文本字段中，而起始字符的索引被提供在answer_start中。为了更容易地探索数据集，我们将用flatten()方法对这些嵌套的列进行平移，并将每个拆分的数据转换为Pandas DataFrame，如下所示：
 
-```
+```python
 import pandas as pd 
 dfs = {split: dset.to_pandas() for split, dset in subjqa.flatten().items()} 
 for split, df in dfs.items(): 
@@ -79,7 +79,7 @@ SubjQA数据集中有相当多的栏目，但是对于建立我们的QA系统来
 
 让我们把注意力集中在这些列上，并看一看几个训练实例。我们可以使用sample()方法来选择一个随机样本：
 
-```
+```python
 qa_cols = ["title", "question", "answers.text", "answers.answer_start", "context"] 
 sample_df = dfs["train"][qa_cols].sample(2, random_state=7) 
 sample_df
@@ -92,7 +92,7 @@ sample_df
 
 从这些例子中，我们可以提出一些看法。首先，这些问题在语法上是不正确的，这在电子商务网站的FAQ部分是很常见的。其次，一个空的answer.text条目表示 "无法回答 "的问题，在评论中找不到答案。最后，我们可以使用答案跨度的起始索引和长度来切出评论中与答案相对应的文本跨度：
 
-```
+```python
 start_idx = sample_df["answers.answer_start"].iloc[0][0] 
 end_idx = start_idx + len(sample_df["answers.text"].iloc[0][0]) 
 sample_df["context"].iloc[0][start_idx:end_idx]
@@ -107,7 +107,7 @@ sample_df["context"].iloc[0][start_idx:end_idx]
 
 
 
-```
+```python
 counts = {} 
 question_types = ["What", "How", "Is", "Does", "Do", "Was", "Where", "Why"]
 for q in question_types: 
@@ -123,7 +123,7 @@ plt.show()
 
 我们可以看到，以 "如何"、"什么 "和 "是 "开头的问题是最常见的问题，所以让我们看一下一些例子：
 
-```
+```python
 for question_type in ["How", "What", "Is"]: 
 	for question in ( dfs["train"][dfs["train"].question.str.startswith(question_type)] .sample(n=3, random_state=42)['question']): 
 		print(question) 
@@ -189,7 +189,7 @@ SubjQA的（问题，评论，[答案句子]）格式通常用于抽取式QA数�
 
 为了对我们的文本进行编码，我们将像往常一样从Hugging Face Hub加载MiniLM模型检查点:
 
-```
+```python
 from transformers import AutoTokenizer 
 model_ckpt = "deepset/minilm-uncased-squad2" 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
@@ -197,7 +197,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
 
 为了看到这个模型的作用，我们首先尝试从一段短文中提取一个答案。在抽取式QA任务中，输入是以（问题。语境）对，所以我们把它们都传递给标记器，如下所示:
 
-```
+```python
 uestion = "How much music can this hold?" 
 context = """An MP3 is about 1 MB/minute, so about 6000 hours depending on \ file size.""" 
 inputs = tokenizer(question, context, return_tensors="pt")
@@ -212,7 +212,7 @@ inputs = tokenizer(question, context, return_tensors="pt")
 
 为了理解标记器是如何为QA任务格式化输入的，让我们对input_ids张量进行解码:
 
-```
+```python
 print(tokenizer.decode(inputs["input_ids"][0])) 
 
 [CLS] how much music can this hold? [SEP] an mp3 is about 1 mb / minute, so about 6000 hours depending on file size. [SEP]
@@ -221,14 +221,14 @@ print(tokenizer.decode(inputs["input_ids"][0]))
 
 我们看到，对于每个QA的例子，输入的格式都是这样:
 
-```
+```python
 [CLS] question tokens [SEP] context tokens [SEP]
 
 ```
 
 其中第一个[SEP]标记的位置由token_type_ids决定。现在我们的文本已经被标记化了，我们只需要用一个QA头来实例化这个模型，并通过前向传递来运行输入:
 
-```
+```python
 import torch
 from transformers import AutoModelForQuestionAnswering 
 model = AutoModelForQuestionAnswering.from_pretrained(model_ckpt)
@@ -242,14 +242,14 @@ QuestionAnsweringModelOutput(loss=None, start_logits=tensor([[-0.9862, -4.7750, 
 
 这里我们可以看到，我们得到了一个QuestionAnsweringModelOutput对象作为QA头的输出。如图7-4所示，QA头对应于一个线性层，它从编码器中获取隐藏状态，并计算出开始和结束跨度的对数。这意味着我们把QA当作一种标记分类的形式，类似于我们在第四章中遇到的命名实体识别的情况。为了将输出转换为答案跨度，我们首先需要得到开始和结束标记的对数:
 
-```
+```python
 start_logits = outputs.start_logits 
 end_logits = outputs.end_logits
 ```
 
 如果我们将这些对数的形状与输入的ID进行比较:
 
-```
+```python
 print(f"Input IDs shape: {inputs.input_ids.size()}") 
 print(f"Start logits shape: {start_logits.size()}") 
 print(f"End logits shape: {end_logits.size()}") 
@@ -266,7 +266,7 @@ End logits shape: torch.Size([1, 28])
 
 为了得到最终的答案，我们可以计算开始和结束标记对数的argmax，然后从输入中切出跨度。下面的代码执行了这些步骤，并对结果进行了解码，因此我们可以打印出结果文本：
 
-```
+```python
 import torch 
 start_idx = torch.argmax(start_logits) 
 end_idx = torch.argmax(end_logits) + 1 
@@ -282,7 +282,7 @@ Answer: 6000 hours
 
 很好，它成功了! 在Transformers中，所有这些预处理和后处理的步骤都方便地封装在一个专门的流水线中。我们可以通过传递我们的标记器和微调模型来实例化这个流水线，如下所示:
 
-```
+```python
 from transformers import pipeline 
 pipe = pipeline("question-answering", model=model, tokenizer=tokenizer) 
 pipe(question=question, context=context, topk=3) 
@@ -293,7 +293,7 @@ pipe(question=question, context=context, topk=3)
 
 除了答案之外，该流水线还在分数字段中返回模型的概率估计值（通过对对数的softmax获得）。当我们想在一个单一的环境中比较多个答案时，这很方便。我们还表明，我们可以通过指定topk参数让模型预测多个答案。有时，有可能出现没有答案的问题，比如SubjQA中的空answer.answer_start例子。在这些情况下，模型会给[CLS]标记分配一个高的开始和结束分数，流水线会将这个输出映射为一个空字符串:
 
-```
+```python
 pipe(question="Why is there no data?", context=context, handle_impossible_answer=True)
 
 {'score': 0.9068416357040405, 'start': 0, 'end': 0, 'answer': ''}
@@ -322,7 +322,7 @@ pipe(question="Why is there no data?", context=context, handle_impossible_answer
 
 在Transformers中，我们可以在tokenizer中设置return_overflowing_tokens=True来启用滑动窗口。滑动窗口的大小由max_seq_length参数控制，而stride的大小则由doc_stride控制。让我们从我们的训练集中抓取第一个例子，并定义一个小的窗口来说明它是如何工作的：
 
-```
+```python
 example = dfs["train"].iloc[0][["question", "context"]] 
 tokenized_example = tokenizer(example["question"], example["context"], return_overflowing_tokens=True, max_length=100, stride=25)
 
@@ -330,7 +330,7 @@ tokenized_example = tokenizer(example["question"], example["context"], return_ov
 
 在这种情况下，我们现在得到一个input_ids的列表，每个窗口都有一个。让我们检查一下每个窗口中的令牌数量：
 
-```
+```python
 for idx, window in enumerate(tokenized_example["input_ids"]): 
 print(f"Window #{idx} has {len(window)} tokens") 
 
@@ -341,7 +341,7 @@ indow #1 has 88 tokens
 
 最后，我们可以通过解码输入看到两个窗口重叠的地方：
 
-```
+```python
 for window in tokenized_example["input_ids"]: 
 	print(f"{tokenizer.decode(window)} \n") 
 	
@@ -404,7 +404,7 @@ for window in tokenized_example["input_ids"]:
 
 为了初始化文档存储，我们首先需要下载并安装Elasticsearch。通过遵循Elasticsearch的指南，我们可以用wget抓取Linux的最新版本，并用tar shell命令解压它：
 
-```
+```python
 url = """https://artifacts.elastic.co/downloads/elasticsearch/\ elasticsearch-7.9.2-linux-x86_64.tar.gz""" 
 !wget -nc -q {url} 
 !tar -xzf elasticsearch-7.9.2-linux-x86_64.tar.gz
@@ -413,7 +413,7 @@ url = """https://artifacts.elastic.co/downloads/elasticsearch/\ elasticsearch-7.
 
 接下来我们需要启动Elasticsearch服务器。由于我们在Jupyter笔记本中运行本书的所有代码，我们需要使用Python的Popen()函数来产生一个新的进程。当我们这样做的时候，也让我们使用chown shell命令在后台运行这个子进程：
 
-```
+```python
 import os from subprocess import Popen, PIPE, STDOUT 
 # Run Elasticsearch as a background process 
 !chown -R daemon:daemon elasticsearch-7.9.2 
@@ -425,7 +425,7 @@ es_server = Popen(args=['elasticsearch-7.9.2/bin/elasticsearch'], stdout=PIPE, s
 
 在Popen()函数中，args指定了我们希望执行的程序，而stdout=PIPE为标准输出创建了一个新流水线，stderr=STDOUT在同一流水线中收集错误。preexec_fn参数指定了我们希望使用的子进程的ID。默认情况下，Elasticsearch在本地9200端口运行，所以我们可以通过向localhost发送HTTP请求来测试连接：
 
-```
+```python
 !curl -X GET "localhost:9200/?pretty" 
 
 { "name" : "96938eee37cd", "cluster_name" : "docker-cluster", "cluster_uuid" : "ABGDdvbbRWmMb9Umz79HbA", "version" : { "number" : "7.9.2", 1
@@ -435,7 +435,7 @@ es_server = Popen(args=['elasticsearch-7.9.2/bin/elasticsearch'], stdout=PIPE, s
 
 现在我们的Elasticsearch服务器已经启动并运行，接下来要做的是实例化文档存储：
 
-```
+```python
 from haystack.document_store.elasticsearch import ElasticsearchDocumentStore 
 # Return the document embedding for later use with dense retriever 
 document_store = ElasticsearchDocumentStore(return_embedding=True)
@@ -444,7 +444,7 @@ document_store = ElasticsearchDocumentStore(return_embedding=True)
 
 默认情况下，ElasticsearchDocumentStore在Elasticsearch上创建了两个索引：一个叫document，用于（你猜对了）存储文档，另一个叫label，用于存储注释的答案跨度。现在，我们只是用SubjQA的评论来填充文档索引，Haystack的文档存储期待一个带有文本和元键的字典列表，如下所示：
 
-```
+```python
 { 
 "text": "<the-context>", 
 "meta": 
@@ -458,7 +458,7 @@ document_store = ElasticsearchDocumentStore(return_embedding=True)
 
 meta中的字段可用于在检索过程中应用过滤器。对于我们的目的，我们将包括SubjQA的item_id和q_review_id列，这样我们就可以通过产品和问题的ID以及相应的训练分割进行过滤。然后我们可以循环浏览每个DataFrame中的例子，并用write_documents()方法将它们添加到索引中，如下所示：
 
-```
+```python
 for split, df in dfs.items(): 
 	# Exclude duplicate reviews 
 	docs = [{"text": row["context"], "meta":{"item_id": row["title"], "question_id": row["id"], "split": split}} 
@@ -478,7 +478,7 @@ Elasticsearch文档存储可以与任何一个Haystack检索器配对，所以�
 
 在Haystack中，BM25检索器被默认用于ElasticsearchRetriever，所以让我们通过指定我们希望搜索的文档存储来初始化这个类：
 
-```
+```python
 from haystack.retriever.sparse import ElasticsearchRetriever 
 es_retriever = ElasticsearchRetriever(document_store=document_store)
 
@@ -486,7 +486,7 @@ es_retriever = ElasticsearchRetriever(document_store=document_store)
 
 接下来，让我们看看对训练集中的一个单一电子产品的简单查询。对于像我们这样基于评论的QA系统来说，将查询限制在一个单一的项目上是很重要的，因为否则检索器会找到与用户查询无关的产品评论。例如，在没有产品过滤器的情况下，问 "相机质量好吗？"可能会返回关于手机的评论，而用户可能是在问一个特定的笔记本电脑相机。就其本身而言，我们数据集中的ASIN值有点隐晦，但我们可以通过在线工具（如amazon ASIN）或简单地将item_id的值附加到www.amazon.com/dp/，来破译它们。下面的项目ID对应于亚马逊的Fire平板电脑之一，所以让我们使用检索器的retrieve()方法来询问它是否适合用于阅读：
 
-```
+```python
 item_id = "B0074BW614" 
 query = "Is it good for reading?" 
 retrieved_docs = es_retriever.retrieve( query=query, top_k=3, filters={"item_id":[item_id], "split":["train"]})
@@ -495,7 +495,7 @@ retrieved_docs = es_retriever.retrieve( query=query, top_k=3, filters={"item_id"
 
 在这里，我们用top_k参数指定了要返回的文档数量，并对包含在文档元字段中的item_id和split键都应用了一个过滤器。retrieved_docs的每个元素都是一个Haystack文档对象，用来表示文档，包括检索器的查询分数和其他元数据。让我们来看看其中一个检索到的文档：
 
-```
+```python
 print(retrieved_docs[0])
 
 {'text': 'This is a gift to myself. I have been a kindle user for 4 years and this is my third one. I never thought I would want a fire for I mainly use it for book reading. I decided to try the fire for when I travel I take my laptop, my phone and my iPod classic. I love my iPod but watching movies on the plane with it can be challenging because it is so small. Laptops battery life is not as good as the Kindle. So the Fire combines for me what I needed all three to do. So far so good.', 'score': 6.243799, 'probability': 0.6857824513476455, 'question': None, 'meta': {'item_id': 'B0074BW614', 'question_id': '868e311275e26dbafe5af70774a300f3', 'split': 'train'}, 'embedding': None,
@@ -529,7 +529,7 @@ print(retrieved_docs[0])
 
 由于我们将在本章的后面对阅读器进行微调，我们将使用FARMReader。和Transformers一样，为了加载模型，我们只需要在Hugging Face Hub上指定MiniLM检查点以及一些QA专用参数:
 
-```
+```python
 from haystack.reader.farm import FARMReader 
 model_ckpt = "deepset/minilm-uncased-squad2" 
 max_seq_length, doc_stride = 384, 128 
@@ -551,7 +551,7 @@ reader = FARMReader(model_name_or_path=model_ckpt, progress_bar=False, max_seq_l
 
 
 
-```
+```python
 print(reader.predict_on_texts(question=question, texts=[context], top_k=1)) 
 
 {'query': 'How much music can this hold?', 'no_ans_gap': 12.648084878921509, 'answers': [{'answer': '6000 hours', 'score': 10.69961929321289, 'probability': 0.3988136053085327, 'context': 'An MP3 is about 1 MB/minute, so about 6000 hours depending on file size.', 'offset_start': 38, 'offset_end': 48, 'offset_start_in_doc': 38, 'offset_end_in_doc': 48, 'document_id': 'e344757014e804eff50faa3ecf1c9c75'}]}
@@ -564,7 +564,7 @@ print(reader.predict_on_texts(question=question, texts=[context], top_k=1))
 
 Haystack提供了一个流水线抽象，允许我们将检索器、阅读器和其他组件结合在一起，作为一个图，可以很容易地为每个用例定制。还有一些预定义的流水线，类似于Transformers中的流水线，但专门用于QA系统。在我们的案例中，我们对提取答案感兴趣，所以我们将使用ExtractiveQAPipeline，它需要一个检索器-阅读器对作为其参数：
 
-```
+```python
 from haystack.pipeline import ExtractiveQAPipeline 
 pipe = ExtractiveQAPipeline(reader, es_retriever)
 
@@ -572,7 +572,7 @@ pipe = ExtractiveQAPipeline(reader, es_retriever)
 
 每个流水线都有一个run()方法，指定查询流程应该如何执行。对于ExtractiveQAPipeline，我们只需要传递查询，用top_k_retriever检索的文档数量，以及用top_k_reader从这些文档中提取的答案数量。在我们的例子中，我们还需要在项目ID上指定一个过滤器，这可以使用过滤器参数来完成，就像我们之前对检索器做的那样。让我们运行一个简单的例子，再次使用我们关于亚马逊Fire平板电脑的问题，但这次是返回提取的答案：
 
-```
+```python
 n_answers = 3 
 preds = pipe.run(query=query, top_k_retriever=3, top_k_reader=n_answers, filters={"item_id": [item_id], "split":["train"]}) 
 print(f"Question: {preds['query']} \n") 
@@ -614,7 +614,7 @@ Answer 3: it is great for reading books when no light is available Review snippe
 
 由于我们需要评估每个产品的召回情况，然后在所有产品中进行汇总，所以我们将选择第二种方法。流水线图中的每个节点代表一个类，它通过run()方法接受一些输入并产生一些输出：
 
-```
+```python
 class PipelineNode: 
 	def __init__(self): 
 		self.outgoing_edges = 1 
@@ -630,7 +630,7 @@ class PipelineNode:
 
 
 
-```
+```python
 from haystack.pipeline import Pipeline 
 from haystack.eval import EvalDocuments 
 class EvalRetrieverPipeline: 
@@ -649,7 +649,7 @@ pipe = EvalRetrieverPipeline(es_retriever)
 
 现在我们有了评估流水线，我们需要传递一些查询和它们相应的答案。为了做到这一点，我们将把答案添加到我们的文档存储中的一个专用标签索引中。Haystack提供了一个Label对象，以标准化的方式表示答案的跨度和它们的元数据。为了填充标签索引，我们将首先创建一个标签对象的列表，通过循环测试集中的每个问题，提取匹配的答案和额外的元数据:
 
-```
+```python
 from haystack import Label 
 labels = [] 
 for i, row in dfs["test"].iterrows():
@@ -669,7 +669,7 @@ for i, row in dfs["test"].iterrows():
 
 如果我们查看下这些标签中的一个:
 
-```
+```python
 print(labels[0])
 
 {'id': 'e28f5e62-85e8-41b2-8a34-fbff63b7a466', 'created_at': None, 'updated_at': None, 'question': 'What is the tonal balance of these headphones?', 'answer': 'I have been a headphone fanatic for thirty years', 'is_correct_answer': True, 'is_correct_document': True, 'origin': 'd0781d13200014aa25860e44da9d5ea7', 'document_id': None, 'offset_start_in_doc': None, 'no_answer': False, 'model_id': None, 'meta': {'item_id': 'B00001WRSJ', 'question_id': 'd0781d13200014aa25860e44da9d5ea7'}}
@@ -678,7 +678,7 @@ print(labels[0])
 
 我们可以看到问题-答案对，以及一个包含唯一问题ID的原点字段，这样我们就可以按问题过滤文档存储。我们还在元字段中添加了产品ID，这样我们就可以按产品过滤标签了。现在我们有了我们的标签，我们可以把它们写到Elasticsearch的标签索引中，如下所示：
 
-```
+```python
 document_store.write_labels(labels, index="label") 
 print(f"""Loaded {document_store.get_label_count(index="label")} \ question-answer pairs""") 
 
@@ -688,7 +688,7 @@ Loaded 358 question-answer pairs
 
 接下来，我们需要在我们的问题ID和相应的答案之间建立一个映射，我们可以把它传递给流水线。为了获得所有的标签，我们可以使用文档存储中的get_all_labels_aggregated()方法，该方法将聚合所有与唯一ID相关的问题-答案对。这个方法返回一个MultiLabel对象的列表，但在我们的例子中，我们只得到一个元素，因为我们是按问题ID过滤的。我们可以建立一个聚合标签的列表，如下所示：
 
-```
+```python
 labels_agg = document_store.get_all_labels_aggregated( index="label", open_domain=True, aggregate_by_meta=["item_id"] ) 
 
 print(len(labels_agg)) 
@@ -701,7 +701,7 @@ print(len(labels_agg))
 
 
 
-```
+```python
 print(labels_agg[109]) 
 
 {'question': 'How does the fan work?', 'multiple_answers': ['the fan is really really good', "the fan itself isn't super loud. There is an adjustable dial to change fan speed"], 'is_correct_answer': True, 'is_correct_document': True, 'origin': '5a9b7616541f700f103d21f8ad41bc4b', 'multiple_document_ids': [None, None], 'multiple_offset_start_in_docs': [None, None], 'no_answer': False, 'model_id': None, 'meta': {'item_id': 'B002MU1ZRS'}}
@@ -710,7 +710,7 @@ print(labels_agg[109])
 
 我们现在拥有评估检索器的所有成分，所以让我们定义一个函数，将与每个产品相关的每个问题-答案对送入评估流水线，并在我们的流水线对象中跟踪正确的检索：
 
-```
+```python
 def run_pipeline(pipeline, top_k_retriever=10, top_k_reader=4): 
 	for l in labels_agg:
     	_ = pipeline.pipeline.run( query=l.question, top_k_retriever=top_k_retriever, top_k_reader=top_k_reader, top_k_eval_documents=top_k_retriever, labels=l, filters={"item_id": [l.meta["item_id"]], "split": ["test"]}) 
@@ -724,7 +724,7 @@ Recall@3: 0.95
 
 很好，它起作用了! 请注意，我们为top_k_retriever选了一个特定的值来指定要检索的文档数量。一般来说，增加这个参数会提高召回率，但代价是向读者提供更多的文档，并减慢端到端的流水线。为了指导我们决定选择哪个值，我们将创建一个函数，在几个k值上循环，计算每个k在整个测试集中的召回率：
 
-```
+```python
 def evaluate_retriever(retriever, topk_values = [1,3,5,10,20]): 
 	topk_results = {} 
 	for topk in topk_values: 
@@ -741,7 +741,7 @@ es_topk_df = evaluate_retriever(es_retriever)
 
 如果我们把结果画出来，我们可以看到，随着k的增加，召回率是如何提高的：
 
-```
+```python
 def plot_retriever_eval(dfs, retriever_names): 
 	fig, ax = plt.subplots() 
 	for df, retriever_name in zip(dfs, retriever_names): 
@@ -768,7 +768,7 @@ plot_retriever_eval([es_topk_df], ["BM25"])
 
 在Haystack中，我们可以用与BM25类似的方式为DPR初始化一个检索器。除了指定文档存储之外，我们还需要为问题和段落挑选BERT编码器。这些编码器是通过给它们提供相关（积极）段落和不相关（消极）段落的问题来训练的，目的是学习相关的问题-段落对具有更高的相似性。对于我们的用例，我们将使用在NQ语料库上以这种方式进行微调的编码器：
 
-```
+```python
 from haystack.retriever.dense import DensePassageRetriever 
 dpr_retriever = DensePassageRetriever(document_store=document_store, query_embedding_model="facebook/dpr-question_encoder-single-nq-base", passage_embedding_model="facebook/dpr-ctx_encoder-single-nq-base", embed_title=False)
 
@@ -776,14 +776,14 @@ dpr_retriever = DensePassageRetriever(document_store=document_store, query_embed
 
 这里我们还设置了embed_title=False，因为连接文档的标题（即item_id）并不能提供任何额外的信息，因为我们是按产品过滤。一旦我们初始化了密集检索器，下一步就是遍历Elasticsearch索引中的所有索引文档，并应用编码器来更新嵌入表示。这可以按以下方式完成：
 
-```
+```python
 document_store.update_embeddings(retriever=dpr_retriever)
 
 ```
 
 我们现在可以开始行动了! 我们可以用评估BM25的同样方法来评估密集检索器，并比较top-k的召回率：
 
-```
+```python
 dpr_topk_df = evaluate_retriever(dpr_retriever) 
 plot_retriever_eval([es_topk_df, dpr_topk_df], ["BM25", "DPR"])
 
@@ -814,7 +814,7 @@ plot_retriever_eval([es_topk_df, dpr_topk_df], ["BM25", "DPR"])
 
 让我们通过从FARM中导入一些辅助函数并将其应用于一个简单的例子，来看看这些指标是如何工作的：
 
-```
+```python
 from farm.evaluation.squad_evaluation import compute_f1, compute_exact 
 pred = "about 6000 hours" 
 label = "6000 hours" 
@@ -828,7 +828,7 @@ F1: 0.8
 
 在引擎盖下，这些函数首先通过去除标点符号、修正空白和转换为小写字母来规范预测和标签。然后，规范化的字符串被标记为一个词包，最后再计算标记层面的度量。从这个简单的例子中，我们可以看到EM是一个比F-score更严格的指标：在预测中增加一个标记，EM就为零。另一方面，F-score可能无法捕捉到真正不正确的答案。例如，如果我们预测的答案跨度是 "大约6000美元"，那么我们会得到：
 
-```
+```python
 pred = "about 6000 dollars" 
 print(f"EM: {compute_exact(label, pred)}") 
 print(f"F1: {compute_f1(label, pred)}") 
@@ -844,7 +844,7 @@ F1: 0.4
 
 为了评估阅读器，我们将创建一个有两个节点的新流水线：一个阅读器节点和一个评估阅读器的节点。我们将使用EvalReader类，它从阅读器中获取预测结果，并计算出相应的EM和F分数。为了与SQuAD评估进行比较，我们将用存储在EvalAnswers中的top_1_em和top_1_f1指标来获取每个查询的最佳答案：
 
-```
+```python
 from haystack.eval import EvalAnswers 
 def evaluate_reader(reader): 
 	score_keys = ['top_1_em', 'top_1_f1'] 
@@ -862,7 +862,7 @@ reader_eval["Fine-tune on SQuAD"] = evaluate_reader(reader)
 
 请注意，我们指定了 skip_incorrect_retrieval=False。这是为了确保检索器总是将上下文传递给阅读器（如SQuAD评估）。现在，我们已经通过阅读器运行了每一道题，让我们来打印分数：
 
-```
+```python
 def plot_reader_eval(reader_eval): 
 	fig, ax = plt.subplots() 
 	df = pd.DataFrame.from_dict(reader_eval) 
@@ -886,7 +886,7 @@ OK，看来微调模型在SubjQA上的表现明显不如在SQuAD 2.0上的表现
 
 这是一个相当复杂的数据格式，所以我们需要一些函数和一些Pandas魔法来帮助我们完成转换。我们需要做的第一件事是实现一个函数，可以创建与每个产品ID相关的段落数组。这个数组中的每个元素都包含一个上下文（即评论）和一个问答对的qas数组。下面是一个建立段落数组的函数：
 
-```
+```python
 def create_paragraphs(df): 
 	paragraphs = [] 
 	id2context = dict(zip(df["review_id"], df["context"])) 
@@ -918,7 +918,7 @@ def create_paragraphs(df):
 
 现在，当我们应用于与单个产品ID相关的DataFrame的行时，我们得到了SQuAD格式:
 
-```
+```python
 product = dfs["train"].query("title == 'B00001P4ZH'") 
 create_paragraphs(product) 
 
@@ -928,7 +928,7 @@ create_paragraphs(product)
 
 最后一步是将这个函数应用于每个分割的DataFrame中的每个产品ID。下面的convert_to_squad()函数做了这个技巧，并将结果存储在electronic-{split}.json文件中:
 
-```
+```python
 import json 
 def convert_to_squad(dfs): 
 	for split, df in dfs.items(): 
@@ -946,7 +946,7 @@ convert_to_squad(dfs)
 
 现在我们有了正确格式的分片，让我们通过指定训练和设计分片的位置，以及保存微调后的模型的位置来微调我们的读者:
 
-```
+```python
 train_filename = "electronics-train.json" 
 dev_filename = "electronics-validation.json" 
 reader.train(data_dir=".", use_gpu=True, n_epochs=1, batch_size=16, train_filename=train_filename, dev_filename=dev_filename)
@@ -959,7 +959,7 @@ reader.train(data_dir=".", use_gpu=True, n_epochs=1, batch_size=16, train_filena
 
 哇，领域适应性使我们的EM得分增加了6倍，F-score增加了一倍以上 在这一点上，你可能会想，为什么我们不直接在SubjQA训练集上对预训练的语言模型进行微调。其中一个原因是，我们在SubjQA中只有1295个训练实例，而SQuAD有超过10万个，所以我们可能会遇到过度拟合的挑战。尽管如此，让我们来看看天真的微调会产生什么。为了进行公平的比较，我们将使用在SQuAD上用于微调基线的同一语言模型。和以前一样，我们将用FARMReader加载模型:
 
-```
+```python
 minilm_ckpt = "microsoft/MiniLM-L12-H384-uncased" 
 minilm_reader = FARMReader(model_name_or_path=minilm_ckpt, progress_bar=False, max_seq_len=max_seq_length, doc_stride=doc_stride, return_no_answer=True)
 
@@ -967,14 +967,14 @@ minilm_reader = FARMReader(model_name_or_path=minilm_ckpt, progress_bar=False, m
 
 接下来，我们对一个epoch进行微调:
 
-```
+```python
 minilm_reader.train(data_dir=".", use_gpu=True, n_epochs=1, batch_size=16, train_filename=train_filename, dev_filename=dev_filename)
 
 ```
 
 并包括对测试集的评估:
 
-```
+```python
 reader_eval["Fine-tune on SubjQA"] = evaluate_reader(minilm_reader) 
 
 plot_reader_eval(reader_eval)
@@ -995,7 +995,7 @@ plot_reader_eval(reader_eval)
 
 现在我们已经看到了如何单独评估阅读器和检索器组件，让我们把它们联系起来，以衡量我们流水线的整体性能。要做到这一点，我们需要在检索器流水线中增加读取器和其评估的节点。我们已经看到，我们在k=10时得到了几乎完美的召回，所以我们可以固定这个值，并评估这对阅读器性能的影响（因为与SQuAD式的评估相比，它现在会在每个查询中收到多个上下文）：
 
-```
+```python
 # Initialize retriever pipeline 
 pipe = EvalRetrieverPipeline(es_retriever) 
 # Add nodes for reader 
@@ -1037,7 +1037,7 @@ RAG扩展了我们在本章中看到的经典检索器-阅读器架构，将阅�
 
 由于RAG-Token模型往往比RAG-Sequence模型表现更好，我们将使用在NQ上微调过的token模型作为我们的生成器。在Haystack中实例化一个生成器类似于实例化阅读器，但我们不是为上下文的滑动窗口指定max_seq_length和doc_stride参数，而是指定控制文本生成的超级参数:
 
-```
+```python
 from haystack.generator.transformers import RAGenerator 
 generator = RAGenerator(model_name_or_path="facebook/rag-token-nq", embed_title=False, num_beams=5)
 
@@ -1047,7 +1047,7 @@ generator = RAGenerator(model_name_or_path="facebook/rag-token-nq", embed_title=
 
 接下来要做的是使用Haystack的GenerativeQAPipeline将检索器和生成器联系起来:
 
-```
+```python
 from haystack.pipeline import GenerativeQAPipeline
 pipe = GenerativeQAPipeline(generator=generator, retriever=dpr_retriever)
 
@@ -1063,7 +1063,7 @@ pipe = GenerativeQAPipeline(generator=generator, retriever=dpr_retriever)
 
 现在让我们给RAG来个旋转，输入之前关于亚马逊Fire平板电脑的一些查询。为了简化查询，我们将编写一个简单的函数，接受查询并打印出最重要的答案：
 
-```
+```python
 def generate_answers(query, top_k_generator=3): 
 	preds = pipe.run(query=query, top_k_generator=top_k_generator, top_k_retriever=5, filters={"item_id":["B0074BW614"]}) 
 	print(f"Question: {preds['query']} \n") 
@@ -1074,7 +1074,7 @@ def generate_answers(query, top_k_generator=3):
 
 好了，现在我们准备给它做个测试：
 
-```
+```python
 generate_answers(query) 
 
 Question: Is it good for reading? 
@@ -1086,7 +1086,7 @@ Answer 3: Kindle fire
 
 这个结果对于一个答案来说不算太坏，但它确实表明，问题的主观性使生成器感到困惑。让我们用更符合事实的东西来试试：
 
-```
+```python
 generate_answers("What is the main drawback?") 
 Question: What is the main drawback?
 Answer 1: the price 

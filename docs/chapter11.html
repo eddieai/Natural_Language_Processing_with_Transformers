@@ -6,7 +6,7 @@
         <title>未来发展方向 · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -412,21 +412,23 @@
 <p><img src="images/chapter11/image-20220214171629924.png" alt="image-20220214171629924"></img></p>
 <p>尽管这种方法在标准的ImageNet数据集上进行预训练时并没有产生更好的结果，但在更大的数据集上，它的扩展性明显优于CNNs。</p>
 <p>ViT集成在Transformers中，使用它与我们在本书中使用的NLP管道非常相似。让我们从加载一只相当有名的狗的图像开始。</p>
-<pre><code>from PIL import Image import matplotlib.pyplot as plt 
-image = Image.open("images/doge.jpg") 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> PIL <span class="hljs-keyword">import</span> Image <span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt 
+image = Image.<span class="hljs-built_in">open</span>(<span class="hljs-string">"images/doge.jpg"</span>) 
 plt.imshow(image) 
-plt.axis("off") 
+plt.axis(<span class="hljs-string">"off"</span>) 
 plt.show()
-</code></pre><p><img src="images/chapter11/image-20220214172111848.png" alt="image-20220214172111848"></img></p>
+</code></pre>
+<p><img src="images/chapter11/image-20220214172111848.png" alt="image-20220214172111848"></img></p>
 <p>要加载一个ViT模型，我们只需要指定图像分类管道，然后输入图像来提取预测的类别:</p>
-<pre><code>import pandas as pd 
-from transformers import pipeline 
-image_classifier = pipeline("image-classification") 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd 
+<span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> pipeline 
+image_classifier = pipeline(<span class="hljs-string">"image-classification"</span>) 
 preds = image_classifier(image) 
 preds_df = pd.DataFrame(preds) 
 
 preds_df
-</code></pre><p><img src="images/chapter11/image-20220214172212269.png" alt="image-20220214172212269"></img></p>
+</code></pre>
+<p><img src="images/chapter11/image-20220214172212269.png" alt="image-20220214172212269"></img></p>
 <p>很好，预测的类别似乎与图像相匹配! </p>
 <p>图像模型的一个自然延伸就是视频模型。除了空间维度之外，视频还带有时间维度。这使得任务更具挑战性，因为数据量变得更大，人们需要处理额外的维度。像TimeSformer这样的模型引入了一个空间和时间注意力机制来考虑这两个问题。</p>
 <p>在未来，这样的模型可以帮助建立用于广泛的任务的工具，如视频序列的分类或注释。</p>
@@ -436,34 +438,39 @@ preds_df
 <p>TAPAS（Table Parser的缩写）来拯救我们了 这个模型将Transformer架构应用于表，将表的信息与查询相结合，如图11-11所示。</p>
 <p><img src="images/chapter11/image-20220214172412338.png" alt="image-20220214172412338"></img></p>
 <p>让我们来看看TAPAS在实践中是如何工作的一个例子。我们创建了一个本书目录的虚构版本。它包含章节编号、章节名称以及章节的起始页和结束页：</p>
-<pre><code>book_data = [ 
-{"chapter": 0, "name": "Introduction", "start_page": 1, "end_page": 11}, 
-{"chapter": 1, "name": "Text classification", "start_page": 12, "end_page": 48}, 
-{"chapter": 2, "name": "Named Entity Recognition", "start_page": 49, "end_page": 73},
-{"chapter": 3, "name": "Question Answering", "start_page": 74, "end_page": 120}, 
-{"chapter": 4, "name": "Summarization", "start_page": 121, "end_page": 140}, 
-{"chapter": 5, "name": "Conclusion", "start_page": 141, "end_page": 144} 
+<pre><code class="lang-python">book_data = [ 
+{<span class="hljs-string">"chapter"</span>: <span class="hljs-number">0</span>, <span class="hljs-string">"name"</span>: <span class="hljs-string">"Introduction"</span>, <span class="hljs-string">"start_page"</span>: <span class="hljs-number">1</span>, <span class="hljs-string">"end_page"</span>: <span class="hljs-number">11</span>}, 
+{<span class="hljs-string">"chapter"</span>: <span class="hljs-number">1</span>, <span class="hljs-string">"name"</span>: <span class="hljs-string">"Text classification"</span>, <span class="hljs-string">"start_page"</span>: <span class="hljs-number">12</span>, <span class="hljs-string">"end_page"</span>: <span class="hljs-number">48</span>}, 
+{<span class="hljs-string">"chapter"</span>: <span class="hljs-number">2</span>, <span class="hljs-string">"name"</span>: <span class="hljs-string">"Named Entity Recognition"</span>, <span class="hljs-string">"start_page"</span>: <span class="hljs-number">49</span>, <span class="hljs-string">"end_page"</span>: <span class="hljs-number">73</span>},
+{<span class="hljs-string">"chapter"</span>: <span class="hljs-number">3</span>, <span class="hljs-string">"name"</span>: <span class="hljs-string">"Question Answering"</span>, <span class="hljs-string">"start_page"</span>: <span class="hljs-number">74</span>, <span class="hljs-string">"end_page"</span>: <span class="hljs-number">120</span>}, 
+{<span class="hljs-string">"chapter"</span>: <span class="hljs-number">4</span>, <span class="hljs-string">"name"</span>: <span class="hljs-string">"Summarization"</span>, <span class="hljs-string">"start_page"</span>: <span class="hljs-number">121</span>, <span class="hljs-string">"end_page"</span>: <span class="hljs-number">140</span>}, 
+{<span class="hljs-string">"chapter"</span>: <span class="hljs-number">5</span>, <span class="hljs-string">"name"</span>: <span class="hljs-string">"Conclusion"</span>, <span class="hljs-string">"start_page"</span>: <span class="hljs-number">141</span>, <span class="hljs-string">"end_page"</span>: <span class="hljs-number">144</span>} 
 ]
-</code></pre><p>我们也可以用现有的字段轻松地添加每章的页数。为了与TAPAS模型很好地配合，我们需要确保所有列都是str类型：</p>
-<pre><code>table = pd.DataFrame(book_data) 
-table['number_of_pages'] = table['end_page']-table['start_page'] 
-table = table.astype(str) table
-</code></pre><p><img src="images/chapter11/image-20220214172630611.png" alt="image-20220214172630611"></img></p>
+</code></pre>
+<p>我们也可以用现有的字段轻松地添加每章的页数。为了与TAPAS模型很好地配合，我们需要确保所有列都是str类型：</p>
+<pre><code class="lang-python">table = pd.DataFrame(book_data) 
+table[<span class="hljs-string">'number_of_pages'</span>] = table[<span class="hljs-string">'end_page'</span>]-table[<span class="hljs-string">'start_page'</span>] 
+table = table.astype(<span class="hljs-built_in">str</span>) table
+</code></pre>
+<p><img src="images/chapter11/image-20220214172630611.png" alt="image-20220214172630611"></img></p>
 <p>现在你应该知道这个程序了。我们首先加载表-问题回答管道。</p>
-<pre><code>table_qa = pipeline("table-question-answering")
-</code></pre><p>然后通过一些查询来提取答案：</p>
-<pre><code>table_qa = pipeline("table-question-answering") 
-queries = ["What's the topic in chapter 4?", "What is the total number of pages?", "On which page does the chapter about question-answering start?", "How many chapters have more than 20 pages?"] 
+<pre><code class="lang-python">table_qa = pipeline(<span class="hljs-string">"table-question-answering"</span>)
+</code></pre>
+<p>然后通过一些查询来提取答案：</p>
+<pre><code class="lang-python">table_qa = pipeline(<span class="hljs-string">"table-question-answering"</span>) 
+queries = [<span class="hljs-string">"What's the topic in chapter 4?"</span>, <span class="hljs-string">"What is the total number of pages?"</span>, <span class="hljs-string">"On which page does the chapter about question-answering start?"</span>, <span class="hljs-string">"How many chapters have more than 20 pages?"</span>] 
 preds = table_qa(table, queries)
-</code></pre><p>这些预测将表的操作类型与答案一起存储在一个聚合器字段中。让我们看看TAPAS在我们的问题上表现得如何：</p>
-<pre><code>for query, pred in zip(queries, preds): 
-    print(query) 
-    if pred["aggregator"] == "NONE": 
-        print("Predicted answer: " + pred["answer"]) 
-    else: 
-        print("Predicted answer: " + pred["answer"]) 
-    print('='*50)
-</code></pre><p><img src="images/chapter11/image-20220214172839743.png" alt="image-20220214172839743"></img></p>
+</code></pre>
+<p>这些预测将表的操作类型与答案一起存储在一个聚合器字段中。让我们看看TAPAS在我们的问题上表现得如何：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> query, pred <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(queries, preds): 
+    <span class="hljs-built_in">print</span>(query) 
+    <span class="hljs-keyword">if</span> pred[<span class="hljs-string">"aggregator"</span>] == <span class="hljs-string">"NONE"</span>: 
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">"Predicted answer: "</span> + pred[<span class="hljs-string">"answer"</span>]) 
+    <span class="hljs-keyword">else</span>: 
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">"Predicted answer: "</span> + pred[<span class="hljs-string">"answer"</span>]) 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">'='</span>*<span class="hljs-number">50</span>)
+</code></pre>
+<p><img src="images/chapter11/image-20220214172839743.png" alt="image-20220214172839743"></img></p>
 <p>对于第一章，该模型正好预测了一个没有聚集的单元。如果我们看一下表格，就会发现答案其实是正确的。在下一个例子中，模型预测了所有包含页数的单元格，并结合了总和聚合，这又是计算总页数的正确方法。问题三的答案也是正确的；在这种情况下，平均聚合是没有必要的，但这并没有什么区别。最后，我们有一个问题，这个问题有点复杂。为了确定有多少章节有20页以上，我们首先需要找出哪些章节符合这一标准，然后对它们进行统计。看来TAPAS又一次做对了，正确地确定了第1、2、3章有20页以上的内容，并在单元格中加入了计数聚合器。</p>
 <p>我们提出的这类问题也可以用几个简单的Pandas命令来解决；然而，用自然语言而不是Python代码来提问的能力，可以让更多的人查询数据来回答具体问题。想象一下，这样的工具掌握在商业分析师或经理的手中，他们能够验证自己对数据的假设!</p>
 <h2 id="多模-transformers">多模 Transformers</h2>
@@ -472,30 +479,35 @@ preds = table_qa(table, queries)
 <p>虽然能够使用文本与计算机对接是一个巨大的进步，但使用口语是我们更自然的沟通方式。你可以在工业领域看到这种趋势，Siri和Alexa等应用程序正在上升，并逐渐变得更加有用。另外，对于很大一部分人来说，写作和阅读比说话更有挑战性。因此，能够处理和理解音频不仅方便，而且可以帮助许多人获得更多信息。这个领域的一个常见任务是自动语音识别（ASR），它将口语转换为文本，并使Siri等语音技术能够回答诸如 "今天的天气如何？"这样的问题。wav2vec 2.0系列模型是自动语音识别领域的最新发展之一：它们使用Transformers层与CNN相结合，如图11-12所示。通过在预训练期间利用未标记的数据，这些模型只需几分钟的标记数据就能达到有竞争力的结果。</p>
 <p><img src="images/chapter11/image-20220214173044388.png" alt="image-20220214173044388"></img></p>
 <p>wav2vec 2.0模型集成在Transformers中，你不会惊讶地发现，加载和使用它们遵循我们在本书中看到的熟悉步骤。让我们加载一个经过预训练的模型，这个模型是在960小时的语音音频上训练的：</p>
-<pre><code>asr = pipeline("automatic-speech-recognition")
-</code></pre><p>为了将这个模型应用于一些音频文件，我们将使用SUPERB数据集的ASR子集，这也是该模型预训练的数据集。由于该数据集相当大，我们将只加载一个例子用于我们的演示目的：</p>
-<pre><code>from datasets import load_dataset 
-ds = load_dataset("superb", "asr", split="validation[:1]") 
-print(ds[0]) 
+<pre><code class="lang-python">asr = pipeline(<span class="hljs-string">"automatic-speech-recognition"</span>)
+</code></pre>
+<p>为了将这个模型应用于一些音频文件，我们将使用SUPERB数据集的ASR子集，这也是该模型预训练的数据集。由于该数据集相当大，我们将只加载一个例子用于我们的演示目的：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> load_dataset 
+ds = load_dataset(<span class="hljs-string">"superb"</span>, <span class="hljs-string">"asr"</span>, split=<span class="hljs-string">"validation[:1]"</span>) 
+<span class="hljs-built_in">print</span>(ds[<span class="hljs-number">0</span>]) 
 
-{'chapter_id': 128104, 'speaker_id': 1272, 'file': '~/.cache/huggingf ace/datasets/downloads/extracted/e4e70a454363bec1c1a8ce336139866a39442114d86a4 3
-6014acd4b1ed55e55/LibriSpeech/dev-clean/1272/128104/1272-128104-0000.flac', 'id': '1272-128104-0000', 'text': 'MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL'}
-</code></pre><p>在这里我们可以看到，文件列中的音频是以FLAC编码格式存储的，而预期的转录则由文本列给出。为了将音频转换为浮点数组，我们可以使用SoundFile库，用map()读取我们数据集中的每个文件：</p>
-<pre><code>import soundfile as sf 
-def map_to_array(batch): 
-    speech, _ = sf.read(batch["file"]) 
-    batch["speech"] = speech r
+{<span class="hljs-string">'chapter_id'</span>: <span class="hljs-number">128104</span>, <span class="hljs-string">'speaker_id'</span>: <span class="hljs-number">1272</span>, <span class="hljs-string">'file'</span>: <span class="hljs-string">'~/.cache/huggingf ace/datasets/downloads/extracted/e4e70a454363bec1c1a8ce336139866a39442114d86a4 3
+6014acd4b1ed55e55/LibriSpeech/dev-clean/1272/128104/1272-128104-0000.flac'</span>, <span class="hljs-string">'id'</span>: <span class="hljs-string">'1272-128104-0000'</span>, <span class="hljs-string">'text'</span>: <span class="hljs-string">'MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL'</span>}
+</code></pre>
+<p>在这里我们可以看到，文件列中的音频是以FLAC编码格式存储的，而预期的转录则由文本列给出。为了将音频转换为浮点数组，我们可以使用SoundFile库，用map()读取我们数据集中的每个文件：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> soundfile <span class="hljs-keyword">as</span> sf 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">map_to_array</span>(<span class="hljs-params">batch</span>): 
+    speech, _ = sf.read(batch[<span class="hljs-string">"file"</span>]) 
+    batch[<span class="hljs-string">"speech"</span>] = speech r
     eturn batch 
-ds = ds.map(map_to_array)
-</code></pre><p>如果你使用的是Jupyter笔记本，你可以用下面的IPython小工具轻松播放声音文件：</p>
-<pre><code>from IPython.display import Audio 
-display(Audio(ds[0]['speech'], rate=16000))
-</code></pre><p>最后，我们可以将输入传递给管道，并检查预测结果：</p>
-<pre><code>pred = asr(ds[0]["speech"]) 
-print(pred) 
+ds = ds.<span class="hljs-built_in">map</span>(map_to_array)
+</code></pre>
+<p>如果你使用的是Jupyter笔记本，你可以用下面的IPython小工具轻松播放声音文件：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> IPython.display <span class="hljs-keyword">import</span> Audio 
+display(Audio(ds[<span class="hljs-number">0</span>][<span class="hljs-string">'speech'</span>], rate=<span class="hljs-number">16000</span>))
+</code></pre>
+<p>最后，我们可以将输入传递给管道，并检查预测结果：</p>
+<pre><code class="lang-python">pred = asr(ds[<span class="hljs-number">0</span>][<span class="hljs-string">"speech"</span>]) 
+<span class="hljs-built_in">print</span>(pred) 
 
-{'text': 'MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL'}
-</code></pre><p>这个转录似乎是正确的。我们可以看到缺少一些标点符号，但这很难仅从音频中获得，可以在后期处理步骤中添加。只需几行代码，我们就可以为自己建立一个最先进的语音到文本的应用程序了。</p>
+{<span class="hljs-string">'text'</span>: <span class="hljs-string">'MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL'</span>}
+</code></pre>
+<p>这个转录似乎是正确的。我们可以看到缺少一些标点符号，但这很难仅从音频中获得，可以在后期处理步骤中添加。只需几行代码，我们就可以为自己建立一个最先进的语音到文本的应用程序了。</p>
 <p>为一种新的语言建立模型仍然需要最低数量的标记数据，而这些数据的获得是具有挑战性的，特别是对于低资源语言。在wav2vec 2.0发布后不久，一篇描述名为wav2vec-U的方法的论文被发表。在这项工作中，巧妙的聚类和GAN训练相结合，只用独立的未标记的语音和未标记的文本数据来建立一个语音到文本模型。这个过程在图11-13中得到了详细的可视化。完全不需要对齐的语音和文本数据，这就可以为更多的语言谱系训练高性能的语音到文本模型。</p>
 <p><img src="images/chapter11/image-20220214173351651.png" alt="image-20220214173351651"></img></p>
 <p>很好，所以Transformers现在可以 "读 "文本和 "听 "音频--它们也可以 "看 "吗？答案是肯定的，这也是目前该领域的热门研究前沿之一。</p>
@@ -517,28 +529,31 @@ print(pred)
  为了使用预训练的模型进行分类，可能的类被嵌入到文本编码器中，类似于我们使用零点拍摄管道的方式。然后将所有类别的嵌入与我们想要分类的图像嵌入进行比较，选择相似度最高的类别。</p>
 <p><img src="images/chapter11/image-20220214173755010.png" alt="image-20220214173755010"></img></p>
 <p>CLIP的零样本图像分类性能显著，与完全监督训练的视觉模型竞争，同时在新的类别方面更加灵活。CLIP也完全集成在Transformers中，所以我们可以试用它。对于图像到文本的任务，我们实例化了一个处理器，由一个特征提取器和一个标记器组成。特征提取器的作用是将图像转换成适合于模型的形式，而标记器负责将模型的预测解码成文本。</p>
-<pre><code>from transformers import CLIPProcessor, CLIPModel 
-clip_ckpt = "openai/clip-vit-base-patch32" 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> CLIPProcessor, CLIPModel 
+clip_ckpt = <span class="hljs-string">"openai/clip-vit-base-patch32"</span> 
 model = CLIPModel.from_pretrained(clip_ckpt) 
 processor = CLIPProcessor.from_pretrained(clip_ckpt)
-</code></pre><p>那么我们需要一个合适的图片来尝试。有什么会比擎天柱的照片更合适呢？</p>
-<pre><code>image = Image.open("images/optimusprime.jpg") 
+</code></pre>
+<p>那么我们需要一个合适的图片来尝试。有什么会比擎天柱的照片更合适呢？</p>
+<pre><code class="lang-python">image = Image.<span class="hljs-built_in">open</span>(<span class="hljs-string">"images/optimusprime.jpg"</span>) 
 plt.imshow(image) 
-plt.axis("off") 
+plt.axis(<span class="hljs-string">"off"</span>) 
 plt.show()
-</code></pre><p><img src="images/chapter11/image-20220214173927530.png" alt="image-20220214173927530"></img></p>
+</code></pre>
+<p><img src="images/chapter11/image-20220214173927530.png" alt="image-20220214173927530"></img></p>
 <p>接下来，我们设置了文本，将图像与之进行比较，并通过模型进行传递：</p>
-<pre><code>import torch 
-texts = ["a photo of a transformer", "a photo of a robot", "a photo of agi"] 
-inputs = processor(text=texts, images=image, return_tensors="pt", padding=True) 
-with torch.no_grad(): 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch 
+texts = [<span class="hljs-string">"a photo of a transformer"</span>, <span class="hljs-string">"a photo of a robot"</span>, <span class="hljs-string">"a photo of agi"</span>] 
+inputs = processor(text=texts, images=image, return_tensors=<span class="hljs-string">"pt"</span>, padding=<span class="hljs-literal">True</span>) 
+<span class="hljs-keyword">with</span> torch.no_grad(): 
     outputs = model(**inputs) 
 logits_per_image = outputs.logits_per_image 
-probs = logits_per_image.softmax(dim=1) p
+probs = logits_per_image.softmax(dim=<span class="hljs-number">1</span>) p
 robs 
 
-tensor([[0.9557, 0.0413, 0.0031]])
-</code></pre><p>嗯，它几乎得到了正确的答案（当然是一张AGI的照片）。玩笑归玩笑，CLIP使图像分类非常灵活，它允许我们通过文本定义类，而不是在模型架构中硬编码类。这就结束了我们对多模态Transformers模型的参观，但我们希望我们已经吊起了你的胃口。</p>
+tensor([[<span class="hljs-number">0.9557</span>, <span class="hljs-number">0.0413</span>, <span class="hljs-number">0.0031</span>]])
+</code></pre>
+<p>嗯，它几乎得到了正确的答案（当然是一张AGI的照片）。玩笑归玩笑，CLIP使图像分类非常灵活，它允许我们通过文本定义类，而不是在模型架构中硬编码类。这就结束了我们对多模态Transformers模型的参观，但我们希望我们已经吊起了你的胃口。</p>
 <h2 id="接下来的旅程在何方？">接下来的旅程在何方？</h2>
 <p>好了，旅程结束了；感谢您加入我们的Transformers之旅！在本书中，我们已经探讨了Transformers如何解决广泛的任务并实现最先进的结果。在这一章中，我们已经看到了当前一代模型是如何被扩展到极限的，以及它们是如何在新的领域和模式中分支的。
 如果你想巩固你在本书中学到的概念和技能，这里有几个想法，你可以从这里开始。</p>
@@ -593,7 +608,7 @@ tensor([[0.9557, 0.0413, 0.0031]])
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"未来发展方向","level":"1.13","depth":1,"next":{"title":"致谢","level":"1.14","depth":1,"path":"thanks.md","ref":"thanks.md","articles":[]},"previous":{"title":"从零开始训练Transformers","level":"1.12","depth":1,"path":"chapter10.md","ref":"chapter10.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter11.md","mtime":"2024-08-23T19:12:41.444Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"未来发展方向","level":"1.13","depth":1,"next":{"title":"致谢","level":"1.14","depth":1,"path":"thanks.md","ref":"thanks.md","articles":[]},"previous":{"title":"从零开始训练Transformers","level":"1.12","depth":1,"path":"chapter10.md","ref":"chapter10.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter11.md","mtime":"2025-01-05T17:59:00.391Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -647,10 +662,6 @@ tensor([[0.9557, 0.0413, 0.0031]])
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -667,7 +678,7 @@ tensor([[0.9557, 0.0413, 0.0031]])
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

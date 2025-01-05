@@ -6,7 +6,7 @@
         <title>多语言命名实体识别 · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -324,77 +324,89 @@
 <p>零样本迁移或零样本学习通常是指在一组标签上训练一个模型，然后在另一组标签上对其进行评估的任务。 在Transformers的背景下，零样本学习也可以指像GPT-3这样的语言模型在下游任务上被评估，而它甚至没有被微调过的情况。</p>
 <h2 id="数据集">数据集</h2>
 <p>在本章中，我们将使用多语言编码器的跨语言TRansfer评估（XTREME）基准的一个子集，称为WikiANN或PAN-X。 该数据集由多种语言的维基百科文章组成，包括瑞士最常用的四种语言。 德语（62.9%）、法语（22.9%）、意大利语（8.4%）和英语（5.9%）。 每篇文章都用LOC（地点）、PER（人物）和ORG（组织）标签以 "内-外-内"（IOB2）的格式进行了注释。 在这种格式中，B-前缀表示一个实体的开始，而属于同一实体的连续标记被赋予I-前缀。 一个O标记表示该标记不属于任何实体。 例如，下面这句话：</p>
-<pre><code>Jeff Dean is a computer scientist at Google in California would be labeled in IOB2 format as shown in Table 4-1.
-</code></pre><p><img src="images/chapter4/image-20220213103834140.png" alt="image-20220213103834140"></img></p>
+<pre><code class="lang-python">Jeff Dean <span class="hljs-keyword">is</span> a computer scientist at Google <span class="hljs-keyword">in</span> California would be labeled <span class="hljs-keyword">in</span> IOB2 <span class="hljs-built_in">format</span> <span class="hljs-keyword">as</span> shown <span class="hljs-keyword">in</span> Table <span class="hljs-number">4</span>-<span class="hljs-number">1.</span>
+</code></pre>
+<p><img src="images/chapter4/image-20220213103834140.png" alt="image-20220213103834140"></img></p>
 <p>要在XTREME中加载PAN-X子集之一，我们需要知道哪种数据集配置要传递给load_dataset()函数。 每当你处理一个有多个域的数据集时，你可以使用get_dataset_config_names()函数来找出哪些子集可用：</p>
-<pre><code>from datasets import get_dataset_config_names 
-xtreme_subsets = get_dataset_config_names("xtreme") 
-print(f"XTREME has {len(xtreme_subsets)} configurations") 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> get_dataset_config_names 
+xtreme_subsets = get_dataset_config_names(<span class="hljs-string">"xtreme"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"XTREME has <span class="hljs-subst">{<span class="hljs-built_in">len</span>(xtreme_subsets)}</span> configurations"</span>) 
 
-XTREME has 183 configurations
-</code></pre><p>哇，那是一个很大的配置! 让我们缩小搜索范围，只寻找以 "PAN "开头的配置：</p>
-<pre><code>panx_subsets = [s for s in xtreme_subsets if s.startswith("PAN")]
-panx_subsets[:3] ['PAN-X.af', 'PAN-X.ar', 'PAN-X.bg']
-</code></pre><p>好了，看来我们已经确定了PAN-X子集的语法。 每个人都有一个两个字母的后缀，似乎是一个ISO 639-1语言代码。 这意味着，为了加载德语语料库，我们将de代码传递给load_dataset()的name参数，如下所示：</p>
-<pre><code>from datasets import load_dataset 
-load_dataset("xtreme", name="PAN-X.de")
-</code></pre><p>为了制作一个真实的瑞士语料库，我们将根据口语比例对PAN-X的德语（de）、法语（fr）、意大利语（it）和英语（en）语料库进行采样。 这将造成语言的不平衡，这在现实世界的数据集中是非常常见的，由于缺乏精通该语言的领域专家，获取少数语言的标注实例可能会很昂贵。 这个不平衡的数据集将模拟多语言应用工作中的常见情况，我们将看到我们如何建立一个对所有语言都有效的模型。</p>
+XTREME has <span class="hljs-number">183</span> configurations
+</code></pre>
+<p>哇，那是一个很大的配置! 让我们缩小搜索范围，只寻找以 "PAN "开头的配置：</p>
+<pre><code class="lang-python">panx_subsets = [s <span class="hljs-keyword">for</span> s <span class="hljs-keyword">in</span> xtreme_subsets <span class="hljs-keyword">if</span> s.startswith(<span class="hljs-string">"PAN"</span>)]
+panx_subsets[:<span class="hljs-number">3</span>] [<span class="hljs-string">'PAN-X.af'</span>, <span class="hljs-string">'PAN-X.ar'</span>, <span class="hljs-string">'PAN-X.bg'</span>]
+</code></pre>
+<p>好了，看来我们已经确定了PAN-X子集的语法。 每个人都有一个两个字母的后缀，似乎是一个ISO 639-1语言代码。 这意味着，为了加载德语语料库，我们将de代码传递给load_dataset()的name参数，如下所示：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> load_dataset 
+load_dataset(<span class="hljs-string">"xtreme"</span>, name=<span class="hljs-string">"PAN-X.de"</span>)
+</code></pre>
+<p>为了制作一个真实的瑞士语料库，我们将根据口语比例对PAN-X的德语（de）、法语（fr）、意大利语（it）和英语（en）语料库进行采样。 这将造成语言的不平衡，这在现实世界的数据集中是非常常见的，由于缺乏精通该语言的领域专家，获取少数语言的标注实例可能会很昂贵。 这个不平衡的数据集将模拟多语言应用工作中的常见情况，我们将看到我们如何建立一个对所有语言都有效的模型。</p>
 <p>为了跟踪每一种语言，让我们创建一个Python defaultdict，将语言代码作为键，将DatasetDict类型的PAN-X语料库作为值:</p>
-<pre><code>from collections import defaultdict 
-from datasets import DatasetDict 
-langs = ["de", "fr", "it", "en"] 
-fracs = [0.629, 0.229, 0.084, 0.059] 
-# Return a DatasetDict if a key doesn't exist 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> collections <span class="hljs-keyword">import</span> defaultdict 
+<span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> DatasetDict 
+langs = [<span class="hljs-string">"de"</span>, <span class="hljs-string">"fr"</span>, <span class="hljs-string">"it"</span>, <span class="hljs-string">"en"</span>] 
+fracs = [<span class="hljs-number">0.629</span>, <span class="hljs-number">0.229</span>, <span class="hljs-number">0.084</span>, <span class="hljs-number">0.059</span>] 
+<span class="hljs-comment"># Return a DatasetDict if a key doesn't exist </span>
 panx_ch = defaultdict(DatasetDict) 
-for lang, frac in zip(langs, fracs): 
-    # Load monolingual corpus 
-    ds = load_dataset("xtreme", name=f"PAN-X.{lang}") 
-    # Shuffle and downsample each split according to spoken proportion 
-    for split in ds: 
+<span class="hljs-keyword">for</span> lang, frac <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(langs, fracs): 
+    <span class="hljs-comment"># Load monolingual corpus </span>
+    ds = load_dataset(<span class="hljs-string">"xtreme"</span>, name=<span class="hljs-string">f"PAN-X.<span class="hljs-subst">{lang}</span>"</span>) 
+    <span class="hljs-comment"># Shuffle and downsample each split according to spoken proportion </span>
+    <span class="hljs-keyword">for</span> split <span class="hljs-keyword">in</span> ds: 
         panx_ch[lang][split] = ( ds[split] 
-        .shuffle(seed=0) 
-        .select(range(int(frac * ds[split].num_rows))))
-</code></pre><p>在这里，我们使用shuffle()方法来确保我们不会意外地偏离我们的数据集拆分，而select()允许我们根据fracs中的值对每个语料库进行欠采样。 让我们通过访问Dataset.num_rows属性来看看我们在训练集中每个语言有多少个例子:</p>
-<pre><code>import pandas as pd 
-pd.DataFrame({lang: [panx_ch[lang]["train"].num_rows] for lang in langs}, index=["Number of training examples"])
-</code></pre><p><img src="images/chapter4/image-20220213153209901.png" alt="image-20220213153209901"></img></p>
+        .shuffle(seed=<span class="hljs-number">0</span>) 
+        .select(<span class="hljs-built_in">range</span>(<span class="hljs-built_in">int</span>(frac * ds[split].num_rows))))
+</code></pre>
+<p>在这里，我们使用shuffle()方法来确保我们不会意外地偏离我们的数据集拆分，而select()允许我们根据fracs中的值对每个语料库进行欠采样。 让我们通过访问Dataset.num_rows属性来看看我们在训练集中每个语言有多少个例子:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd 
+pd.DataFrame({lang: [panx_ch[lang][<span class="hljs-string">"train"</span>].num_rows] <span class="hljs-keyword">for</span> lang <span class="hljs-keyword">in</span> langs}, index=[<span class="hljs-string">"Number of training examples"</span>])
+</code></pre>
+<p><img src="images/chapter4/image-20220213153209901.png" alt="image-20220213153209901"></img></p>
 <p>根据设计，我们在德语中的例子比其他所有语言的总和还要多，所以我们将以德语为起点，对法语、意大利语和英语进行Zeroshot跨语言转移。 让我们检查一下德语语料库中的一个例子:</p>
-<pre><code>element = panx_ch["de"]["train"][0] 
-for key, value in element.items(): 
-    print(f"{key}: {value}") 
+<pre><code class="lang-python">element = panx_ch[<span class="hljs-string">"de"</span>][<span class="hljs-string">"train"</span>][<span class="hljs-number">0</span>] 
+<span class="hljs-keyword">for</span> key, value <span class="hljs-keyword">in</span> element.items(): 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"<span class="hljs-subst">{key}</span>: <span class="hljs-subst">{value}</span>"</span>) 
 
-langs: ['de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de'] ner_tags: [0, 0, 0, 0, 5, 6, 0, 0, 5, 5, 6, 0] tokens: ['2.000', 'Einwohnern', 'an', 'der', 'Danziger', 'Bucht', 'in', 'der', 'polnischen', 'Woiwodschaft', 'Pommern', '.']
-</code></pre><p>与我们之前遇到的数据集对象一样，我们的例子中的键对应于Arrow表中的列名，而值则表示每一列中的条目。 特别是，我们看到ner_tags列对应于每个实体与一个类ID的映射。 这对人的眼睛来说有点神秘，所以让我们用熟悉的LOC、PER和ORG标签创建一个新列。 要做到这一点，首先要注意的是，我们的数据集对象有一个特征属性，指定与每一列相关的基础数据类型:</p>
-<pre><code>for key, value in panx_ch["de"]["train"].features.items(): 
-    print(f"{key}: {value}") 
+langs: [<span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'de'</span>] ner_tags: [<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">5</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>, <span class="hljs-number">0</span>] tokens: [<span class="hljs-string">'2.000'</span>, <span class="hljs-string">'Einwohnern'</span>, <span class="hljs-string">'an'</span>, <span class="hljs-string">'der'</span>, <span class="hljs-string">'Danziger'</span>, <span class="hljs-string">'Bucht'</span>, <span class="hljs-string">'in'</span>, <span class="hljs-string">'der'</span>, <span class="hljs-string">'polnischen'</span>, <span class="hljs-string">'Woiwodschaft'</span>, <span class="hljs-string">'Pommern'</span>, <span class="hljs-string">'.'</span>]
+</code></pre>
+<p>与我们之前遇到的数据集对象一样，我们的例子中的键对应于Arrow表中的列名，而值则表示每一列中的条目。 特别是，我们看到ner_tags列对应于每个实体与一个类ID的映射。 这对人的眼睛来说有点神秘，所以让我们用熟悉的LOC、PER和ORG标签创建一个新列。 要做到这一点，首先要注意的是，我们的数据集对象有一个特征属性，指定与每一列相关的基础数据类型:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> key, value <span class="hljs-keyword">in</span> panx_ch[<span class="hljs-string">"de"</span>][<span class="hljs-string">"train"</span>].features.items(): 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"<span class="hljs-subst">{key}</span>: <span class="hljs-subst">{value}</span>"</span>) 
 
-tokens: Sequence(feature=Value(dtype='string', id=None), length=-1, id=None) ner_tags: Sequence(feature=ClassLabel(num_classes=7, names=['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC'], names_file=None, id=None), length=-1, id=None) langs: Sequence(feature=Value(dtype='string', id=None), length=-1, id=None)
-</code></pre><p>序列类指定该字段包含一个特征列表，在ner_tags的情况下，它对应于ClassLabel特征列表。 让我们从训练集中挑出这个特征，如下:</p>
-<pre><code>tags = panx_ch["de"]["train"].features["ner_tags"].feature 
-print(tags) 
+tokens: <span class="hljs-type">Sequence</span>(feature=Value(dtype=<span class="hljs-string">'string'</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>), length=-<span class="hljs-number">1</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>) ner_tags: <span class="hljs-type">Sequence</span>(feature=ClassLabel(num_classes=<span class="hljs-number">7</span>, names=[<span class="hljs-string">'O'</span>, <span class="hljs-string">'B-PER'</span>, <span class="hljs-string">'I-PER'</span>, <span class="hljs-string">'B-ORG'</span>, <span class="hljs-string">'I-ORG'</span>, <span class="hljs-string">'B-LOC'</span>, <span class="hljs-string">'I-LOC'</span>], names_file=<span class="hljs-literal">None</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>), length=-<span class="hljs-number">1</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>) langs: <span class="hljs-type">Sequence</span>(feature=Value(dtype=<span class="hljs-string">'string'</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>), length=-<span class="hljs-number">1</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>)
+</code></pre>
+<p>序列类指定该字段包含一个特征列表，在ner_tags的情况下，它对应于ClassLabel特征列表。 让我们从训练集中挑出这个特征，如下:</p>
+<pre><code class="lang-python">tags = panx_ch[<span class="hljs-string">"de"</span>][<span class="hljs-string">"train"</span>].features[<span class="hljs-string">"ner_tags"</span>].feature 
+<span class="hljs-built_in">print</span>(tags) 
 
-ClassLabel(num_classes=7, names=['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC'], names_file=None, id=None)
-</code></pre><p>我们可以使用第二章中遇到的ClassLabel.int2str()方法，在我们的训练集中为每个标签创建一个带有类名的新列。 我们将使用map()方法返回一个dict，其键对应于新的列名，其值是一个类名的列表:</p>
-<pre><code>def create_tag_names(batch): 
-    return {"ner_tags_str": [tags.int2str(idx) for idx in batch["ner_tags"]]} 
-panx_de = panx_ch["de"].map(create_tag_names)
-</code></pre><p>现在我们有了人类可读格式的标签，让我们看看训练集中第一个例子的标记和标签是如何对齐的:</p>
-<pre><code>de_example = panx_de["train"][0] 
-pd.DataFrame([de_example["tokens"], de_example["ner_tags_str"]], ['Tokens', 'Tags'])
-</code></pre><p><img src="images/chapter4/image-20220213153646680.png" alt="image-20220213153646680"></img></p>
+ClassLabel(num_classes=<span class="hljs-number">7</span>, names=[<span class="hljs-string">'O'</span>, <span class="hljs-string">'B-PER'</span>, <span class="hljs-string">'I-PER'</span>, <span class="hljs-string">'B-ORG'</span>, <span class="hljs-string">'I-ORG'</span>, <span class="hljs-string">'B-LOC'</span>, <span class="hljs-string">'I-LOC'</span>], names_file=<span class="hljs-literal">None</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>)
+</code></pre>
+<p>我们可以使用第二章中遇到的ClassLabel.int2str()方法，在我们的训练集中为每个标签创建一个带有类名的新列。 我们将使用map()方法返回一个dict，其键对应于新的列名，其值是一个类名的列表:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">create_tag_names</span>(<span class="hljs-params">batch</span>): 
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"ner_tags_str"</span>: [tags.int2str(idx) <span class="hljs-keyword">for</span> idx <span class="hljs-keyword">in</span> batch[<span class="hljs-string">"ner_tags"</span>]]} 
+panx_de = panx_ch[<span class="hljs-string">"de"</span>].<span class="hljs-built_in">map</span>(create_tag_names)
+</code></pre>
+<p>现在我们有了人类可读格式的标签，让我们看看训练集中第一个例子的标记和标签是如何对齐的:</p>
+<pre><code class="lang-python">de_example = panx_de[<span class="hljs-string">"train"</span>][<span class="hljs-number">0</span>] 
+pd.DataFrame([de_example[<span class="hljs-string">"tokens"</span>], de_example[<span class="hljs-string">"ner_tags_str"</span>]], [<span class="hljs-string">'Tokens'</span>, <span class="hljs-string">'Tags'</span>])
+</code></pre>
+<p><img src="images/chapter4/image-20220213153646680.png" alt="image-20220213153646680"></img></p>
 <p>LOC标签的存在是有意义的，因为句子 "2,000 Einwohnern an der Danziger Bucht in der polnischen Woiwodschaft Pommern "在英语中是指 "波兰波美拉尼亚省格但斯克湾的2,000名居民"，而格但斯克湾是波罗的海的一个海湾，而 "voivodeship "对应的是波兰的一个州。</p>
 <p>作为快速检查，我们没有在标签中出现任何不寻常的不平衡，让我们计算每个实体在每个子集中的频率:</p>
-<pre><code>from collections import Counter 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> collections <span class="hljs-keyword">import</span> Counter 
 split2freqs = defaultdict(Counter) 
-for split, dataset in panx_de.items(): 
-    for row in dataset["ner_tags_str"]: 
-        for tag in row: 
-            if tag.startswith("B"): 
-                tag_type = tag.split("-")[1] 
-                split2freqs[split][tag_type] += 1 
+<span class="hljs-keyword">for</span> split, dataset <span class="hljs-keyword">in</span> panx_de.items(): 
+    <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> dataset[<span class="hljs-string">"ner_tags_str"</span>]: 
+        <span class="hljs-keyword">for</span> tag <span class="hljs-keyword">in</span> row: 
+            <span class="hljs-keyword">if</span> tag.startswith(<span class="hljs-string">"B"</span>): 
+                tag_type = tag.split(<span class="hljs-string">"-"</span>)[<span class="hljs-number">1</span>] 
+                split2freqs[split][tag_type] += <span class="hljs-number">1</span> 
 
-pd.DataFrame.from_dict(split2freqs, orient="index")
-</code></pre><p><img src="images/chapter4/image-20220213154724181.png" alt="image-20220213154724181"></img></p>
+pd.DataFrame.from_dict(split2freqs, orient=<span class="hljs-string">"index"</span>)
+</code></pre>
+<p><img src="images/chapter4/image-20220213154724181.png" alt="image-20220213154724181"></img></p>
 <p>这看起来不错--PER、LOC和ORG频率的分布在每个分组中大致相同，因此验证集和测试集应该能够很好地衡量我们的NER标记器的概括能力。 接下来，让我们看看几个流行的多语言Transformers，以及如何调整它们来处理我们的NER任务。</p>
 <h2 id="多语言transformers">多语言Transformers</h2>
 <p>多语言Transformers涉及类似于单语言Transformers的架构和训练程序，只是用于预训练的语料库由多种语言的文件组成。 这种方法的一个显著特点是，尽管没有收到区分语言的明确信息，但所产生的语言表征能够在各种下游任务中很好地跨语言进行概括。 在某些情况下，这种进行跨语言转移的能力可以产生与单语言模型相竞争的结果，这就规避了为每一种语言训练一个模型的需要。</p>
@@ -412,16 +424,18 @@ pd.DataFrame.from_dict(split2freqs, orient="index")
 <p>XLM-R是多语言NLU任务的最佳选择。 在下一节中，我们将探讨它如何在多种语言中有效地进行标记化。</p>
 <h2 id="标记化详解-（tokenization">标记化详解 （tokenization)</h2>
 <p>XLM-R没有使用WordPiece标记器，而是使用一个名为SentencePiece的标记器，该标记器是在所有一百种语言的原始文本上训练出来的。 为了感受一下SentencePiece与WordPiece的比较，让我们以通常的方式用Transformers加载BERT和XLM-R标记器:</p>
-<pre><code>from transformers import AutoTokenizer 
-bert_model_name = "bert-base-cased" 
-xlmr_model_name = "xlm-roberta-base" 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer 
+bert_model_name = <span class="hljs-string">"bert-base-cased"</span> 
+xlmr_model_name = <span class="hljs-string">"xlm-roberta-base"</span> 
 bert_tokenizer = AutoTokenizer.from_pretrained(bert_model_name) 
 xlmr_tokenizer = AutoTokenizer.from_pretrained(xlmr_model_name)
-</code></pre><p>通过对一小段文字的编码，我们也可以检索到每个模型在预训练时使用的特殊标记:</p>
-<pre><code>text = "Jack Sparrow loves New York!" 
+</code></pre>
+<p>通过对一小段文字的编码，我们也可以检索到每个模型在预训练时使用的特殊标记:</p>
+<pre><code class="lang-python">text = <span class="hljs-string">"Jack Sparrow loves New York!"</span> 
 bert_tokens = bert_tokenizer(text).tokens() 
 xlmr_tokens = xlmr_tokenizer(text).tokens()
-</code></pre><p><img src="images/chapter4/image-20220213161254375.png" alt="image-20220213161254375"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213161254375.png" alt="image-20220213161254375"></img></p>
 <p>这里我们看到，XLM-R使用&lt; s&gt;和&lt; /s&gt;来表示一个序列的开始和结束，而不是BERT用于句子分类任务的[CLS]和[SEP]标记。 这些令牌是在标记化的最后阶段添加的，我们接下来会看到。</p>
 <h3 id="标记器流水线">标记器流水线</h3>
 <p>到目前为止，我们已经将标记化作为一个单一的操作，将字符串转换为我们可以通过模型传递的整数。 这并不完全准确，如果我们仔细观察，可以发现它实际上是一个完整的处理流水线，通常由四个步骤组成，如图4-1所示。</p>
@@ -438,9 +452,10 @@ xlmr_tokens = xlmr_tokenizer(text).tokens()
 <p>回到我们对XLM-R和BERT的比较，我们现在明白SentencePiece在后处理步骤中添加了&lt; s&gt;和&lt; /s&gt;，而不是[CLS]和[SEP]（作为惯例，我们将在图形说明中继续使用[CLS]和[SEP]）。让我们回到SentencePiece标记器，看看它的特殊之处。</p>
 <h3 id="sentencepiece标记器">SentencePiece标记器</h3>
 <p>SentencePiece标记器是基于一种称为Unigram的子词分割，并将每个输入文本编码为Unicode字符序列。这最后一个特点对多语言语料库特别有用，因为它允许SentencePiece对口音、标点符号以及许多语言（如日语）没有空白字符的事实不加考虑。SentencePiece的另一个特点是空白字符被分配到Unicode符号U+2581，即▁字符，也叫下四分之一块字符。这使得SentencePiece能够在没有歧义的情况下对一个序列进行去标记，而不需要依赖特定语言的预标记器。例如，在我们上一节的例子中，我们可以看到WordPiece丢失了 "York "和"！"之间没有空白的信息。相比之下，SentencePiece保留了标记化文本中的空白，因此我们可以毫无歧义地转换回原始文本：</p>
-<pre><code>"".join(xlmr_tokens).replace(u"\u2581", " ")
-'&lt;s&gt; Jack Sparrow loves New York!&lt;/s&gt;'
-</code></pre><p>现在我们了解了SentencePiece的工作原理，让我们看看如何将我们的简单例子编码成适合NER的形式。首先要做的是给预训练的模型加载一个标记分类头。但我们不是直接从Transformers中加载这个头，而是自己建立它! 通过深入研究Transformers API，我们只需几个步骤就可以做到这一点。</p>
+<pre><code class="lang-python"><span class="hljs-string">""</span>.join(xlmr_tokens).replace(<span class="hljs-string">u"\u2581"</span>, <span class="hljs-string">" "</span>)
+<span class="hljs-string">'&lt;s&gt; Jack Sparrow loves New York!&lt;/s&gt;'</span>
+</code></pre>
+<p>现在我们了解了SentencePiece的工作原理，让我们看看如何将我们的简单例子编码成适合NER的形式。首先要做的是给预训练的模型加载一个标记分类头。但我们不是直接从Transformers中加载这个头，而是自己建立它! 通过深入研究Transformers API，我们只需几个步骤就可以做到这一点。</p>
 <h2 id="命名实体识别的transformers">命名实体识别的Transformers</h2>
 <p>在第2章中，我们看到，对于文本分类，BERT使用特殊的[CLS]标记来表示整个文本序列。然后，该表示法通过一个全连接或dense层来输出所有离散标签值的分布，如图4-2所示。</p>
 <p><img src="images/chapter4/image-20220213173100941.png" alt="image-20220213173100941"></img></p>
@@ -460,187 +475,213 @@ xlmr_tokens = xlmr_tokenizer(text).tokens()
 <h3 id="为标记分类创建一个自定义模型">为标记分类创建一个自定义模型</h3>
 <p>让我们经历一下为XLM-R建立一个自定义的标记分类头的练习。由于XLM-R使用与RoBERTa相同的模型架构，我们将使用RoBERTa作为基础模型，但用XLM-R的特定设置进行增强。请注意，这是一个教育性练习，向你展示如何为你自己的任务建立一个自定义模型。对于标记分类，XLMRobertaForTokenClassification类已经存在，你可以从Transformers导入。如果你愿意，你可以跳到下一节，直接使用那个。</p>
 <p>为了开始工作，我们需要一个数据结构来表示我们的XLM-R NER标记器。首先，我们需要一个配置对象来初始化模型，以及一个forward()函数来生成输出。让我们继续建立我们的XLM-R类，用于标记分类：</p>
-<pre><code>import torch.nn as nn from transformers
-import XLMRobertaConfig from transformers.modeling_outputs
-import TokenClassifierOutput from transformers.models.roberta.modeling_roberta
-import RobertaModel from transformers.models.roberta.modeling_roberta
-import RobertaPreTrainedModel 
-class XLMRobertaForTokenClassification( RobertaPreTrainedModel): config_class = XLMRobertaConfig 
-    def __init__(self, config): 
-        super().__init__(config) self.num_labels = config.num_labels# Load model body 
-        self.roberta = RobertaModel( config, add_pooling_layer = False)
-        # Set up token classification head 
-        self.dropout = nn.Dropout(config.hidden_dropout_prob) 
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
-        # Load and initialize weights 
-        self.init_weights() 
-    def forward(self, input_ids = None, attention_mask = None, token_type_ids = None, labels = None, ** kwargs): 
-        #Use model body to get encoder representations 
-        outputs = self.roberta(input_ids, attention_mask = attention_mask,token_type_ids = token_type_ids, * * kwargs)
-        # Apply classifier to encoder representation 
-        sequence_output =  self.dropout(outputs[0]) 
-        logits = self.classifier( sequence_output)
-        # Calculate losses 
-        loss = None
-        if labels is not None: 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn <span class="hljs-keyword">from</span> transformers
+<span class="hljs-keyword">import</span> XLMRobertaConfig <span class="hljs-keyword">from</span> transformers.modeling_outputs
+<span class="hljs-keyword">import</span> TokenClassifierOutput <span class="hljs-keyword">from</span> transformers.models.roberta.modeling_roberta
+<span class="hljs-keyword">import</span> RobertaModel <span class="hljs-keyword">from</span> transformers.models.roberta.modeling_roberta
+<span class="hljs-keyword">import</span> RobertaPreTrainedModel 
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">XLMRobertaForTokenClassification</span>( <span class="hljs-title class_ inherited__">RobertaPreTrainedModel</span>): config_class = XLMRobertaConfig 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): 
+        <span class="hljs-built_in">super</span>().__init__(config) <span class="hljs-variable language_">self</span>.num_labels = config.num_labels<span class="hljs-comment"># Load model body </span>
+        <span class="hljs-variable language_">self</span>.roberta = RobertaModel( config, add_pooling_layer = <span class="hljs-literal">False</span>)
+        <span class="hljs-comment"># Set up token classification head </span>
+        <span class="hljs-variable language_">self</span>.dropout = nn.Dropout(config.hidden_dropout_prob) 
+        <span class="hljs-variable language_">self</span>.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        <span class="hljs-comment"># Load and initialize weights </span>
+        <span class="hljs-variable language_">self</span>.init_weights() 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, input_ids = <span class="hljs-literal">None</span>, attention_mask = <span class="hljs-literal">None</span>, token_type_ids = <span class="hljs-literal">None</span>, labels = <span class="hljs-literal">None</span>, ** kwargs</span>): 
+        <span class="hljs-comment">#Use model body to get encoder representations </span>
+        outputs = <span class="hljs-variable language_">self</span>.roberta(input_ids, attention_mask = attention_mask,token_type_ids = token_type_ids, * * kwargs)
+        <span class="hljs-comment"># Apply classifier to encoder representation </span>
+        sequence_output =  <span class="hljs-variable language_">self</span>.dropout(outputs[<span class="hljs-number">0</span>]) 
+        logits = <span class="hljs-variable language_">self</span>.classifier( sequence_output)
+        <span class="hljs-comment"># Calculate losses </span>
+        loss = <span class="hljs-literal">None</span>
+        <span class="hljs-keyword">if</span> labels <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>: 
             loss_fct = nn.CrossEntropyLoss() loss =
-            loss_fct(logits.view(-1, self.num_labels), labels.view(-1))# Return model output object
-        return TokenClassifierOutput(loss = loss, logits = logits, hidden_states = outputs.hidden_states, attentions =  outputs.attentions)
-</code></pre><p>config_class确保我们在初始化一个新模型时使用标准的XLM-R设置。如果你想改变默认参数，你可以通过覆盖配置中的默认设置来实现。通过super()方法，我们调用RobertaPreTrainedModel类的初始化函数。这个抽象类处理初始化或加载预训练的权重。然后我们加载我们的模型主体，也就是RobertaModel，并用我们自己的分类头来扩展它，包括一个dropout和一个标准前馈层。注意，我们设置add_pooling_layer=False，以确保所有的隐藏状态都被返回，而不仅仅是与[CLS]标记相关的一个。最后，我们通过调用从RobertaPreTrainedModel继承的init_weights()方法来初始化所有权重，该方法将加载模型主体的预训练权重，并随机初始化我们标记分类头的权重。</p>
+            loss_fct(logits.view(-<span class="hljs-number">1</span>, <span class="hljs-variable language_">self</span>.num_labels), labels.view(-<span class="hljs-number">1</span>))<span class="hljs-comment"># Return model output object</span>
+        <span class="hljs-keyword">return</span> TokenClassifierOutput(loss = loss, logits = logits, hidden_states = outputs.hidden_states, attentions =  outputs.attentions)
+</code></pre>
+<p>config_class确保我们在初始化一个新模型时使用标准的XLM-R设置。如果你想改变默认参数，你可以通过覆盖配置中的默认设置来实现。通过super()方法，我们调用RobertaPreTrainedModel类的初始化函数。这个抽象类处理初始化或加载预训练的权重。然后我们加载我们的模型主体，也就是RobertaModel，并用我们自己的分类头来扩展它，包括一个dropout和一个标准前馈层。注意，我们设置add_pooling_layer=False，以确保所有的隐藏状态都被返回，而不仅仅是与[CLS]标记相关的一个。最后，我们通过调用从RobertaPreTrainedModel继承的init_weights()方法来初始化所有权重，该方法将加载模型主体的预训练权重，并随机初始化我们标记分类头的权重。</p>
 <p>唯一要做的就是用forward()方法定义模型在前向传递中应该做什么。在前向传递过程中，数据首先通过模型主体被输入。有许多输入变量，但我们现在唯一需要的是input_ids 和 attention_mask。隐藏状态是模型主体输出的一部分，然后通过dropout和分类层进行反馈。如果我们在前向传递中也提供标签，我们可以直接计算损失。如果有一个注意力掩码，我们需要多做一点工作，以确保我们只计算未掩码的标记的损失。最后，我们将所有的输出包在一个TokenClassifierOutput对象中，允许我们访问前几章中熟悉的命名元组中的元素。</p>
 <p>通过实现一个简单类的两个函数，我们就可以建立我们自己的自定义Transformers模型。由于我们继承了PreTrainedModel，我们可以立即获得所有有用的Transformer工具，比如from_pretrained()! 让我们来看看我们如何将预训练的权重加载到我们的自定义模型中。</p>
 <h3 id="加载一个自定义模型">加载一个自定义模型</h3>
 <p>现在我们准备加载我们的标记分类模型。我们需要在模型名称之外提供一些额外的信息，包括我们将用于标记每个实体的标签，以及每个标签与ID的映射，反之亦然。所有这些信息都可以从我们的tags变量中得到，作为一个ClassLabel对象，它有一个names属性，我们可以用它来导出映射。</p>
-<pre><code>index2tag = {idx: tag for idx, tag in enumerate(tags.names)} 
-tag2index = {tag: idx for idx, tag in enumerate(tags.names)}
-</code></pre><p>我们将把这些映射和tags.num_classes属性存储在我们在第三章遇到的AutoConfig对象中。向from_pretrained()方法传递关键字参数会覆盖默认值:</p>
-<pre><code>from transformers import AutoConfig 
+<pre><code class="lang-python">index2tag = {idx: tag <span class="hljs-keyword">for</span> idx, tag <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(tags.names)} 
+tag2index = {tag: idx <span class="hljs-keyword">for</span> idx, tag <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(tags.names)}
+</code></pre>
+<p>我们将把这些映射和tags.num_classes属性存储在我们在第三章遇到的AutoConfig对象中。向from_pretrained()方法传递关键字参数会覆盖默认值:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoConfig 
 xlmr_config = AutoConfig.from_pretrained(xlmr_model_name, num_labels=tags.num_classes, id2label=index2tag, label2id=tag2index)
-</code></pre><p>AutoConfig类包含了一个模型的架构蓝图。当我们用AutoModel.from_pretrained(model_ckpt)加载一个模型时，与该模型相关的配置文件会自动下载。然而，如果我们想修改诸如 类或标签名称，那么我们可以先用我们想定制的参数加载配置。</p>
+</code></pre>
+<p>AutoConfig类包含了一个模型的架构蓝图。当我们用AutoModel.from_pretrained(model_ckpt)加载一个模型时，与该模型相关的配置文件会自动下载。然而，如果我们想修改诸如 类或标签名称，那么我们可以先用我们想定制的参数加载配置。</p>
 <p>现在，我们可以像往常一样用带有额外配置参数的from_pretrained()函数加载模型权重。注意，我们没有在我们的自定义模型类中实现加载预训练的权重；我们通过继承RobertaPreTrainedModel免费获得这个功能：</p>
-<pre><code>import torch device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch device = torch.device(<span class="hljs-string">"cuda"</span> <span class="hljs-keyword">if</span> torch.cuda.is_available() <span class="hljs-keyword">else</span> <span class="hljs-string">"cpu"</span>) 
 xlmr_model = (XLMRobertaForTokenClassification .from_pretrained(xlmr_model_name, config=xlmr_config) .to(device))
-</code></pre><p>作为一个快速检查，我们已经正确地初始化了标记器和模型，让我们在已知实体的小序列上测试预测：</p>
-<pre><code>input_ids = xlmr_tokenizer.encode(text, return_tensors="pt") 
-pd.DataFrame([xlmr_tokens, input_ids[0].numpy()], index=["Tokens", "Input IDs"])
-</code></pre><p><img src="images/chapter4/image-20220213183607482.png" alt="image-20220213183607482"></img></p>
+</code></pre>
+<p>作为一个快速检查，我们已经正确地初始化了标记器和模型，让我们在已知实体的小序列上测试预测：</p>
+<pre><code class="lang-python">input_ids = xlmr_tokenizer.encode(text, return_tensors=<span class="hljs-string">"pt"</span>) 
+pd.DataFrame([xlmr_tokens, input_ids[<span class="hljs-number">0</span>].numpy()], index=[<span class="hljs-string">"Tokens"</span>, <span class="hljs-string">"Input IDs"</span>])
+</code></pre>
+<p><img src="images/chapter4/image-20220213183607482.png" alt="image-20220213183607482"></img></p>
 <p>正如你在这里看到的，开始<s>和结束</s>标记分别被赋予0和2的ID。</p>
 <p>最后，我们需要将输入传递给模型，并通过获取argmax来提取预测，以获得每个标记最可能的类别：</p>
-<pre><code>outputs = xlmr_model(input_ids.to(device)).logits 
-predictions = torch.argmax(outputs, dim=-1) 
-print(f"Number of tokens in sequence: {len(xlmr_tokens)}") 
-print(f"Shape of outputs: {outputs.shape}") 
+<pre><code class="lang-python">outputs = xlmr_model(input_ids.to(device)).logits 
+predictions = torch.argmax(outputs, dim=-<span class="hljs-number">1</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Number of tokens in sequence: <span class="hljs-subst">{<span class="hljs-built_in">len</span>(xlmr_tokens)}</span>"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Shape of outputs: <span class="hljs-subst">{outputs.shape}</span>"</span>) 
 
-Number of tokens in sequence: 10 
-Shape of outputs: torch.Size([1, 10, 7])
-</code></pre><p>这里我们看到对数的形状是[batch_size, num_tokens, num_tags]，每个标记在七个可能的NER标记中都有一个对数。通过对序列的枚举，我们可以很快看到预训练模型的预测：</p>
-<pre><code>preds = [tags.names[p] for p in predictions[0].cpu().numpy()] 
-pd.DataFrame([xlmr_tokens, preds], index=["Tokens", "Tags"])
-</code></pre><p><img src="images/chapter4/image-20220213183830794.png" alt="image-20220213183830794"></img></p>
+Number of tokens <span class="hljs-keyword">in</span> sequence: <span class="hljs-number">10</span> 
+Shape of outputs: torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">10</span>, <span class="hljs-number">7</span>])
+</code></pre>
+<p>这里我们看到对数的形状是[batch_size, num_tokens, num_tags]，每个标记在七个可能的NER标记中都有一个对数。通过对序列的枚举，我们可以很快看到预训练模型的预测：</p>
+<pre><code class="lang-python">preds = [tags.names[p] <span class="hljs-keyword">for</span> p <span class="hljs-keyword">in</span> predictions[<span class="hljs-number">0</span>].cpu().numpy()] 
+pd.DataFrame([xlmr_tokens, preds], index=[<span class="hljs-string">"Tokens"</span>, <span class="hljs-string">"Tags"</span>])
+</code></pre>
+<p><img src="images/chapter4/image-20220213183830794.png" alt="image-20220213183830794"></img></p>
 <p>不出所料，我们的随机权重的标记分类层还有很多不足之处；让我们在一些标记的数据上进行微调，使其变得更好！在这之前，让我们把前面的步骤封装在以后使用的辅助函数中。在这样做之前，让我们把前面的步骤打包成一个辅助函数，供以后使用：</p>
-<pre><code>def tag_text(text, tags, model, tokenizer):
-    # Get tokens with special characters 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">tag_text</span>(<span class="hljs-params">text, tags, model, tokenizer</span>):
+    <span class="hljs-comment"># Get tokens with special characters </span>
     tokens = tokenizer(text).tokens() 
-    # Encode the sequence into IDs 
-    input_ids = xlmr_tokenizer(text, return_tensors="pt").input_ids.to(device) 
-    # Get predictions as distribution over 7 possible classes 
-    outputs = model(inputs)[0] 
-    # Take argmax to get most likely class per token 
-    predictions = torch.argmax(outputs, dim=2) 
-    # Convert to DataFrame 
-    preds = [tags.names[p] for p in predictions[0].cpu().numpy()] 
-    return pd.DataFrame([tokens, preds], index=["Tokens", "Tags"])
-</code></pre><p>在我们训练模型之前，我们还需要对输入进行标记化，并准备好标签。我们接下来会做这个。</p>
+    <span class="hljs-comment"># Encode the sequence into IDs </span>
+    input_ids = xlmr_tokenizer(text, return_tensors=<span class="hljs-string">"pt"</span>).input_ids.to(device) 
+    <span class="hljs-comment"># Get predictions as distribution over 7 possible classes </span>
+    outputs = model(inputs)[<span class="hljs-number">0</span>] 
+    <span class="hljs-comment"># Take argmax to get most likely class per token </span>
+    predictions = torch.argmax(outputs, dim=<span class="hljs-number">2</span>) 
+    <span class="hljs-comment"># Convert to DataFrame </span>
+    preds = [tags.names[p] <span class="hljs-keyword">for</span> p <span class="hljs-keyword">in</span> predictions[<span class="hljs-number">0</span>].cpu().numpy()] 
+    <span class="hljs-keyword">return</span> pd.DataFrame([tokens, preds], index=[<span class="hljs-string">"Tokens"</span>, <span class="hljs-string">"Tags"</span>])
+</code></pre>
+<p>在我们训练模型之前，我们还需要对输入进行标记化，并准备好标签。我们接下来会做这个。</p>
 <h3 id="将文本标记化以用于ner">将文本标记化以用于NER</h3>
 <p>现在我们已经确定标记器和模型可以对单个例子进行编码，我们的下一步是对整个数据集进行标记，以便我们可以将其传递给XLM-R模型进行微调。正如我们在第二章中所看到的，Datasets提供了一种快速的方法，用map()操作对数据集对象进行标记化。要实现这一点，请回忆一下，我们首先需要定义一个具有最小签名的函数：</p>
-<pre><code>function(examples: Dict[str, List]) -&gt; Dict[str, List]
-</code></pre><p>其中examples相当于数据集的一个片断，例如panx_de['train'][:10]。由于XLM-R标记器为模型的输入返回了输入ID，我们只需要用注意力掩码和标签ID来增加这些信息，这些标签编码了与每个NER标记相关的标记信息。</p>
+<pre><code class="lang-python">function(examples: <span class="hljs-type">Dict</span>[<span class="hljs-built_in">str</span>, <span class="hljs-type">List</span>]) -&gt; <span class="hljs-type">Dict</span>[<span class="hljs-built_in">str</span>, <span class="hljs-type">List</span>]
+</code></pre>
+<p>其中examples相当于数据集的一个片断，例如panx_de['train'][:10]。由于XLM-R标记器为模型的输入返回了输入ID，我们只需要用注意力掩码和标签ID来增加这些信息，这些标签编码了与每个NER标记相关的标记信息。</p>
 <p>按照Transformers文档中的方法，让我们看看这在我们的单一德语例子中是如何工作的，首先收集单词和标签作为普通列表：</p>
-<pre><code>words, labels = de_example["tokens"], de_example["ner_tags"]
-</code></pre><p>接下来，我们对每个词进行标记，并使用is_split_into_words参数来告诉标记器，我们的输入序列已经被分割成单词：</p>
-<pre><code>tokenized_input = xlmr_tokenizer(de_example["tokens"], is_split_into_words=True) 
-tokens = xlmr_tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"]) 
-pd.DataFrame([tokens], index=["Tokens"])
-</code></pre><p><img src="images/chapter4/image-20220213184251176.png" alt="image-20220213184251176"></img></p>
+<pre><code class="lang-python">words, labels = de_example[<span class="hljs-string">"tokens"</span>], de_example[<span class="hljs-string">"ner_tags"</span>]
+</code></pre>
+<p>接下来，我们对每个词进行标记，并使用is_split_into_words参数来告诉标记器，我们的输入序列已经被分割成单词：</p>
+<pre><code class="lang-python">tokenized_input = xlmr_tokenizer(de_example[<span class="hljs-string">"tokens"</span>], is_split_into_words=<span class="hljs-literal">True</span>) 
+tokens = xlmr_tokenizer.convert_ids_to_tokens(tokenized_input[<span class="hljs-string">"input_ids"</span>]) 
+pd.DataFrame([tokens], index=[<span class="hljs-string">"Tokens"</span>])
+</code></pre>
+<p><img src="images/chapter4/image-20220213184251176.png" alt="image-20220213184251176"></img></p>
 <p>在这个例子中，我们可以看到标记器将 "Einwohnern "分成两个子词，"▁Einwohner "和 "n"。由于我们遵循的惯例是只有"▁Einwohner "应该与B-LOC标签相关联，我们需要一种方法来掩盖第一个子词之后的子词表示。幸运的是，tokenized_input是一个包含word_ids()函数的类，可以帮助我们实现这个目标：</p>
-<pre><code>word_ids = tokenized_input.word_ids() 
-pd.DataFrame([tokens, word_ids], index=["Tokens", "Word IDs"])
-</code></pre><p><img src="images/chapter4/image-20220213184406947.png" alt="image-20220213184406947"></img></p>
+<pre><code class="lang-python">word_ids = tokenized_input.word_ids() 
+pd.DataFrame([tokens, word_ids], index=[<span class="hljs-string">"Tokens"</span>, <span class="hljs-string">"Word IDs"</span>])
+</code></pre>
+<p><img src="images/chapter4/image-20220213184406947.png" alt="image-20220213184406947"></img></p>
 <p>在这里我们可以看到，word_ids已经将每个子词映射到单词序列中的相应索引，所以第一个子词"▁2.000 "被分配到索引0，而"▁Einwohner "和 "n "被分配到索引1（因为 "Einwohnern "是单词中的第二个单词）。我们还可以看到，像&lt; s&gt;和&lt; /s&gt;这样的特殊标记被映射为无。让我们把-100设为这些特殊标记和我们希望在训练中屏蔽的子词的标签：</p>
-<pre><code>previous_word_idx = None 
+<pre><code class="lang-python">previous_word_idx = <span class="hljs-literal">None</span> 
 label_ids = [] 
-for word_idx in word_ids: 
-    if word_idx is None or word_idx == previous_word_idx: 
-        label_ids.append(-100) 
-    elif word_idx != previous_word_idx: 
+<span class="hljs-keyword">for</span> word_idx <span class="hljs-keyword">in</span> word_ids: 
+    <span class="hljs-keyword">if</span> word_idx <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span> <span class="hljs-keyword">or</span> word_idx == previous_word_idx: 
+        label_ids.append(-<span class="hljs-number">100</span>) 
+    <span class="hljs-keyword">elif</span> word_idx != previous_word_idx: 
         label_ids.append(labels[word_idx]) 
     previous_word_idx = word_idx 
-labels = [index2tag[l] if l != -100 else "IGN" for l in label_ids] 
-index = ["Tokens", "Word IDs", "Label IDs", "Labels"] 
+labels = [index2tag[l] <span class="hljs-keyword">if</span> l != -<span class="hljs-number">100</span> <span class="hljs-keyword">else</span> <span class="hljs-string">"IGN"</span> <span class="hljs-keyword">for</span> l <span class="hljs-keyword">in</span> label_ids] 
+index = [<span class="hljs-string">"Tokens"</span>, <span class="hljs-string">"Word IDs"</span>, <span class="hljs-string">"Label IDs"</span>, <span class="hljs-string">"Labels"</span>] 
 pd.DataFrame([tokens, word_ids, label_ids, labels], index=index)
-</code></pre><p><img src="images/chapter4/image-20220213184730492.png" alt="image-20220213184730492"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213184730492.png" alt="image-20220213184730492"></img></p>
 <p><strong>注意事项</strong></p>
 <p>为什么我们选择-100作为屏蔽子词表示的ID？原因是在PyTorch中，交叉熵损失类torch.nn.CrossEntropyLoss有一个名为ignore_index的属性，其值为-100。这个指数在训练过程中会被忽略，所以我们可以用它来忽略与连续子词相关的标记。</p>
 <p>就这样了 我们可以清楚地看到标签ID是如何与标记对齐的，所以让我们通过定义一个包含所有逻辑的单一函数，将其扩展到整个数据集：</p>
-<pre><code>def tokenize_and_align_labels(examples): 
-    tokenized_inputs = xlmr_tokenizer(examples["tokens"], truncation=True, is_split_into_words=True) 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">tokenize_and_align_labels</span>(<span class="hljs-params">examples</span>): 
+    tokenized_inputs = xlmr_tokenizer(examples[<span class="hljs-string">"tokens"</span>], truncation=<span class="hljs-literal">True</span>, is_split_into_words=<span class="hljs-literal">True</span>) 
     labels = [] 
-    for idx, label in enumerate(examples["ner_tags"]): 
+    <span class="hljs-keyword">for</span> idx, label <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(examples[<span class="hljs-string">"ner_tags"</span>]): 
         word_ids = tokenized_inputs.word_ids(batch_index=idx) 
-        previous_word_idx = None label_ids = [] 
-        for word_idx in word_ids: 
-            if word_idx is None or word_idx == previous_word_idx: 
-                label_ids.append(-100) 
-            else: 
+        previous_word_idx = <span class="hljs-literal">None</span> label_ids = [] 
+        <span class="hljs-keyword">for</span> word_idx <span class="hljs-keyword">in</span> word_ids: 
+            <span class="hljs-keyword">if</span> word_idx <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span> <span class="hljs-keyword">or</span> word_idx == previous_word_idx: 
+                label_ids.append(-<span class="hljs-number">100</span>) 
+            <span class="hljs-keyword">else</span>: 
                 label_ids.append(label[word_idx]) 
             previous_word_idx = word_idx 
         labels.append(label_ids) 
-    tokenized_inputs["labels"] = labels 
-    return tokenized_inputs
-</code></pre><p>我们现在有了对每个分裂进行编码所需的所有成分，所以让我们写一个我们可以迭代的函数：</p>
-<pre><code>def encode_panx_dataset(corpus): 
-    return corpus.map(tokenize_and_align_labels, batched=True, remove_columns=['langs', 'ner_tags', 'tokens'])
-</code></pre><p>将这个函数应用于DatasetDict对象，我们就可以得到每个分割的编码数据集对象。让我们用它来对我们的德语语料库进行编码：</p>
-<pre><code>panx_de_encoded = encode_panx_dataset(panx_ch["de"])
-</code></pre><p>现在我们有一个模型和一个数据集，我们需要定义一个性能指标。</p>
+    tokenized_inputs[<span class="hljs-string">"labels"</span>] = labels 
+    <span class="hljs-keyword">return</span> tokenized_inputs
+</code></pre>
+<p>我们现在有了对每个分裂进行编码所需的所有成分，所以让我们写一个我们可以迭代的函数：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">encode_panx_dataset</span>(<span class="hljs-params">corpus</span>): 
+    <span class="hljs-keyword">return</span> corpus.<span class="hljs-built_in">map</span>(tokenize_and_align_labels, batched=<span class="hljs-literal">True</span>, remove_columns=[<span class="hljs-string">'langs'</span>, <span class="hljs-string">'ner_tags'</span>, <span class="hljs-string">'tokens'</span>])
+</code></pre>
+<p>将这个函数应用于DatasetDict对象，我们就可以得到每个分割的编码数据集对象。让我们用它来对我们的德语语料库进行编码：</p>
+<pre><code class="lang-python">panx_de_encoded = encode_panx_dataset(panx_ch[<span class="hljs-string">"de"</span>])
+</code></pre>
+<p>现在我们有一个模型和一个数据集，我们需要定义一个性能指标。</p>
 <h2 id="性能评估">性能评估</h2>
 <p>评估NER模型与评估文本分类模型类似，通常报告精度、召回率和F-score的结果。唯一的微妙之处在于，一个实体的所有单词都需要被正确预测，这样才能算作正确的预测。幸运的是，有一个叫seqeval的漂亮库，是为这类任务设计的。例如，给定一些占位的NER标签和模型预测，我们可以通过seqeval的classification_report()函数来计算度量：</p>
-<pre><code>from seqeval.metrics import classification_report 
-y_true = [["O", "O", "O", "B-MISC", "I-MISC", "I-MISC", "O"], ["B-PER", "I-PER", "O"]] 
-y_pred = [["O", "O", "B-MISC", "I-MISC", "I-MISC", "I-MISC", "O"], ["B-PER", "I-PER", "O"]] 
-print(classification_report(y_true, y_pred))
-</code></pre><p><img src="images/chapter4/image-20220213185403579.png" alt="image-20220213185403579"></img></p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> seqeval.metrics <span class="hljs-keyword">import</span> classification_report 
+y_true = [[<span class="hljs-string">"O"</span>, <span class="hljs-string">"O"</span>, <span class="hljs-string">"O"</span>, <span class="hljs-string">"B-MISC"</span>, <span class="hljs-string">"I-MISC"</span>, <span class="hljs-string">"I-MISC"</span>, <span class="hljs-string">"O"</span>], [<span class="hljs-string">"B-PER"</span>, <span class="hljs-string">"I-PER"</span>, <span class="hljs-string">"O"</span>]] 
+y_pred = [[<span class="hljs-string">"O"</span>, <span class="hljs-string">"O"</span>, <span class="hljs-string">"B-MISC"</span>, <span class="hljs-string">"I-MISC"</span>, <span class="hljs-string">"I-MISC"</span>, <span class="hljs-string">"I-MISC"</span>, <span class="hljs-string">"O"</span>], [<span class="hljs-string">"B-PER"</span>, <span class="hljs-string">"I-PER"</span>, <span class="hljs-string">"O"</span>]] 
+<span class="hljs-built_in">print</span>(classification_report(y_true, y_pred))
+</code></pre>
+<p><img src="images/chapter4/image-20220213185403579.png" alt="image-20220213185403579"></img></p>
 <p>正如我们所看到的，seqeval期望预测和标签为列表，每个列表对应于我们验证集或测试集中的一个例子。为了在训练过程中整合这些指标，我们需要一个函数来获取模型的输出并将其转换为seqeval所期望的列表。下面的函数通过确保我们忽略与后续子词相关的标签ID来完成这个任务：</p>
-<pre><code>import numpy as np 
-def align_predictions(predictions, label_ids): 
-    preds = np.argmax(predictions, axis=2) 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">align_predictions</span>(<span class="hljs-params">predictions, label_ids</span>): 
+    preds = np.argmax(predictions, axis=<span class="hljs-number">2</span>) 
     batch_size, seq_len = preds.shape 
     labels_list, preds_list = [], [] 
-    for batch_idx in range(batch_size): 
+    <span class="hljs-keyword">for</span> batch_idx <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(batch_size): 
         example_labels, example_preds = [], [] 
-        for seq_idx in range(seq_len): 
-        # Ignore label IDs = -100 
-        if label_ids[batch_idx, seq_idx] != -100: 
+        <span class="hljs-keyword">for</span> seq_idx <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(seq_len): 
+        <span class="hljs-comment"># Ignore label IDs = -100 </span>
+        <span class="hljs-keyword">if</span> label_ids[batch_idx, seq_idx] != -<span class="hljs-number">100</span>: 
             example_labels.append(index2tag[label_ids[batch_idx] [seq_idx]]) 
             example_preds.append(index2tag[preds[batch_idx][seq_idx]]) 
         labels_list.append(example_labels) 
         preds_list.append(example_preds) 
-    return preds_list, labels_list
-</code></pre><p>有了性能指标，我们就可以开始实际训练模型了。</p>
+    <span class="hljs-keyword">return</span> preds_list, labels_list
+</code></pre>
+<p>有了性能指标，我们就可以开始实际训练模型了。</p>
 <h2 id="微调-xlm-roberta">微调 XLM-RoBERTa</h2>
 <p>我们现在有了对我们的模型进行微调的所有材料！我们的第一个策略是在PAN-X的德语子集上对我们的基本模型进行微调，然后评估它在法语和意大利语上的零散跨语言表现。我们的第一个策略是在PAN-X的德语子集上微调我们的基础模型，然后评估它在法语、意大利语和英语上的零起点跨语言性能。像往常一样，我们将使用Transformers训练器来处理我们的训练循环，所以首先我们需要使用TrainingArguments类来定义训练属性：</p>
-<pre><code>from transformers import TrainingArguments 
-num_epochs = 3 
-batch_size = 24 
-logging_steps = len(panx_de_encoded["train"]) // batch_size 
-model_name = f"{xlmr_model_name}-finetuned-panx-de" 
-training_args = TrainingArguments( output_dir=model_name, log_level="error", num_train_epochs=num_epochs, per_device_train_batch_size=batch_size, per_device_eval_batch_size=batch_size, evaluation_strategy="epoch", save_steps=1e6, weight_decay=0.01, disable_tqdm=False, logging_steps=logging_steps, push_to_hub=True)
-</code></pre><p>在这里，我们在每个历时结束时评估模型在验证集上的预测，调整权重衰减，并将save_steps设置为一个大数字，以禁用检查点，从而加快训练速度。</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> TrainingArguments 
+num_epochs = <span class="hljs-number">3</span> 
+batch_size = <span class="hljs-number">24</span> 
+logging_steps = <span class="hljs-built_in">len</span>(panx_de_encoded[<span class="hljs-string">"train"</span>]) // batch_size 
+model_name = <span class="hljs-string">f"<span class="hljs-subst">{xlmr_model_name}</span>-finetuned-panx-de"</span> 
+training_args = TrainingArguments( output_dir=model_name, log_level=<span class="hljs-string">"error"</span>, num_train_epochs=num_epochs, per_device_train_batch_size=batch_size, per_device_eval_batch_size=batch_size, evaluation_strategy=<span class="hljs-string">"epoch"</span>, save_steps=<span class="hljs-number">1e6</span>, weight_decay=<span class="hljs-number">0.01</span>, disable_tqdm=<span class="hljs-literal">False</span>, logging_steps=logging_steps, push_to_hub=<span class="hljs-literal">True</span>)
+</code></pre>
+<p>在这里，我们在每个历时结束时评估模型在验证集上的预测，调整权重衰减，并将save_steps设置为一个大数字，以禁用检查点，从而加快训练速度。</p>
 <p>这也是确保我们登录到Hugging Face Hub的一个好时机（如果你在终端工作，你可以执行huggingface-cli login命令）。</p>
-<pre><code>from huggingface_hub 
-import notebook_login notebook_login()
-</code></pre><p>我们还需要告诉Trainer如何在验证集上计算指标，所以在这里我们可以使用之前定义的align_predictions()函数，以seqeval需要的格式提取预测和标签，以计算F-score：</p>
-<pre><code>from seqeval.metrics import f1_score 
-def compute_metrics(eval_pred): 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> huggingface_hub 
+<span class="hljs-keyword">import</span> notebook_login notebook_login()
+</code></pre>
+<p>我们还需要告诉Trainer如何在验证集上计算指标，所以在这里我们可以使用之前定义的align_predictions()函数，以seqeval需要的格式提取预测和标签，以计算F-score：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> seqeval.metrics <span class="hljs-keyword">import</span> f1_score 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">compute_metrics</span>(<span class="hljs-params">eval_pred</span>): 
     y_pred, y_true = align_predictions(eval_pred.predictions, eval_pred.label_ids)
-    return {"f1": f1_score(y_true, y_pred)}
-</code></pre><p>最后一步是定义一个数据整理器，这样我们就可以把每个输入序列填充到一个批次的最大序列长度。Transformers提供了一个 专用于标记分类的数据整理器，它将与输入一起填充标签。</p>
-<pre><code>from transformers import DataCollatorForTokenClassification 
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"f1"</span>: f1_score(y_true, y_pred)}
+</code></pre>
+<p>最后一步是定义一个数据整理器，这样我们就可以把每个输入序列填充到一个批次的最大序列长度。Transformers提供了一个 专用于标记分类的数据整理器，它将与输入一起填充标签。</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> DataCollatorForTokenClassification 
 data_collator = DataCollatorForTokenClassification(xlmr_tokenizer)
-</code></pre><p>填充标签是必要的，因为与文本分类任务不同，标签也是序列。这里的一个重要细节是，标签序列被填充了-100的值，正如我们所看到的，PyTorch损失函数会忽略这个值。</p>
+</code></pre>
+<p>填充标签是必要的，因为与文本分类任务不同，标签也是序列。这里的一个重要细节是，标签序列被填充了-100的值，正如我们所看到的，PyTorch损失函数会忽略这个值。</p>
 <p>我们将在本章中训练几个模型，所以我们将通过创建model_init()方法来避免为每个训练者初始化一个新的模型。这个方法会加载一个未训练过的模型，并在调用train()的开始阶段被调用:</p>
-<pre><code>def model_init(): 
-    return (XLMRobertaForTokenClassification .from_pretrained(xlmr_model_name, config=xlmr_config) .to(device))
-</code></pre><p>现在我们可以将所有这些信息连同编码的数据集一起传递给Trainer:</p>
-<pre><code>from transformers import Trainer 
-trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, train_dataset=panx_de_encoded["train"], eval_dataset=panx_de_encoded["validation"], tokenizer=xlmr_tokenizer)
-</code></pre><p>然后按如下方式运行训练循环，并将最终模型推送给Hub:</p>
-<pre><code>trainer.train() trainer.push_to_hub(commit_message="Training completed!")
-</code></pre><p><img src="images/chapter4/image-20220213190508247.png" alt="image-20220213190508247"></img></p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">model_init</span>(): 
+    <span class="hljs-keyword">return</span> (XLMRobertaForTokenClassification .from_pretrained(xlmr_model_name, config=xlmr_config) .to(device))
+</code></pre>
+<p>现在我们可以将所有这些信息连同编码的数据集一起传递给Trainer:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> Trainer 
+trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, train_dataset=panx_de_encoded[<span class="hljs-string">"train"</span>], eval_dataset=panx_de_encoded[<span class="hljs-string">"validation"</span>], tokenizer=xlmr_tokenizer)
+</code></pre>
+<p>然后按如下方式运行训练循环，并将最终模型推送给Hub:</p>
+<pre><code class="lang-python">trainer.train() trainer.push_to_hub(commit_message=<span class="hljs-string">"Training completed!"</span>)
+</code></pre>
+<p><img src="images/chapter4/image-20220213190508247.png" alt="image-20220213190508247"></img></p>
 <p>这些F1分数对于一个NER模型来说是相当不错的。为了确认我们的模型按预期工作，让我们在我们的简单例子的德语翻译上测试它:</p>
-<pre><code>text_de = "Jeff Dean ist ein Informatiker bei Google in Kalifornien" 
+<pre><code class="lang-python">text_de = <span class="hljs-string">"Jeff Dean ist ein Informatiker bei Google in Kalifornien"</span> 
 tag_text(text_de, tags, trainer.model, xlmr_tokenizer)
-</code></pre><p><img src="images/chapter4/image-20220213190558180.png" alt="image-20220213190558180"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213190558180.png" alt="image-20220213190558180"></img></p>
 <p>它是有效的! 但是，我们永远不应该根据一个单一的例子而对性能过于自信。相反，我们应该对模型的错误进行适当和彻底的调查。在下一节中，我们将探讨如何在NER任务中做到这一点。</p>
 <h2 id="错误分析">错误分析</h2>
 <p>在我们深入研究XLM-R的多语言方面之前，让我们花点时间调查一下我们模型的错误。正如我们在第二章中所看到的，在训练和调试Transformers（以及一般的机器学习模型）时，对你的模型进行彻底的错误分析是最重要的方面之一。有几种失败模式，在这些模式下，可能看起来模型表现良好，而实际上它有一些严重的缺陷。训练可能失败的例子包括：</p>
@@ -655,58 +696,63 @@ tag_text(text_de, tags, trainer.model, xlmr_tokenizer)
 <p>当模型的表现比预期的要差得多时，查看错误可以产生有用的见解，并揭示出仅通过查看代码很难发现的错误。而且，即使模型表现良好，代码中没有错误，错误分析仍然是了解模型的优点和缺点的有用工具。当我们在生产环境中部署模型时，这些方面我们始终需要牢记。</p>
 <p>对于我们的分析，我们将再次使用我们所掌握的最强大的工具之一，那就是查看损失最大的验证例子。我们可以重新使用我们在第二章中为分析序列分类模型而建立的大部分函数，但是我们现在要计算样本序列中每个标记的损失。</p>
 <p>让我们定义一个我们可以应用于验证集的方法：</p>
-<pre><code>from torch.nn.functional import cross_entropy 
-def forward_pass_with_label(batch): 
-    # Convert dict of lists to list of dicts suitable for data collator 
-    features = [dict(zip(batch, t)) for t in zip(*batch.values())] 
-    # Pad inputs and labels and put all tensors on device 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> torch.nn.functional <span class="hljs-keyword">import</span> cross_entropy 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">forward_pass_with_label</span>(<span class="hljs-params">batch</span>): 
+    <span class="hljs-comment"># Convert dict of lists to list of dicts suitable for data collator </span>
+    features = [<span class="hljs-built_in">dict</span>(<span class="hljs-built_in">zip</span>(batch, t)) <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(*batch.values())] 
+    <span class="hljs-comment"># Pad inputs and labels and put all tensors on device </span>
     batch = data_collator(features) 
-    input_ids = batch["input_ids"].to(device) 
-    attention_mask = batch["attention_mask"].to(device) 
-    labels = batch["labels"].to(device) 
-    with torch.no_grad(): 
-        # Pass data through model 
+    input_ids = batch[<span class="hljs-string">"input_ids"</span>].to(device) 
+    attention_mask = batch[<span class="hljs-string">"attention_mask"</span>].to(device) 
+    labels = batch[<span class="hljs-string">"labels"</span>].to(device) 
+    <span class="hljs-keyword">with</span> torch.no_grad(): 
+        <span class="hljs-comment"># Pass data through model </span>
         output = trainer.model(input_ids, attention_mask) 
-        # logit.size: [batch_size, sequence_length, classes] 
-        # Predict class with largest logit value on classes axis 
-        predicted_label = torch.argmax(output.logits, axis=-1).cpu().numpy() 
-    # Calculate loss per token after flattening batch dimension with view 
-    loss = cross_entropy(output.logits.view(-1, 7), labels.view(-1), reduction="none")
-    # Unflatten batch dimension and convert to numpy array
-    loss = loss.view(len(input_ids), -1).cpu().numpy() 
-    return {"loss":loss, "predicted_label": predicted_label}
-</code></pre><p>现在我们可以使用map()将这个函数应用于整个验证集，并将所有的数据加载到一个DataFrame中进行进一步分析：</p>
-<pre><code>valid_set = panx_de_encoded["validation"] 
-valid_set = valid_set.map(forward_pass_with_label, batched=True, batch_size=32) 
+        <span class="hljs-comment"># logit.size: [batch_size, sequence_length, classes] </span>
+        <span class="hljs-comment"># Predict class with largest logit value on classes axis </span>
+        predicted_label = torch.argmax(output.logits, axis=-<span class="hljs-number">1</span>).cpu().numpy() 
+    <span class="hljs-comment"># Calculate loss per token after flattening batch dimension with view </span>
+    loss = cross_entropy(output.logits.view(-<span class="hljs-number">1</span>, <span class="hljs-number">7</span>), labels.view(-<span class="hljs-number">1</span>), reduction=<span class="hljs-string">"none"</span>)
+    <span class="hljs-comment"># Unflatten batch dimension and convert to numpy array</span>
+    loss = loss.view(<span class="hljs-built_in">len</span>(input_ids), -<span class="hljs-number">1</span>).cpu().numpy() 
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"loss"</span>:loss, <span class="hljs-string">"predicted_label"</span>: predicted_label}
+</code></pre>
+<p>现在我们可以使用map()将这个函数应用于整个验证集，并将所有的数据加载到一个DataFrame中进行进一步分析：</p>
+<pre><code class="lang-python">valid_set = panx_de_encoded[<span class="hljs-string">"validation"</span>] 
+valid_set = valid_set.<span class="hljs-built_in">map</span>(forward_pass_with_label, batched=<span class="hljs-literal">True</span>, batch_size=<span class="hljs-number">32</span>) 
 df = valid_set.to_pandas()
-</code></pre><p>代币和标签仍然是用它们的ID编码的，所以让我们把代币和标签映射回字符串，以便更容易阅读结果。对于标签为-100的填充代币，我们分配一个特殊的标签，即IGN，这样我们就可以在以后过滤它们。我们还通过将损失和预测标签字段截断到输入的长度来摆脱所有的填充物：</p>
-<pre><code>index2tag[-100] = "IGN" 
-df["input_tokens"] = df["input_ids"].apply( lambda x: xlmr_tokenizer.convert_ids_to_tokens(x)) 
-df["predicted_label"] = df["predicted_label"].apply( lambda x: [index2tag[i] for i in x]) 
-df["labels"] = df["labels"].apply( lambda x: [index2tag[i] for i in x]) 
-df['loss'] = df.apply( lambda x: x['loss'][:len(x['input_ids'])], axis=1) 
-df['predicted_label'] = df.apply( lambda x: x['predicted_label'][:len(x['input_ids'])], axis=1) 
-df.head(1)
-</code></pre><p><img src="images/chapter4/image-20220213214719589.png" alt="image-20220213214719589"></img></p>
+</code></pre>
+<p>代币和标签仍然是用它们的ID编码的，所以让我们把代币和标签映射回字符串，以便更容易阅读结果。对于标签为-100的填充代币，我们分配一个特殊的标签，即IGN，这样我们就可以在以后过滤它们。我们还通过将损失和预测标签字段截断到输入的长度来摆脱所有的填充物：</p>
+<pre><code class="lang-python">index2tag[-<span class="hljs-number">100</span>] = <span class="hljs-string">"IGN"</span> 
+df[<span class="hljs-string">"input_tokens"</span>] = df[<span class="hljs-string">"input_ids"</span>].apply( <span class="hljs-keyword">lambda</span> x: xlmr_tokenizer.convert_ids_to_tokens(x)) 
+df[<span class="hljs-string">"predicted_label"</span>] = df[<span class="hljs-string">"predicted_label"</span>].apply( <span class="hljs-keyword">lambda</span> x: [index2tag[i] <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> x]) 
+df[<span class="hljs-string">"labels"</span>] = df[<span class="hljs-string">"labels"</span>].apply( <span class="hljs-keyword">lambda</span> x: [index2tag[i] <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> x]) 
+df[<span class="hljs-string">'loss'</span>] = df.apply( <span class="hljs-keyword">lambda</span> x: x[<span class="hljs-string">'loss'</span>][:<span class="hljs-built_in">len</span>(x[<span class="hljs-string">'input_ids'</span>])], axis=<span class="hljs-number">1</span>) 
+df[<span class="hljs-string">'predicted_label'</span>] = df.apply( <span class="hljs-keyword">lambda</span> x: x[<span class="hljs-string">'predicted_label'</span>][:<span class="hljs-built_in">len</span>(x[<span class="hljs-string">'input_ids'</span>])], axis=<span class="hljs-number">1</span>) 
+df.head(<span class="hljs-number">1</span>)
+</code></pre>
+<p><img src="images/chapter4/image-20220213214719589.png" alt="image-20220213214719589"></img></p>
 <p>每一列包含每个样本的标记、标签、预测标签等的列表。让我们通过拆开这些列表来逐一看看这些标记。这些列表。pandas.Series.explode()函数允许我们在一行中完全做到这一点，它为原始行列表中的每个元素创建一个行。由于一行中的所有列表都有相同的长度，我们可以对所有列进行并行处理。我们还放弃了我们命名为IGN的填充代币，因为它们的损失反正是零。最后，我们将损失（仍然是numpy.Array对象）转换成标准的浮点数：</p>
-<pre><code>df_tokens = df.apply(pd.Series.explode) 
-df_tokens = df_tokens.query("labels != 'IGN'") 
-df_tokens["loss"] = df_tokens["loss"].astype(float).round(2) 
-df_tokens.head(7)
-</code></pre><p><img src="images/chapter4/image-20220213214901271.png" alt="image-20220213214901271"></img></p>
+<pre><code class="lang-python">df_tokens = df.apply(pd.Series.explode) 
+df_tokens = df_tokens.query(<span class="hljs-string">"labels != 'IGN'"</span>) 
+df_tokens[<span class="hljs-string">"loss"</span>] = df_tokens[<span class="hljs-string">"loss"</span>].astype(<span class="hljs-built_in">float</span>).<span class="hljs-built_in">round</span>(<span class="hljs-number">2</span>) 
+df_tokens.head(<span class="hljs-number">7</span>)
+</code></pre>
+<p><img src="images/chapter4/image-20220213214901271.png" alt="image-20220213214901271"></img></p>
 <p>有了这种形式的数据，我们现在可以按输入标记进行分组，并用计数、平均值和总和对每个标记的损失进行汇总。最后，我们根据损失的总和对汇总的数据进行排序，看看哪些标记在验证集中积累了最多的损失：</p>
-<pre><code>( 
-df_tokens.groupby("input_tokens")[["loss"]] 
-.agg(["count", "mean", "sum"]) 
-.droplevel(level=0, axis=1) 
-# Get rid of multi-level columns 
-.sort_values(by="sum", ascending=False) 
+<pre><code class="lang-python">( 
+df_tokens.groupby(<span class="hljs-string">"input_tokens"</span>)[[<span class="hljs-string">"loss"</span>]] 
+.agg([<span class="hljs-string">"count"</span>, <span class="hljs-string">"mean"</span>, <span class="hljs-string">"sum"</span>]) 
+.droplevel(level=<span class="hljs-number">0</span>, axis=<span class="hljs-number">1</span>) 
+<span class="hljs-comment"># Get rid of multi-level columns </span>
+.sort_values(by=<span class="hljs-string">"sum"</span>, ascending=<span class="hljs-literal">False</span>) 
 .reset_index() 
-.round(2) 
-.head(10) 
+.<span class="hljs-built_in">round</span>(<span class="hljs-number">2</span>) 
+.head(<span class="hljs-number">10</span>) 
 .T 
 )
-</code></pre><p><img src="images/chapter4/image-20220213215025753.png" alt="image-20220213215025753"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213215025753.png" alt="image-20220213215025753"></img></p>
 <p>我们可以在这个列表中观察到几种模式。</p>
 <ul>
 <li><p>空白符号的总损失最高，这并不令人惊讶，因为它也是列表中最常见的符号。然而，它的平均损失要比列表中的其他标记低得多。这意味着模型对它的分类并不费力。</p>
@@ -717,167 +763,188 @@ df_tokens.groupby("input_tokens")[["loss"]]
 </li>
 </ul>
 <p>  我们还可以对标签ID进行分组，看看每一类的损失：</p>
-<pre><code>( 
-df_tokens.groupby("labels")[["loss"]] 
-.agg(["count", "mean", "sum"]) 
-.droplevel(level=0, axis=1) 
-.sort_values(by="mean", ascending=False) 
+<pre><code class="lang-python">( 
+df_tokens.groupby(<span class="hljs-string">"labels"</span>)[[<span class="hljs-string">"loss"</span>]] 
+.agg([<span class="hljs-string">"count"</span>, <span class="hljs-string">"mean"</span>, <span class="hljs-string">"sum"</span>]) 
+.droplevel(level=<span class="hljs-number">0</span>, axis=<span class="hljs-number">1</span>) 
+.sort_values(by=<span class="hljs-string">"mean"</span>, ascending=<span class="hljs-literal">False</span>) 
 .reset_index() 
-.round(2) 
+.<span class="hljs-built_in">round</span>(<span class="hljs-number">2</span>) 
 .T 
 )
-</code></pre><p><img src="images/chapter4/image-20220213215254676.png" alt="image-20220213215254676"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213215254676.png" alt="image-20220213215254676"></img></p>
 <p>我们看到，B-ORG的平均损失最高，这意味着确定一个组织的开始对我们的模型构成了挑战。</p>
 <p>我们可以通过绘制标记分类的混淆矩阵来进一步分解，我们看到一个组织的开始经常与随后的I-ORG标记相混淆:</p>
-<pre><code>from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix 
-def plot_confusion_matrix(y_preds, y_true, labels): 
-    cm = confusion_matrix(y_true, y_preds, normalize="true") 
-    fig, ax = plt.subplots(figsize=(6, 6)) 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> sklearn.metrics <span class="hljs-keyword">import</span> ConfusionMatrixDisplay, confusion_matrix 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">plot_confusion_matrix</span>(<span class="hljs-params">y_preds, y_true, labels</span>): 
+    cm = confusion_matrix(y_true, y_preds, normalize=<span class="hljs-string">"true"</span>) 
+    fig, ax = plt.subplots(figsize=(<span class="hljs-number">6</span>, <span class="hljs-number">6</span>)) 
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels) 
-    disp.plot(cmap="Blues", values_format=".2f", ax=ax, colorbar=False) 
-    plt.title("Normalized confusion matrix") 
+    disp.plot(cmap=<span class="hljs-string">"Blues"</span>, values_format=<span class="hljs-string">".2f"</span>, ax=ax, colorbar=<span class="hljs-literal">False</span>) 
+    plt.title(<span class="hljs-string">"Normalized confusion matrix"</span>) 
     plt.show() 
-plot_confusion_matrix(df_tokens["labels"], df_tokens["predicted_label"], tags.names
-</code></pre><p><img src="images/chapter4/image-20220213215439506.png" alt="image-20220213215439506"></img></p>
+plot_confusion_matrix(df_tokens[<span class="hljs-string">"labels"</span>], df_tokens[<span class="hljs-string">"predicted_label"</span>], tags.names
+</code></pre>
+<p><img src="images/chapter4/image-20220213215439506.png" alt="image-20220213215439506"></img></p>
 <p>从图中我们可以看出，我们的模型倾向于混淆B-ORG和IORG实体最多。除此之外，它在对其余实体进行分类时表现得相当好，这一点从混淆矩阵的近对角线性质可以看出。</p>
 <p>现在我们已经检查了标记水平上的错误，让我们继续看一下具有高损失的序列。在这个计算中，我们将重新审视我们的 "未爆炸 "数据框架，通过对每个标记的损失进行加总来计算总损失。要做到这一点，首先让我们写一个函数，帮助我们显示带有标签和损失的标记序列。</p>
 <p><img src="images/chapter4/image-20220213215534047.png" alt="image-20220213215534047"></img></p>
 <p><img src="images/chapter4/image-20220213215603835.png" alt="image-20220213215603835"></img></p>
 <p>很明显，这些样本的标签有问题；例如，联合国和中非共和国分别被标为一个人！这是不对的。同时，第一个例子中的 "8.Juli "被标记为一个组织。事实证明，PAN-X数据集的注释是通过一个自动过程产生的。这样的注释通常被称为 "银质标准"（与人类生成的注释的 "黄金标准 "形成对比），而且毫不奇怪，有些情况下，自动方法未能产生合理的标签。事实上，这样的失败模式并不是自动方法所独有的；即使人类仔细地注释数据，当注释者的注意力减退或者他们只是误解了句子，也会发生错误。</p>
 <p>我们先前注意到的另一件事是，括号和斜线的损失相对较高。让我们来看看几个带有开头小括号的序列的例子:</p>
-<pre><code>df_tmp = df.loc[df["input_tokens"].apply(lambda x: u"\u2581(" in x)].head(2) 
-for sample in get_samples(df_tmp): 
+<pre><code class="lang-python">df_tmp = df.loc[df[<span class="hljs-string">"input_tokens"</span>].apply(<span class="hljs-keyword">lambda</span> x: <span class="hljs-string">u"\u2581("</span> <span class="hljs-keyword">in</span> x)].head(<span class="hljs-number">2</span>) 
+<span class="hljs-keyword">for</span> sample <span class="hljs-keyword">in</span> get_samples(df_tmp): 
     display(sample)
-</code></pre><p><img src="images/chapter4/image-20220213215746355.png" alt="image-20220213215746355"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213215746355.png" alt="image-20220213215746355"></img></p>
 <p>一般来说，我们不会把括号及其内容作为命名实体的一部分，但这似乎是自动提取注释文件的方式。在其他的例子中，括号里包含了一个地理规范。虽然这确实也是一个位置，但我们可能希望在注释中把它与原始位置断开。这个数据集由不同语言的维基百科文章组成，文章标题经常在括号中包含某种解释。例如，在第一个例子中，括号里的文字表明Hama是一个 "Unternehmen"，即英文中的公司。当我们推出这个模型时，这些细节是很重要的，因为它们可能对模型所在的整个管道的下游性能产生影响。</p>
 <p>通过一个相对简单的分析，我们已经发现了我们的模型和数据集的一些弱点。在一个真实的用例中，我们会反复进行这个步骤，清理数据集，重新训练模型，分析新的错误，直到我们对性能感到满意。</p>
 <p>在这里，我们分析了单一语言的错误，但我们也对跨语言的性能感兴趣。在下一节中，我们将进行一些实验，看看XLM-R的跨语言转移的效果如何。</p>
 <h2 id="跨语言迁移">跨语言迁移</h2>
 <p>现在我们已经在德语上对XLM-R进行了微调，我们可以通过Trainer的predict()方法来评估它转移到其他语言的能力。由于我们计划评估多种语言，让我们创建一个简单的函数，为我们做这件事：</p>
-<pre><code>def get_f1_score(trainer, dataset): 
-    return trainer.predict(dataset).metrics["test_f1"]
-</code></pre><p>我们可以用这个函数来检查测试集的性能，并在一个dict中记录我们的分数：</p>
-<pre><code>f1_scores = defaultdict(dict) 
-f1_scores["de"]["de"] = get_f1_score(trainer, panx_de_encoded["test"]) 
-print(f"F1-score of [de] model on [de] dataset: {f1_scores['de']['de']:.3f}")
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_f1_score</span>(<span class="hljs-params">trainer, dataset</span>): 
+    <span class="hljs-keyword">return</span> trainer.predict(dataset).metrics[<span class="hljs-string">"test_f1"</span>]
+</code></pre>
+<p>我们可以用这个函数来检查测试集的性能，并在一个dict中记录我们的分数：</p>
+<pre><code class="lang-python">f1_scores = defaultdict(<span class="hljs-built_in">dict</span>) 
+f1_scores[<span class="hljs-string">"de"</span>][<span class="hljs-string">"de"</span>] = get_f1_score(trainer, panx_de_encoded[<span class="hljs-string">"test"</span>]) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"F1-score of [de] model on [de] dataset: <span class="hljs-subst">{f1_scores[<span class="hljs-string">'de'</span>][<span class="hljs-string">'de'</span>]:<span class="hljs-number">.3</span>f}</span>"</span>)
 
-F1-score of [de] model on [de] dataset: 0.868
-</code></pre><p>对于一个NER任务来说，这些结果相当不错。我们的指标在85%左右，我们可以看到该模型在ORG实体上似乎最吃力，可能是因为这些实体在训练数据中最不常见，而且许多组织名称在XLM-R的词汇中很罕见。其他语言的情况如何？为了热身，让我们看看我们在德语上微调的模型在法语上的表现如何：</p>
-<pre><code>text_fr = "Jeff Dean est informaticien chez Google en Californie" 
+F1-score of [de] model on [de] dataset: <span class="hljs-number">0.868</span>
+</code></pre>
+<p>对于一个NER任务来说，这些结果相当不错。我们的指标在85%左右，我们可以看到该模型在ORG实体上似乎最吃力，可能是因为这些实体在训练数据中最不常见，而且许多组织名称在XLM-R的词汇中很罕见。其他语言的情况如何？为了热身，让我们看看我们在德语上微调的模型在法语上的表现如何：</p>
+<pre><code class="lang-python">text_fr = <span class="hljs-string">"Jeff Dean est informaticien chez Google en Californie"</span> 
 tag_text(text_fr, tags, trainer.model, xlmr_tokenizer)
-</code></pre><p><img src="images/chapter4/image-20220213220107583.png" alt="image-20220213220107583"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213220107583.png" alt="image-20220213220107583"></img></p>
 <p>还不错! 虽然这两种语言的名称和组织都是一样的，但该模型确实能够正确标记 "Kalifornien "的法语翻译。接下来，让我们通过编写一个简单的函数来量化我们的德语模型在整个法语测试集上的表现，该函数对数据集进行编码并生成分类报告：</p>
-<pre><code>def evaluate_lang_performance(lang, trainer):
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">evaluate_lang_performance</span>(<span class="hljs-params">lang, trainer</span>):
     panx_ds = encode_panx_dataset(panx_ch[lang]) 
-    return get_f1_score(trainer, panx_ds["test"]) 
-f1_scores["de"]["fr"] = evaluate_lang_performance("fr", trainer) 
-print(f"F1-score of [de] model on [fr] dataset: {f1_scores['de']['fr']:.3f}") 
+    <span class="hljs-keyword">return</span> get_f1_score(trainer, panx_ds[<span class="hljs-string">"test"</span>]) 
+f1_scores[<span class="hljs-string">"de"</span>][<span class="hljs-string">"fr"</span>] = evaluate_lang_performance(<span class="hljs-string">"fr"</span>, trainer) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"F1-score of [de] model on [fr] dataset: <span class="hljs-subst">{f1_scores[<span class="hljs-string">'de'</span>][<span class="hljs-string">'fr'</span>]:<span class="hljs-number">.3</span>f}</span>"</span>) 
 
-F1-score of [de] model on [fr] dataset: 0.714
-</code></pre><p>虽然我们看到微观平均指标下降了约15分，但请记住，我们的模型还没有看到一个贴有标签的法语例子！一般来说，性能的下降与语言之间的 "距离 "有关。一般来说，性能下降的大小与语言之间的 "距离 "有关。虽然德语和法语被归类为印欧语系，但从技术上讲，它们属于不同的语系。分别是日耳曼语和罗曼语。</p>
+F1-score of [de] model on [fr] dataset: <span class="hljs-number">0.714</span>
+</code></pre>
+<p>虽然我们看到微观平均指标下降了约15分，但请记住，我们的模型还没有看到一个贴有标签的法语例子！一般来说，性能的下降与语言之间的 "距离 "有关。一般来说，性能下降的大小与语言之间的 "距离 "有关。虽然德语和法语被归类为印欧语系，但从技术上讲，它们属于不同的语系。分别是日耳曼语和罗曼语。</p>
 <p>接下来，让我们评估一下在意大利语上的表现。由于意大利语也是一种罗曼语，我们期望得到一个与法语类似的结果:</p>
-<pre><code>f1_scores["de"]["it"] = evaluate_lang_performance("it", trainer) 
-print(f"F1-score of [de] model on [it] dataset: {f1_scores['de']['it']:.3f}") 
+<pre><code class="lang-python">f1_scores[<span class="hljs-string">"de"</span>][<span class="hljs-string">"it"</span>] = evaluate_lang_performance(<span class="hljs-string">"it"</span>, trainer) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"F1-score of [de] model on [it] dataset: <span class="hljs-subst">{f1_scores[<span class="hljs-string">'de'</span>][<span class="hljs-string">'it'</span>]:<span class="hljs-number">.3</span>f}</span>"</span>) 
 
-F1-score of [de] model on [it] dataset: 0.692
-</code></pre><p>事实上，我们的期望得到了F-scores的证实。最后，让我们来看看英语的表现，它属于日耳曼语系的语言:</p>
-<pre><code>f1_scores["de"]["en"] = evaluate_lang_performance("en", trainer) 
-print(f"F1-score of [de] model on [en] dataset: {f1_scores['de']['en']:.3f}") 
+F1-score of [de] model on [it] dataset: <span class="hljs-number">0.692</span>
+</code></pre>
+<p>事实上，我们的期望得到了F-scores的证实。最后，让我们来看看英语的表现，它属于日耳曼语系的语言:</p>
+<pre><code class="lang-python">f1_scores[<span class="hljs-string">"de"</span>][<span class="hljs-string">"en"</span>] = evaluate_lang_performance(<span class="hljs-string">"en"</span>, trainer) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"F1-score of [de] model on [en] dataset: <span class="hljs-subst">{f1_scores[<span class="hljs-string">'de'</span>][<span class="hljs-string">'en'</span>]:<span class="hljs-number">.3</span>f}</span>"</span>) 
 
-F1-score of [de] model on [en] dataset: 0.589
-</code></pre><p>令人惊讶的是，我们的模型在英语上的表现最差，尽管我们可能直观地期望德语比法语更类似于英语。在对德语进行了微调并对法语和英语进行了零点转移之后，接下来让我们看看什么时候直接对目标语言进行微调是有意义的。</p>
+F1-score of [de] model on [en] dataset: <span class="hljs-number">0.589</span>
+</code></pre>
+<p>令人惊讶的是，我们的模型在英语上的表现最差，尽管我们可能直观地期望德语比法语更类似于英语。在对德语进行了微调并对法语和英语进行了零点转移之后，接下来让我们看看什么时候直接对目标语言进行微调是有意义的。</p>
 <h3 id="何时零样本迁移才有意义？">何时零样本迁移才有意义？</h3>
 <p>到目前为止，我们已经看到，在德语语料库上对XLM-R进行微调，可以得到85%左右的F-score，而且不需要任何额外的训练，该模型就能够在我们的语料库中的其他语言上取得适度的表现。问题是，这些结果有多好，它们与在单语语料库上微调的XLM-R模型相比如何？</p>
 <p>在本节中，我们将通过在越来越大的训练集上对XLM-R进行微调，来探索法语语料库的这个问题。通过这种方式跟踪性能，我们可以确定在哪一点上零点跨语言转移更有优势，这在实践中对指导关于是否收集更多标记数据的决定很有用。</p>
 <p>为了简单起见，我们将保持对德语语料库进行微调时的超参数，只是我们将调整TrainingArguments的logging_steps参数，以考虑到训练集规模的变化。我们可以用一个简单的函数把这一切包起来，该函数接收一个对应于单语语料库的DatasetDict对象，通过num_samples对其进行降样，并对XLM-R进行微调，以返回最佳历时的度量：</p>
-<pre><code>def train_on_subset(dataset, num_samples): 
-    train_ds = dataset["train"].shuffle(seed=42).select(range(num_samples)) 
-    valid_ds = dataset["validation"] 
-    test_ds = dataset["test"] training_args.logging_steps = len(train_ds) // batch_size 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">train_on_subset</span>(<span class="hljs-params">dataset, num_samples</span>): 
+    train_ds = dataset[<span class="hljs-string">"train"</span>].shuffle(seed=<span class="hljs-number">42</span>).select(<span class="hljs-built_in">range</span>(num_samples)) 
+    valid_ds = dataset[<span class="hljs-string">"validation"</span>] 
+    test_ds = dataset[<span class="hljs-string">"test"</span>] training_args.logging_steps = <span class="hljs-built_in">len</span>(train_ds) // batch_size 
     trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, train_dataset=train_ds, eval_dataset=valid_ds, tokenizer=xlmr_tokenizer) 
     trainer.train() 
-    if training_args.push_to_hub: 
-        trainer.push_to_hub(commit_message="Training completed!") 
+    <span class="hljs-keyword">if</span> training_args.push_to_hub: 
+        trainer.push_to_hub(commit_message=<span class="hljs-string">"Training completed!"</span>) 
     f1_score = get_f1_score(trainer, test_ds) 
-    return pd.DataFrame.from_dict( {"num_samples": [len(train_ds)], "f1_score": [f1_score]})
-</code></pre><p>正如我们对德语语料库的微调一样，我们也需要将法语语料库编码为输入ID、注意力掩码和标签ID：</p>
-<pre><code>panx_fr_encoded = encode_panx_dataset(panx_ch["fr"])
-</code></pre><p>接下来，让我们通过在250个例子的小型训练集上运行来检查我们的函数是否有效：</p>
-<pre><code>training_args.push_to_hub = False 
-metrics_df = train_on_subset(panx_fr_encoded, 250) 
+    <span class="hljs-keyword">return</span> pd.DataFrame.from_dict( {<span class="hljs-string">"num_samples"</span>: [<span class="hljs-built_in">len</span>(train_ds)], <span class="hljs-string">"f1_score"</span>: [f1_score]})
+</code></pre>
+<p>正如我们对德语语料库的微调一样，我们也需要将法语语料库编码为输入ID、注意力掩码和标签ID：</p>
+<pre><code class="lang-python">panx_fr_encoded = encode_panx_dataset(panx_ch[<span class="hljs-string">"fr"</span>])
+</code></pre>
+<p>接下来，让我们通过在250个例子的小型训练集上运行来检查我们的函数是否有效：</p>
+<pre><code class="lang-python">training_args.push_to_hub = <span class="hljs-literal">False</span> 
+metrics_df = train_on_subset(panx_fr_encoded, <span class="hljs-number">250</span>) 
 
 metrics_df
-</code></pre><p><img src="images/chapter4/image-20220213220711923.png" alt="image-20220213220711923"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213220711923.png" alt="image-20220213220711923"></img></p>
 <p>我们可以看到，在只有250个例子的情况下，法语的微调在很大程度上低于德语的零枪转移。现在让我们把训练集的大小增加到500、1000、2000和4000个例子，以了解性能的提高：</p>
-<pre><code>for num_samples in [500, 1000, 2000, 4000]: 
-    metrics_df = metrics_df.append( train_on_subset(panx_fr_encoded, num_samples), ignore_index=True)
-</code></pre><p>我们可以通过绘制测试集上的F-scores作为增加训练集大小的函数，来比较法语样本的微调与德语的零点跨语言转移之间的比较：</p>
-<pre><code>fig, ax = plt.subplots() 
-ax.axhline(f1_scores["de"]["fr"], ls="--", color="r") 
-metrics_df.set_index("num_samples").plot(ax=ax) 
-plt.legend(["Zero-shot from de", "Fine-tuned on fr"], loc="lower right") plt.ylim((0, 1)) 
-plt.xlabel("Number of Training Samples") 
-plt.ylabel("F1 Score") 
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> num_samples <span class="hljs-keyword">in</span> [<span class="hljs-number">500</span>, <span class="hljs-number">1000</span>, <span class="hljs-number">2000</span>, <span class="hljs-number">4000</span>]: 
+    metrics_df = metrics_df.append( train_on_subset(panx_fr_encoded, num_samples), ignore_index=<span class="hljs-literal">True</span>)
+</code></pre>
+<p>我们可以通过绘制测试集上的F-scores作为增加训练集大小的函数，来比较法语样本的微调与德语的零点跨语言转移之间的比较：</p>
+<pre><code class="lang-python">fig, ax = plt.subplots() 
+ax.axhline(f1_scores[<span class="hljs-string">"de"</span>][<span class="hljs-string">"fr"</span>], ls=<span class="hljs-string">"--"</span>, color=<span class="hljs-string">"r"</span>) 
+metrics_df.set_index(<span class="hljs-string">"num_samples"</span>).plot(ax=ax) 
+plt.legend([<span class="hljs-string">"Zero-shot from de"</span>, <span class="hljs-string">"Fine-tuned on fr"</span>], loc=<span class="hljs-string">"lower right"</span>) plt.ylim((<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)) 
+plt.xlabel(<span class="hljs-string">"Number of Training Samples"</span>) 
+plt.ylabel(<span class="hljs-string">"F1 Score"</span>) 
 plt.show()
-</code></pre><p><img src="images/chapter4/image-20220213220841464.png" alt="image-20220213220841464"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213220841464.png" alt="image-20220213220841464"></img></p>
 <p>从图中我们可以看到，在大约750个训练实例之前，零点转移一直是有竞争力的，在这之后，对法语的微调达到了与我们对德语微调时类似的性能水平。然而，这个结果是不容忽视的。根据我们的经验，让领域专家给几百个文档贴上标签的成本很高，特别是对NER来说，贴标签的过程很细而且很耗时。</p>
 <p>我们可以尝试最后一种技术来评估多语言学习：同时对多种语言进行微调！让我们来看看如何进行微调。让我们来看看我们如何做到这一点。</p>
 <h3 id="一次性对多种语言进行微调">一次性对多种语言进行微调</h3>
 <p>到目前为止，我们已经看到，从德语到法语或意大利语的零拍跨语言转移产生了约15点的性能下降。缓解这种情况的一个方法是同时对多种语言进行微调。为了看看我们能得到什么类型的收益，让我们首先使用 concatenate_datasets()函数，将德语和法语语料库连接起来：</p>
-<pre><code>from datasets import concatenate_datasets 
-def concatenate_splits(corpora): 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> concatenate_datasets 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">concatenate_splits</span>(<span class="hljs-params">corpora</span>): 
     multi_corpus = DatasetDict() 
-    for split in corpora[0].keys(): 
-        multi_corpus[split] = concatenate_datasets( [corpus[split] for corpus in corpora]).shuffle(seed=42) 
-    return multi_corpus 
+    <span class="hljs-keyword">for</span> split <span class="hljs-keyword">in</span> corpora[<span class="hljs-number">0</span>].keys(): 
+        multi_corpus[split] = concatenate_datasets( [corpus[split] <span class="hljs-keyword">for</span> corpus <span class="hljs-keyword">in</span> corpora]).shuffle(seed=<span class="hljs-number">42</span>) 
+    <span class="hljs-keyword">return</span> multi_corpus 
 panx_de_fr_encoded = concatenate_splits([panx_de_encoded, panx_fr_encoded])
-</code></pre><p>对于训练，我们将再次使用前几节的超参数，因此我们可以简单地更新训练器中的记录步骤、模型和数据集：</p>
-<pre><code>training_args.logging_steps = len(panx_de_fr_encoded["train"]) // batch_size 
-training_args.push_to_hub = True 
-training_args.output_dir = "xlm-roberta-base-finetuned-panx-de-fr" 
-trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, tokenizer=xlmr_tokenizer, train_dataset=panx_de_fr_encoded["train"], eval_dataset=panx_de_fr_encoded["validation"])
+</code></pre>
+<p>对于训练，我们将再次使用前几节的超参数，因此我们可以简单地更新训练器中的记录步骤、模型和数据集：</p>
+<pre><code class="lang-python">training_args.logging_steps = <span class="hljs-built_in">len</span>(panx_de_fr_encoded[<span class="hljs-string">"train"</span>]) // batch_size 
+training_args.push_to_hub = <span class="hljs-literal">True</span> 
+training_args.output_dir = <span class="hljs-string">"xlm-roberta-base-finetuned-panx-de-fr"</span> 
+trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, tokenizer=xlmr_tokenizer, train_dataset=panx_de_fr_encoded[<span class="hljs-string">"train"</span>], eval_dataset=panx_de_fr_encoded[<span class="hljs-string">"validation"</span>])
 trainer.train() 
-trainer.push_to_hub(commit_message="Training completed!")
-</code></pre><p>让我们来看看该模型在每种语言的测试集上的表现：</p>
-<pre><code>for lang in langs: 
+trainer.push_to_hub(commit_message=<span class="hljs-string">"Training completed!"</span>)
+</code></pre>
+<p>让我们来看看该模型在每种语言的测试集上的表现：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> lang <span class="hljs-keyword">in</span> langs: 
     f1 = evaluate_lang_performance(lang, trainer) 
-    print(f"F1-score of [de-fr] model on [{lang}] dataset: {f1:.3f}") 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"F1-score of [de-fr] model on [<span class="hljs-subst">{lang}</span>] dataset: <span class="hljs-subst">{f1:<span class="hljs-number">.3</span>f}</span>"</span>) 
 
 
- F1-score of [de-fr] model on [de] dataset: 0.866 
- F1-score of [de-fr] model on [fr] dataset: 0.868 
- F1-score of [de-fr] model on [it] dataset: 0.815 
- F1-score of [de-fr] model on [en] dataset: 0.677
-</code></pre><p>它在法语分词上的表现比以前好得多，与德语测试集上的表现相当。有趣的是，它在意大利语和英语部分的表现也提高了大约10个百分点。因此，即使增加另一种语言的训练数据，也能提高该模型在未见过的语言上的表现。</p>
+ F1-score of [de-fr] model on [de] dataset: <span class="hljs-number">0.866</span> 
+ F1-score of [de-fr] model on [fr] dataset: <span class="hljs-number">0.868</span> 
+ F1-score of [de-fr] model on [it] dataset: <span class="hljs-number">0.815</span> 
+ F1-score of [de-fr] model on [en] dataset: <span class="hljs-number">0.677</span>
+</code></pre>
+<p>它在法语分词上的表现比以前好得多，与德语测试集上的表现相当。有趣的是，它在意大利语和英语部分的表现也提高了大约10个百分点。因此，即使增加另一种语言的训练数据，也能提高该模型在未见过的语言上的表现。</p>
 <p>让我们通过比较在每种语言上的微调和在所有语料库上的多语言学习的性能来完成我们的分析。由于我们已经对德语语料库进行了微调，我们可以用train_on_subset()函数对其余语言进行微调，num_samples等于训练集的例子数量。</p>
-<pre><code>corpora = [panx_de_encoded] 
-# Exclude German from iteration 
-for lang in langs[1:]: 
-    training_args.output_dir = f"xlm-roberta-base-finetuned-panx-{lang}" 
-    # Fine-tune on monolingual corpus 
+<pre><code class="lang-python">corpora = [panx_de_encoded] 
+<span class="hljs-comment"># Exclude German from iteration </span>
+<span class="hljs-keyword">for</span> lang <span class="hljs-keyword">in</span> langs[<span class="hljs-number">1</span>:]: 
+    training_args.output_dir = <span class="hljs-string">f"xlm-roberta-base-finetuned-panx-<span class="hljs-subst">{lang}</span>"</span> 
+    <span class="hljs-comment"># Fine-tune on monolingual corpus </span>
     ds_encoded = encode_panx_dataset(panx_ch[lang]) 
-    metrics = train_on_subset(ds_encoded, ds_encoded["train"].num_rows) 
-    # Collect F1-scores in common dict 
-    f1_scores[lang][lang] = metrics["f1_score"][0]
-    # Add monolingual corpus to list of corpora to concatenate 
+    metrics = train_on_subset(ds_encoded, ds_encoded[<span class="hljs-string">"train"</span>].num_rows) 
+    <span class="hljs-comment"># Collect F1-scores in common dict </span>
+    f1_scores[lang][lang] = metrics[<span class="hljs-string">"f1_score"</span>][<span class="hljs-number">0</span>]
+    <span class="hljs-comment"># Add monolingual corpus to list of corpora to concatenate </span>
     corpora.append(ds_encoded)
-</code></pre><p>现在我们已经对每种语言的语料库进行了微调，下一步是将所有的分片串联起来，创建一个所有四种语言的多语言语料库。与之前的德语和法语分析一样，我们可以使用concatenate_splits()函数来为我们在上一步生成的语料库列表上完成这一步骤：</p>
-<pre><code>corpora_encoded = concatenate_splits(corpora)
-</code></pre><p>现在我们有了我们的多语言语料库，我们用训练器运行熟悉的步骤：</p>
-<pre><code>training_args.logging_steps = len(corpora_encoded["train"]) // batch_size 
-training_args.output_dir = "xlm-roberta-base-finetuned-panx-all"
-trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, tokenizer=xlmr_tokenizer, train_dataset=corpora_encoded["train"], eval_dataset=corpora_encoded["validation"]) 
+</code></pre>
+<p>现在我们已经对每种语言的语料库进行了微调，下一步是将所有的分片串联起来，创建一个所有四种语言的多语言语料库。与之前的德语和法语分析一样，我们可以使用concatenate_splits()函数来为我们在上一步生成的语料库列表上完成这一步骤：</p>
+<pre><code class="lang-python">corpora_encoded = concatenate_splits(corpora)
+</code></pre>
+<p>现在我们有了我们的多语言语料库，我们用训练器运行熟悉的步骤：</p>
+<pre><code class="lang-python">training_args.logging_steps = <span class="hljs-built_in">len</span>(corpora_encoded[<span class="hljs-string">"train"</span>]) // batch_size 
+training_args.output_dir = <span class="hljs-string">"xlm-roberta-base-finetuned-panx-all"</span>
+trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, tokenizer=xlmr_tokenizer, train_dataset=corpora_encoded[<span class="hljs-string">"train"</span>], eval_dataset=corpora_encoded[<span class="hljs-string">"validation"</span>]) 
 trainer.train() 
-trainer.push_to_hub(commit_message="Training completed!")
-</code></pre><p>最后一步是在每种语言的测试集上生成训练器的预测结果。这将使我们深入了解多语言学习的真正效果。我们将在f1_scores字典中收集F-scores，然后创建一个DataFrame，总结我们多语言实验的主要结果:</p>
-<pre><code>for idx, lang in enumerate(langs): 
-    f1_scores["all"][lang] = get_f1_score(trainer, corpora[idx]["test"]) 
-scores_data = {"de": f1_scores["de"], "each": {lang: f1_scores[lang][lang] for lang in langs}, "all": f1_scores["all"]} 
-f1_scores_df = pd.DataFrame(scores_data).T.round(4) 
-f1_scores_df.rename_axis(index="Fine-tune on", columns="Evaluated on", inplace=True)
+trainer.push_to_hub(commit_message=<span class="hljs-string">"Training completed!"</span>)
+</code></pre>
+<p>最后一步是在每种语言的测试集上生成训练器的预测结果。这将使我们深入了解多语言学习的真正效果。我们将在f1_scores字典中收集F-scores，然后创建一个DataFrame，总结我们多语言实验的主要结果:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> idx, lang <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(langs): 
+    f1_scores[<span class="hljs-string">"all"</span>][lang] = get_f1_score(trainer, corpora[idx][<span class="hljs-string">"test"</span>]) 
+scores_data = {<span class="hljs-string">"de"</span>: f1_scores[<span class="hljs-string">"de"</span>], <span class="hljs-string">"each"</span>: {lang: f1_scores[lang][lang] <span class="hljs-keyword">for</span> lang <span class="hljs-keyword">in</span> langs}, <span class="hljs-string">"all"</span>: f1_scores[<span class="hljs-string">"all"</span>]} 
+f1_scores_df = pd.DataFrame(scores_data).T.<span class="hljs-built_in">round</span>(<span class="hljs-number">4</span>) 
+f1_scores_df.rename_axis(index=<span class="hljs-string">"Fine-tune on"</span>, columns=<span class="hljs-string">"Evaluated on"</span>, inplace=<span class="hljs-literal">True</span>)
 
 f1_scores_df
-</code></pre><p><img src="images/chapter4/image-20220213221808785.png" alt="image-20220213221808785"></img></p>
+</code></pre>
+<p><img src="images/chapter4/image-20220213221808785.png" alt="image-20220213221808785"></img></p>
 <p>从这些结果中，我们可以得出一些一般性的结论。</p>
 <ul>
 <li>多语言学习可以带来显著的性能提升，尤其是当跨语言转移的低资源语言属于类似的语言家族时。在我们的实验中，我们可以看到德语、法语和意大利语在所有类别中都取得了相似的表现，这表明这些语言之间的相似度要高于英语。</li>
@@ -932,7 +999,7 @@ f1_scores_df
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"多语言命名实体识别","level":"1.6","depth":1,"next":{"title":"文本生成","level":"1.7","depth":1,"path":"chapter5.md","ref":"chapter5.md","articles":[]},"previous":{"title":"Transformers架构剖析","level":"1.5","depth":1,"path":"chapter3.md","ref":"chapter3.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter4.md","mtime":"2024-08-23T19:12:41.446Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"多语言命名实体识别","level":"1.6","depth":1,"next":{"title":"文本生成","level":"1.7","depth":1,"path":"chapter5.md","ref":"chapter5.md","articles":[]},"previous":{"title":"Transformers架构剖析","level":"1.5","depth":1,"path":"chapter3.md","ref":"chapter3.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter4.md","mtime":"2025-01-05T17:59:00.401Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -986,10 +1053,6 @@ f1_scores_df
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -1006,7 +1069,7 @@ f1_scores_df
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

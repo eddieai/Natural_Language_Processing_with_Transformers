@@ -6,7 +6,7 @@
         <title>文本分类 · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -326,7 +326,7 @@
 <p>  为了建立我们的情绪检测器，我们将使用一个伟大的数据集，该数据集来自一篇探讨英语Twitter消息中情绪如何表现的文章。 与大多数只涉及 "积极 "和 "消极 "两极的情感分析数据集不同，这个数据集包含六种基本情感。 愤怒、厌恶、恐惧、喜悦、悲伤和惊讶。 给定一条推文，我们的任务是训练一个可以将其归类为这些情绪之一的模型。</p>
 <h3 id="对hugging-face数据集的初步了解">对Hugging face数据集的初步了解</h3>
 <p>  我们将使用Datasets 类库从Hugging Face Hub下载数据。 我们可以使用list_datasets()函数来查看Hub上有哪些数据集可用。</p>
-<pre><code class="lang-py"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> list_datasets 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> list_datasets 
 all_datasets = list_datasets() 
 <span class="hljs-built_in">print</span>(<span class="hljs-string">f"There are <span class="hljs-subst">{<span class="hljs-built_in">len</span>(all_datasets)}</span> datasets currently available on the Hub"</span>) 
 <span class="hljs-built_in">print</span>(<span class="hljs-string">f"The first 10 are: <span class="hljs-subst">{all_datasets[:<span class="hljs-number">10</span>]}</span>"</span>) 
@@ -335,11 +335,11 @@ all_datasets = list_datasets()
 There are <span class="hljs-number">1753</span> datasets currently available on the Hub The first <span class="hljs-number">10</span> are: [<span class="hljs-string">'acronym_identification'</span>, <span class="hljs-string">'ade_corpus_v2'</span>, <span class="hljs-string">'adversarial_qa'</span>, <span class="hljs-string">'aeslc'</span>, <span class="hljs-string">'afrikaans_ner_corpus'</span>, <span class="hljs-string">'ag_news'</span>, <span class="hljs-string">'ai2_arc'</span>, <span class="hljs-string">'air_dialogue'</span>, <span class="hljs-string">'ajgt_twitter_ar'</span>, <span class="hljs-string">'allegro_reviews'</span>]
 </code></pre>
 <p>  我们看到每个数据集都有一个名字，所以让我们用load_dataset()函数加载情感数据集。</p>
-<pre><code class="lang-py"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> load_dataset
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> load_dataset
 emotions = load_dataset(<span class="hljs-string">"emotion"</span>)
 </code></pre>
 <p>如果我们看一下我们的emotion对象的内部：</p>
-<pre><code class="lang-py">emotions
+<pre><code class="lang-python">emotions
 
 DatasetDict(
 { 
@@ -349,7 +349,7 @@ DatasetDict(
 })
 </code></pre>
 <p>我们看到它类似于一个Python字典，每个键都对应于不同的分割。 我们可以使用通常的字典语法来访问一个单独的分割：</p>
-<pre><code class="lang-py">train_ds = emotions[<span class="hljs-string">"train"</span>]
+<pre><code class="lang-python">train_ds = emotions[<span class="hljs-string">"train"</span>]
 train_ds 
 
 Dataset({ features: [<span class="hljs-string">'text'</span>, <span class="hljs-string">'label'</span>], num_rows: <span class="hljs-number">16000</span> })
@@ -359,27 +359,27 @@ Dataset({ features: [<span class="hljs-string">'text'</span>, <span class="hljs-
 
 16000
 </code></pre><p>或通过其索引访问一个单一的例子：</p>
-<pre><code class="lang-py">train_ds[<span class="hljs-number">0</span>] 
+<pre><code class="lang-python">train_ds[<span class="hljs-number">0</span>] 
 
 {<span class="hljs-string">'label'</span>: <span class="hljs-number">0</span>, <span class="hljs-string">'text'</span>: <span class="hljs-string">'i didnt feel humiliated'</span>}
 </code></pre>
 <p>这里我们看到，单行被表示为一个字典，其中的键对应于列名：</p>
-<pre><code class="lang-py">train_ds.column_names
+<pre><code class="lang-python">train_ds.column_names
 
 [<span class="hljs-string">'text'</span>, <span class="hljs-string">'label'</span>]
 </code></pre>
 <p>并且值是推文和情感类型。 这反映出Datasets是基于Apache Arrow的，它定义了一种类型化的列式格式，比本地Python更节省内存。 我们可以通过访问Dataset对象的特征属性来了解在引擎盖下使用了哪些数据类型：</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(train_ds.features)
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(train_ds.features)
 
 {<span class="hljs-string">'text'</span>: Value(dtype=<span class="hljs-string">'string'</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>), <span class="hljs-string">'label'</span>: ClassLabel(num_classes=<span class="hljs-number">6</span>, names=[<span class="hljs-string">'sadness'</span>, <span class="hljs-string">'joy'</span>, <span class="hljs-string">'love'</span>, <span class="hljs-string">'anger'</span>, <span class="hljs-string">'fear'</span>, <span class="hljs-string">'surprise'</span>], names_file=<span class="hljs-literal">None</span>, <span class="hljs-built_in">id</span>=<span class="hljs-literal">None</span>)}
 </code></pre>
 <p>在这种情况下，文本列的数据类型是字符串，而标签列是一个特殊的ClassLabel对象，包含了关于类名和它们与整数的映射信息。 我们也可以用一个切片来访问几条记录：</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(train_ds[:<span class="hljs-number">5</span>])
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(train_ds[:<span class="hljs-number">5</span>])
 
 {<span class="hljs-string">'text'</span>: [<span class="hljs-string">'i didnt feel humiliated'</span>, <span class="hljs-string">'i can go from feeling so hopeless to so damned hopeful just from being around someone who cares and is awake'</span>, <span class="hljs-string">'im grabbing a minute to post i feel greedy wrong'</span>, <span class="hljs-string">'i am ever feeling nostalgic about the fireplace i will know that it is still on the property'</span>, <span class="hljs-string">'i am feeling grouchy'</span>], <span class="hljs-string">'label'</span>: [<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>]}
 </code></pre>
 <p>注意，在这种情况下，字典中的值现在是一个List，而不是单个元素。 我们也可以通过名称来获得完整的列：</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(train_ds[<span class="hljs-string">"text"</span>][:<span class="hljs-number">5</span>]) 
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(train_ds[<span class="hljs-string">"text"</span>][:<span class="hljs-number">5</span>]) 
 
 [<span class="hljs-string">'i didnt feel humiliated'</span>, <span class="hljs-string">'i can go from feeling so hopeless to so damned hopeful just from being around someone who cares and is awake'</span>, <span class="hljs-string">'im grabbing a minute to post i feel greedy wrong'</span>, <span class="hljs-string">'i am ever feeling nostalgic about the fireplace i will know that it is still on the property'</span>, <span class="hljs-string">'i am feeling grouchy'</span>]
 </code></pre>
@@ -388,7 +388,7 @@ Dataset({ features: [<span class="hljs-string">'text'</span>, <span class="hljs-
 <p>我们将使用Hugging Face Hub来下载本书中大多数例子的数据集。 但在许多情况下，你会发现自己的工作数据要么存储在你的笔记本电脑上，要么存储在你组织的远程服务器上。 数据集提供了几个加载脚本来处理本地和远程数据集。 最常见的数据格式的例子见表2-1：</p>
 <p><img src="images/chapter2/image-20220212202451702.png" alt="image-20220212202451702"></img></p>
 <p>正如你所看到的，对于每一种数据格式，我们只需要将相关的加载脚本传递给load_dataset()函数，以及指定一个或多个文件的路径或URL的 data_files 参数。 例如，情感数据集的源文件实际上托管在Dropbox上，所以加载数据集的另一种方法是先下载其中一个分割文件。 </p>
-<pre><code class="lang-py">dataset_url = <span class="hljs-string">"https://www.dropbox.com/s/1pzkadrvffbqw6o/train.txt"</span> 
+<pre><code class="lang-python">dataset_url = <span class="hljs-string">"https://www.dropbox.com/s/1pzkadrvffbqw6o/train.txt"</span> 
 
 !wget {dataset_url}
 </code></pre>
@@ -404,14 +404,14 @@ i didnt feel humiliated;sadness
 <p>这将为你自动下载和缓存数据集。 正如你所看到的，load_dataset()函数是非常通用的。 我们建议查看数据集文档以获得完整的概述。</p>
 <h2 id="从-datasets-类-到-dataframes-类">从 Datasets 类 到 DataFrames 类</h2>
 <p>虽然Datasets提供了很多底层的功能来切分我们的数据，但将Dataset对象转换为Pandas DataFrame通常是很方便的，这样我们就可以访问高层的API来实现数据可视化。 为了实现转换，数据集提供了一个set_format()方法，允许我们改变数据集的输出格式。 请注意，这并不改变底层的数据格式（这是一个箭头表），如果需要，你可以在以后切换到另一种格式：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd 
 emotions.set_format(<span class="hljs-built_in">type</span>=<span class="hljs-string">"pandas"</span>) 
 df = emotions[<span class="hljs-string">"train"</span>][:] 
 df.head()
 </code></pre>
 <p><img src="images/chapter2/image-20220212203837791.png" alt="image-20220212203837791"></img></p>
 <p>正如你所看到的，列标题被保留了下来，前几行与我们之前的数据视图相吻合。 然而，标签是以整数表示的，所以让我们使用标签功能的int2str()方法，在我们的DataFrame中创建一个新的列，其中有相应的标签名称：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">def</span> <span class="hljs-title function_">label_int2str</span>(<span class="hljs-params">row</span>): 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">label_int2str</span>(<span class="hljs-params">row</span>): 
     <span class="hljs-keyword">return</span> emotions[<span class="hljs-string">"train"</span>].features[<span class="hljs-string">"label"</span>].int2str(row) 
 df[<span class="hljs-string">"label_name"</span>] = df[<span class="hljs-string">"label"</span>].apply(label_int2str) 
 df.head()
@@ -421,7 +421,7 @@ df.head()
 <h3 id="查看类分布">查看类分布</h3>
 <p>每当你在处理文本分类问题时，检查例子在各个类别中的分布是一个好主意。 一个具有倾斜类分布的数据集在训练损失和评价指标方面可能需要与平衡的数据集有不同的处理。</p>
 <p>通过Pandas和Matplotlib，我们可以快速地将类的分布可视化，如下所示:</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt
 df[<span class="hljs-string">"label_name"</span>].value_counts(ascending=<span class="hljs-literal">True</span>).plot.barh() 
 plt.title(<span class="hljs-string">"Frequency of Classes"</span>) 
 plt.show()
@@ -437,7 +437,7 @@ plt.show()
 <p>现在我们已经看了这些类，让我们来看看推文本身：</p>
 <h3 id="我们的推文有多长？">我们的推文有多长？</h3>
 <p>Transformers模型有一个最大的输入序列长度，被称为最大上下文大小。 对于使用DistilBERT的应用程序，最大的上下文大小是512个标记，相当于几段文字。 正如我们将在下一节中看到的，一个标记是一个原子性的文本。 现在，我们将把一个标记视为一个单字。 我们可以通过观察每条推文的字数分布来粗略估计每种情绪的推文长度:</p>
-<pre><code class="lang-py">df[<span class="hljs-string">"Words Per Tweet"</span>] = df[<span class="hljs-string">"text"</span>].<span class="hljs-built_in">str</span>.split().apply(<span class="hljs-built_in">len</span>) 
+<pre><code class="lang-python">df[<span class="hljs-string">"Words Per Tweet"</span>] = df[<span class="hljs-string">"text"</span>].<span class="hljs-built_in">str</span>.split().apply(<span class="hljs-built_in">len</span>) 
 df.boxplot(<span class="hljs-string">"Words Per Tweet"</span>, by=<span class="hljs-string">"label_name"</span>, grid=<span class="hljs-literal">False</span>, showfliers=<span class="hljs-literal">False</span>, color=<span class="hljs-string">"black"</span>) 
 plt.suptitle(<span class="hljs-string">""</span>) 
 plt.xlabel(<span class="hljs-string">""</span>) 
@@ -446,41 +446,41 @@ plt.show()
 <p><img src="images/chapter2/image-20220212215038666.png" alt="image-20220212215038666"></img></p>
 <p>从图中我们看到，对于每一种情绪，大多数推文的长度都在15个字左右，最长的推文远远低于DistilBERT的最大上下文大小。 长于模型上下文尺寸的文本需要被截断，如果被截断的文本包含关键信息，就会导致性能损失。 在这种情况下，看起来这不会是一个问题。</p>
 <p>现在让我们想一想，如何将这些原始文本转换成适合Transformers的格式! 既然我们已经不需要DataFrame格式了，那么我们也重新设置一下我们的数据集的输出格式吧:</p>
-<pre><code class="lang-py">emotions.reset_format()
+<pre><code class="lang-python">emotions.reset_format()
 </code></pre>
 <h2 id="从-文本到标记">从 文本到标记</h2>
 <p>像DistilBERT这样的转化器模型不能接收原始字符串作为输入。 相反，他们假设文本已被标记化并被编码为数字向量。 符号化是将字符串分解为模型中使用的原子单元的步骤。 有几种标记化策略可以采用，而且通常从语料库中学习到最佳的单词拆分成子单元的方法。 在研究用于DistilBERT的标记器之前，让我们考虑两个极端情况。 字符和词的标记化。</p>
 <h3 id="字符标记">字符标记</h3>
 <p>最简单的标记化方案是将每个字符单独送入模型。 在Python中，str对象实际上就是引擎盖下的数组，这使得我们只需一行代码就可以快速实现字符级的标记化：</p>
-<pre><code class="lang-py">text = <span class="hljs-string">"Tokenizing text is a core task of NLP."</span>
+<pre><code class="lang-python">text = <span class="hljs-string">"Tokenizing text is a core task of NLP."</span>
 tokenized_text = <span class="hljs-built_in">list</span>(text) 
 <span class="hljs-built_in">print</span>(tokenized_text) 
 [<span class="hljs-string">'T'</span>, <span class="hljs-string">'o'</span>, <span class="hljs-string">'k'</span>, <span class="hljs-string">'e'</span>, <span class="hljs-string">'n'</span>, <span class="hljs-string">'i'</span>, <span class="hljs-string">'z'</span>, <span class="hljs-string">'i'</span>, <span class="hljs-string">'n'</span>, <span class="hljs-string">'g'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'t'</span>, <span class="hljs-string">'e'</span>, <span class="hljs-string">'x'</span>, <span class="hljs-string">'t'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'i'</span>, <span class="hljs-string">'s'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'a'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'c'</span>, <span class="hljs-string">'o'</span>, <span class="hljs-string">'r'</span>, <span class="hljs-string">'e'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'t'</span>, <span class="hljs-string">'a'</span>, <span class="hljs-string">'s'</span>, <span class="hljs-string">'k'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'o'</span>, <span class="hljs-string">'f'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'N'</span>, <span class="hljs-string">'L'</span>, <span class="hljs-string">'P'</span>, <span class="hljs-string">'.'</span>]
 </code></pre>
 <p>这是一个好的开始，但我们还没有完成。 我们的模型希望每个字符都被转换为一个整数，这个过程有时被称为数值化。 做到这一点的一个简单方法是对每个独特的标记（在这种情况下是字符）用一个独特的整数进行编码：</p>
-<pre><code class="lang-py">token2idx = {ch: idx <span class="hljs-keyword">for</span> idx, ch <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(<span class="hljs-built_in">sorted</span>(<span class="hljs-built_in">set</span>(tokenized_text)))} 
+<pre><code class="lang-python">token2idx = {ch: idx <span class="hljs-keyword">for</span> idx, ch <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(<span class="hljs-built_in">sorted</span>(<span class="hljs-built_in">set</span>(tokenized_text)))} 
 <span class="hljs-built_in">print</span>(token2idx) 
 {<span class="hljs-string">' '</span>: <span class="hljs-number">0</span>, <span class="hljs-string">'.'</span>: <span class="hljs-number">1</span>, <span class="hljs-string">'L'</span>: <span class="hljs-number">2</span>, <span class="hljs-string">'N'</span>: <span class="hljs-number">3</span>, <span class="hljs-string">'P'</span>: <span class="hljs-number">4</span>, <span class="hljs-string">'T'</span>: <span class="hljs-number">5</span>, <span class="hljs-string">'a'</span>: <span class="hljs-number">6</span>, <span class="hljs-string">'c'</span>: <span class="hljs-number">7</span>, <span class="hljs-string">'e'</span>: <span class="hljs-number">8</span>, <span class="hljs-string">'f'</span>: <span class="hljs-number">9</span>, <span class="hljs-string">'g'</span>: <span class="hljs-number">10</span>, <span class="hljs-string">'i'</span>: <span class="hljs-number">11</span>, <span class="hljs-string">'k'</span>: <span class="hljs-number">12</span>, <span class="hljs-string">'n'</span>: <span class="hljs-number">13</span>, <span class="hljs-string">'o'</span>: <span class="hljs-number">14</span>, <span class="hljs-string">'r'</span>: <span class="hljs-number">15</span>, <span class="hljs-string">'s'</span>: <span class="hljs-number">16</span>, <span class="hljs-string">'t'</span>: <span class="hljs-number">17</span>, <span class="hljs-string">'x'</span>: <span class="hljs-number">18</span>, <span class="hljs-string">'z'</span>: <span class="hljs-number">19</span>}
 </code></pre>
 <p>这给了我们一个从词汇表中的每个字符到一个唯一的整数的映射。 现在我们可以使用token2idx将标记化的文本转换为一个整数的列表：</p>
-<pre><code class="lang-py">input_ids = [token2idx[token] <span class="hljs-keyword">for</span> token <span class="hljs-keyword">in</span> tokenized_text] 
+<pre><code class="lang-python">input_ids = [token2idx[token] <span class="hljs-keyword">for</span> token <span class="hljs-keyword">in</span> tokenized_text] 
 <span class="hljs-built_in">print</span>(input_ids)
 
 [<span class="hljs-number">5</span>, <span class="hljs-number">14</span>, <span class="hljs-number">12</span>, <span class="hljs-number">8</span>, <span class="hljs-number">13</span>, <span class="hljs-number">11</span>, <span class="hljs-number">19</span>, <span class="hljs-number">11</span>, <span class="hljs-number">13</span>, <span class="hljs-number">10</span>, <span class="hljs-number">0</span>, <span class="hljs-number">17</span>, <span class="hljs-number">8</span>, <span class="hljs-number">18</span>, <span class="hljs-number">17</span>, <span class="hljs-number">0</span>, <span class="hljs-number">11</span>, <span class="hljs-number">16</span>, <span class="hljs-number">0</span>, <span class="hljs-number">6</span>, <span class="hljs-number">0</span>, <span class="hljs-number">7</span>, <span class="hljs-number">14</span>, <span class="hljs-number">15</span>, <span class="hljs-number">8</span>, <span class="hljs-number">0</span>, <span class="hljs-number">17</span>, <span class="hljs-number">6</span>, <span class="hljs-number">16</span>, <span class="hljs-number">12</span>, <span class="hljs-number">0</span>, <span class="hljs-number">14</span>, <span class="hljs-number">9</span>, <span class="hljs-number">0</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">4</span>, <span class="hljs-number">1</span>]
 </code></pre>
 <p>每个标记现在都被映射到一个唯一的数字标识符（因此被称为input_ids）。 最后一步是将input_ids转换为二维独热向量的张量。 一热向量在机器学习中经常被用来编码分类数据，这些数据可以是顺序的，也可以是名义的。 例如，假设我们想对《变形金刚》电视剧中的人物名称进行编码。 一种方法是将每个名字映射到一个唯一的ID，如下所示：</p>
-<pre><code class="lang-py">categorical_df = pd.DataFrame( {<span class="hljs-string">"Name"</span>: [<span class="hljs-string">"Bumblebee"</span>, <span class="hljs-string">"Optimus Prime"</span>, <span class="hljs-string">"Megatron"</span>], <span class="hljs-string">"Label ID"</span>: [<span class="hljs-number">0</span>,<span class="hljs-number">1</span>,<span class="hljs-number">2</span>]}) 
+<pre><code class="lang-python">categorical_df = pd.DataFrame( {<span class="hljs-string">"Name"</span>: [<span class="hljs-string">"Bumblebee"</span>, <span class="hljs-string">"Optimus Prime"</span>, <span class="hljs-string">"Megatron"</span>], <span class="hljs-string">"Label ID"</span>: [<span class="hljs-number">0</span>,<span class="hljs-number">1</span>,<span class="hljs-number">2</span>]}) 
 
 categorical_df
 </code></pre>
 <p><img src="images/chapter2/image-20220212215646298.png" alt="image-20220212215646298"></img></p>
 <p>这种方法的问题是，它在名字之间创造了一个虚构的排序，而神经网络在学习这类关系方面确实很出色。 因此，我们可以为每个类别创建一个新的列，并在该类别为真的情况下指定为1，否则为0。 在Pandas中，这可以通过get_dummies()函数实现，如下所示：</p>
-<pre><code class="lang-py">pd.get_dummies(categorical_df[<span class="hljs-string">"Name"</span>])
+<pre><code class="lang-python">pd.get_dummies(categorical_df[<span class="hljs-string">"Name"</span>])
 </code></pre>
 <p><img src="images/chapter2/image-20220212215744165.png" alt="image-20220212215744165"></img></p>
 <p>这个DataFrame的行是独热向量，它有一个带1的 "热 "条目，其他地方都是0。 现在，看一下我们的input_ids，我们有一个类似的问题。 元素创建了一个序数尺度。 这意味着加减两个ID是一个无意义的操作，因为结果是一个新的ID，代表另一个随机标记。</p>
 <p>另一方面，添加两个一热编码的结果可以很容易地被解释。 两条 "热门 "的条目表示相应的标记共同出现。 我们可以在PyTorch中通过将input_ids转换为张量并应用one_hot()函数来创建独热编码，具体方法如下：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> torch
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch
 <span class="hljs-keyword">import</span> torch.nn.functional <span class="hljs-keyword">as</span> F
 input_ids = torch.tensor(input_ids)
 one_hot_encodings = F.one_hot(input_ids, num_classes=<span class="hljs-built_in">len</span>(token2idx))
@@ -494,7 +494,7 @@ torch.Size([<span class="hljs-number">38</span>, <span class="hljs-number">20</s
 <p><strong>警告</strong></p>
 <p>一定要在one_hot()函数中设置num_classes，这一点很重要，否则one-hot向量可能最终短于词汇表的长度（需要手动填充零）。 在TensorFlow中，等同的函数是tf.one_hot()，其中深度参数扮演num_classes的角色。</p>
 <p>通过检查第一个向量，我们可以验证一个1出现在input_ids[0]所指示的位置:</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(<span class="hljs-string">f"Token: <span class="hljs-subst">{tokenized_text[<span class="hljs-number">0</span>]}</span>"</span>) 
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(<span class="hljs-string">f"Token: <span class="hljs-subst">{tokenized_text[<span class="hljs-number">0</span>]}</span>"</span>) 
 <span class="hljs-built_in">print</span>(<span class="hljs-string">f"Tensor index: <span class="hljs-subst">{input_ids[<span class="hljs-number">0</span>]}</span>"</span>) 
 <span class="hljs-built_in">print</span>(<span class="hljs-string">f"One-hot: <span class="hljs-subst">{one_hot_encodings[<span class="hljs-number">0</span>]}</span>"</span>) 
 
@@ -506,7 +506,7 @@ One-hot: tensor([<span class="hljs-number">0</span>, <span class="hljs-number">0
 <h2 id="词标记化">词标记化</h2>
 <p>我们可以不把文本分割成字符，而是把它分割成单词，并把每个单词映射成一个整数。 从一开始就使用单词，使模型能够跳过从字符中学习单词的步骤，从而降低训练过程的复杂性。</p>
 <p>一类简单的单词标记器使用空白处对文本进行标记。 我们可以通过在原始文本上直接应用Python的split()函数来做到这一点（就像我们在测量推文长度时一样）：</p>
-<pre><code class="lang-py">tokenized_text = text.split() 
+<pre><code class="lang-python">tokenized_text = text.split() 
 <span class="hljs-built_in">print</span>(tokenized_text) 
 
 [<span class="hljs-string">'Tokenizing'</span>, <span class="hljs-string">'text'</span>, <span class="hljs-string">'is'</span>, <span class="hljs-string">'a'</span>, <span class="hljs-string">'core'</span>, <span class="hljs-string">'task'</span>, <span class="hljs-string">'of'</span>, <span class="hljs-string">'NLP.'</span>]
@@ -520,45 +520,45 @@ One-hot: tensor([<span class="hljs-number">0</span>, <span class="hljs-number">0
 <h3 id="子词标记化">子词标记化</h3>
 <p>子词标记化的基本思路是结合字符和词的标记化的最佳方面。 一方面，我们想把罕见的词分成更小的单元，以使模型能够处理复杂的词和拼写错误。 另一方面，我们希望把频繁出现的词作为唯一的实体，这样我们就可以把输入的长度保持在一个可控的规模。 子词标记化（以及单词标记化）的主要区别在于，它是利用统计规则和算法的混合，从预训练语料库中学习的。</p>
 <p>在NLP中，有几种常用的子词标记化算法，但让我们从WordPiece开始，它被BERT和DistilBERT标记化程序所使用。 了解WordPiece如何工作的最简单方法是看它的运行情况。Transformers提供了一个方便的AutoTokenizer类，允许你快速加载与预训练模型相关的标记器--我们只需调用其from_pretrained()方法，提供Hub上模型的ID或本地文件路径。 让我们从加载DistilBERT的标记器开始:</p>
-<pre><code class="lang-py"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer 
 model_ckpt = <span class="hljs-string">"distilbert-base-uncased"</span> 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
 </code></pre>
 <p>AutoTokenizer类属于一个更大的 "auto "类集合，其工作是自动检索模型的配置、预训练的权重或来自检查点名称的词汇。 这允许你在不同的模型之间快速切换，但如果你想手动加载特定的类，你也可以这样做。 例如，我们可以按以下方式加载DistilBERT标记器:</p>
-<pre><code class="lang-py"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> DistilBertTokenizer 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> DistilBertTokenizer 
 distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)
 </code></pre>
 <p><strong>注意事项</strong></p>
 <p>当你第一次运行AutoTokenizer.from_pretrained()方法时，你会看到一个进度条，显示预训练标记器的哪些参数从Hugging Face Hub加载。 当你第二次运行该代码时，它将从缓存中加载标记器，通常在~/.cache/huggingface。</p>
 <p>让我们通过向它输入简单的 "对文本进行标记是NLP的一项核心任务 "的例子文本，来检查这个标记器是如何工作的：</p>
-<pre><code class="lang-py">encoded_text = tokenizer(text) 
+<pre><code class="lang-python">encoded_text = tokenizer(text) 
 <span class="hljs-built_in">print</span>(encoded_text) 
 
 {<span class="hljs-string">'input_ids'</span>: [<span class="hljs-number">101</span>, <span class="hljs-number">19204</span>, <span class="hljs-number">6026</span>, <span class="hljs-number">3793</span>, <span class="hljs-number">2003</span>, <span class="hljs-number">1037</span>, <span class="hljs-number">4563</span>, <span class="hljs-number">4708</span>, <span class="hljs-number">1997</span>, <span class="hljs-number">17953</span>, <span class="hljs-number">2361</span>, <span class="hljs-number">1012</span>, <span class="hljs-number">102</span>], <span class="hljs-string">'attention_mask'</span>: [<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>]}
 </code></pre>
 <p>就像字符标记化一样，我们可以看到单词已经被映射到input_ids字段中的唯一整数。 我们将在下一节讨论attention_mask字段的作用。 现在我们有了input_ids，我们可以通过使用tokenizer的convert_ids_to_tokens()方法将它们转换为tokens：</p>
-<pre><code class="lang-py">tokens = tokenizer.convert_ids_to_tokens(encoded_text.input_ids) 
+<pre><code class="lang-python">tokens = tokenizer.convert_ids_to_tokens(encoded_text.input_ids) 
 <span class="hljs-built_in">print</span>(tokens) 
 
 [<span class="hljs-string">'[CLS]'</span>, <span class="hljs-string">'token'</span>, <span class="hljs-string">'##izing'</span>, <span class="hljs-string">'text'</span>, <span class="hljs-string">'is'</span>, <span class="hljs-string">'a'</span>, <span class="hljs-string">'core'</span>, <span class="hljs-string">'task'</span>, <span class="hljs-string">'of'</span>, <span class="hljs-string">'nl'</span>, <span class="hljs-string">'##p'</span>, <span class="hljs-string">'.'</span>, <span class="hljs-string">'[SEP]'</span>]
 </code></pre>
 <p>我们在这里可以观察到三件事。 首先，一些特殊的[CLS]和[SEP]标记已被添加到序列的开始和结束。 这些标记因模型而异，但它们的主要作用是指示序列的开始和结束。 第二，代币都被小写了，这是这个特定检查点的一个特点。 最后，我们可以看到，"tokenizing "和 "NLP "被分成了两个标记，这是有道理的，因为它们不是常见的词。 ##izing和##p中的##前缀意味着前面的字符串不是空白。 任何带有此前缀的标记在你将标记转换为字符串时，应与前一个标记合并。 AutoTokenizer类有一个convert_tokens_to_string()方法来做这件事，所以让我们把它应用到我们的tokens中：</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(tokenizer.convert_tokens_to_string(tokens)) 
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(tokenizer.convert_tokens_to_string(tokens)) 
 
 [CLS] tokenizing text <span class="hljs-keyword">is</span> a core task of nlp. [SEP]
 </code></pre>
 <p>AutoTokenizer类也有几个属性，提供关于标记器的信息。 例如，我们可以检查词汇量的大小：</p>
-<pre><code class="lang-py">tokenizer.vocab_size 
+<pre><code class="lang-python">tokenizer.vocab_size 
 
 <span class="hljs-number">30522</span>
 </code></pre>
 <p>和相应模型的最大上下文大小：</p>
-<pre><code class="lang-py">tokenizer.model_max_length 
+<pre><code class="lang-python">tokenizer.model_max_length 
 
 <span class="hljs-number">512</span>
 </code></pre>
 <p>另一个需要了解的有趣属性是模型在其前向传递中期望的字段的名称：</p>
-<pre><code class="lang-py">tokenizer.model_input_names 
+<pre><code class="lang-python">tokenizer.model_input_names 
 
 [<span class="hljs-string">'input_ids'</span>, <span class="hljs-string">'attention_mask'</span>]
 </code></pre>
@@ -568,11 +568,11 @@ distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)
 <h2 id="对整个数据集进行标记化">对整个数据集进行标记化</h2>
 <p>为了对整个语料库进行标记，我们将使用DatasetDict对象的map（）方法。 在本书中，我们会多次遇到这种方法，因为它提供了一种方便的方法，可以对数据集中的每个元素应用处理函数。 我们很快就会看到，map()方法也可以用来创建新的行和列。</p>
 <p>为了开始工作，我们首先需要一个处理函数来对我们的例子进行标记：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">def</span> <span class="hljs-title function_">tokenize</span>(<span class="hljs-params">batch</span>): 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">tokenize</span>(<span class="hljs-params">batch</span>): 
     <span class="hljs-keyword">return</span> tokenizer(batch[<span class="hljs-string">"text"</span>], padding=<span class="hljs-literal">True</span>, truncation=<span class="hljs-literal">True</span>)
 </code></pre>
 <p>这个函数将标记器应用于一批例子。 padding=True将用零填充例子，使其达到一个批次中最长的一个的大小，truncation=True将把例子截断到模型的最大上下文大小。 为了看看tokenize()的作用，让我们从训练集中传递一批两个例子：</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(tokenize(emotions[<span class="hljs-string">"train"</span>][:<span class="hljs-number">2</span>]))
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(tokenize(emotions[<span class="hljs-string">"train"</span>][:<span class="hljs-number">2</span>]))
 {<span class="hljs-string">'input_ids'</span>: [[<span class="hljs-number">101</span>, <span class="hljs-number">1045</span>, <span class="hljs-number">2134</span>, <span class="hljs-number">2102</span>, <span class="hljs-number">2514</span>, <span class="hljs-number">26608</span>, <span class="hljs-number">102</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>], [<span class="hljs-number">101</span>, <span class="hljs-number">1045</span>, <span class="hljs-number">2064</span>, <span class="hljs-number">2175</span>, <span class="hljs-number">2013</span>, <span class="hljs-number">3110</span>, <span class="hljs-number">2061</span>, <span class="hljs-number">20625</span>, <span class="hljs-number">2000</span>, <span class="hljs-number">2061</span>, <span class="hljs-number">9636</span>, <span class="hljs-number">17772</span>, <span class="hljs-number">2074</span>, <span class="hljs-number">2013</span>, <span class="hljs-number">2108</span>, <span class="hljs-number">2105</span>, <span class="hljs-number">2619</span>, <span class="hljs-number">2040</span>, <span class="hljs-number">14977</span>, <span class="hljs-number">1998</span>, <span class="hljs-number">2003</span>, <span class="hljs-number">8300</span>, <span class="hljs-number">102</span>]], <span class="hljs-string">'attention_mask'</span>: [[<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>], [<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>
 ,,,,],[,,,,,,,,,,,,,,,,,,,, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>]]}
 </code></pre>
@@ -581,10 +581,10 @@ distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)
 <p>还要注意的是，除了返回编码后的推文作为input_ids外，tokenizer还返回一个attention_mask数组的列表。 这是因为我们不希望模型被额外的填充标记所迷惑。 注意力掩码允许模型忽略输入的填充部分。 图2-3直观地解释了输入ID和注意掩码的填充方式。</p>
 <p><img src="images/chapter2/image-20220212221714524.png" alt="image-20220212221714524"></img></p>
 <p>一旦我们定义了一个处理函数，我们就可以用一行代码将其应用于语料库中的所有分片:</p>
-<pre><code class="lang-py">emotions_encoded = emotions.<span class="hljs-built_in">map</span>(tokenize, batched=<span class="hljs-literal">True</span>, batch_size=<span class="hljs-literal">None</span>)
+<pre><code class="lang-python">emotions_encoded = emotions.<span class="hljs-built_in">map</span>(tokenize, batched=<span class="hljs-literal">True</span>, batch_size=<span class="hljs-literal">None</span>)
 </code></pre>
 <p>默认情况下，map()方法对语料库中的每个例子进行单独操作，所以设置batched=True将对推文进行分批编码。 因为我们设置了batch_size=None，我们的tokenize()函数将作为一个批次应用于整个数据集。 这确保了输入张量和注意力掩码在全球范围内具有相同的形状，我们可以看到这个操作为数据集增加了新的输入_ids和注意力掩码列:</p>
-<pre><code class="lang-py"><span class="hljs-built_in">print</span>(emotions_encoded[<span class="hljs-string">"train"</span>].column_names) 
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(emotions_encoded[<span class="hljs-string">"train"</span>].column_names) 
 
 [<span class="hljs-string">'attention_mask'</span>, <span class="hljs-string">'input_ids'</span>, <span class="hljs-string">'label'</span>, <span class="hljs-string">'text'</span>]
 </code></pre>
@@ -649,7 +649,7 @@ torch.Size([1, 6, 768])
 
 torch.Size([1, 768])
 </code></pre><p>  现在我们知道如何获得单个字符串的最后隐藏状态。 让我们对整个数据集进行同样的处理，创建一个新的hidden_state列，存储所有这些向量。 正如我们对标记器所做的那样，我们将使用DatasetDict的map()方法来一次性提取所有的隐藏状态。 我们需要做的第一件事是将前面的步骤包裹在一个处理函数中：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">def</span> <span class="hljs-title function_">extract_hidden_states</span>(<span class="hljs-params">batch</span>): <span class="hljs-comment"># Place model inputs on the GPU </span>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">extract_hidden_states</span>(<span class="hljs-params">batch</span>): <span class="hljs-comment"># Place model inputs on the GPU </span>
     inputs = {
         k : v.to(device) <span class="hljs-keyword">for</span> k,v <span class="hljs-keyword">in</span> batch.items() <span class="hljs-keyword">if</span> k <span class="hljs-keyword">in</span> tokenizer.model_input_names
     } <span class="hljs-comment"># Extract last hidden states </span>
@@ -659,13 +659,13 @@ torch.Size([1, 768])
 </code></pre>
 <p>  这个函数和我们之前的逻辑的唯一区别是最后一步，我们把最终的隐藏状态作为一个NumPy数组放回CPU上。 当我们使用分批输入时，map()方法要求处理函数返回Python或NumPy对象。</p>
 <p>由于我们的模型希望将张量作为输入，接下来要做的是将input_ids和attention_mask列转换为 "Torch"。 格式，如下所示：</p>
-<pre><code class="lang-py">emotions_encoded.set_format(<span class="hljs-string">"torch"</span>, columns=[<span class="hljs-string">"input_ids"</span>, <span class="hljs-string">"attention_mask"</span>, <span class="hljs-string">"label"</span>])
+<pre><code class="lang-python">emotions_encoded.set_format(<span class="hljs-string">"torch"</span>, columns=[<span class="hljs-string">"input_ids"</span>, <span class="hljs-string">"attention_mask"</span>, <span class="hljs-string">"label"</span>])
 </code></pre>
 <p>然后，我们可以继续前进，一次性提取所有分片的隐藏状态：</p>
-<pre><code class="lang-py">emotions_hidden = emotions_encoded.<span class="hljs-built_in">map</span>(extract_hidden_states, batched=<span class="hljs-literal">True</span>)
+<pre><code class="lang-python">emotions_hidden = emotions_encoded.<span class="hljs-built_in">map</span>(extract_hidden_states, batched=<span class="hljs-literal">True</span>)
 </code></pre>
 <p>注意，在这种情况下，我们没有设置 batch_size=None，这意味着使用默认的 batch_size=1000 来代替。 正如预期的那样，应用extract_hidden_states()函数为我们的数据集增加了一个新的hidden_state列：</p>
-<pre><code class="lang-py">emotions_hidden[<span class="hljs-string">"train"</span>].column_names 
+<pre><code class="lang-python">emotions_hidden[<span class="hljs-string">"train"</span>].column_names 
 
 [<span class="hljs-string">'attention_mask'</span>, <span class="hljs-string">'hidden_state'</span>, <span class="hljs-string">'input_ids'</span>, <span class="hljs-string">'label'</span>, <span class="hljs-string">'text'</span>]
 </code></pre>
@@ -673,7 +673,7 @@ torch.Size([1, 768])
 <p>让我们一探究竟。</p>
 <h4 id="创建特征矩阵">创建特征矩阵</h4>
 <p>  预处理过的数据集现在包含了我们需要在上面训练分类器的所有信息。 我们将把隐藏状态作为输入特征，把标签作为目标。 我们可以很容易地以众所周知的Scikit-learn格式创建相应的数组，如下所示：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np 
 X_train = np.array(emotions_hidden[<span class="hljs-string">"train"</span>][<span class="hljs-string">"hidden_state"</span>]) 
 X_valid = np.array(emotions_hidden[<span class="hljs-string">"validation"</span>][<span class="hljs-string">"hidden_state"</span>]) 
 y_train = np.array(emotions_hidden[<span class="hljs-string">"train"</span>][<span class="hljs-string">"label"</span>])
@@ -685,7 +685,7 @@ X_train.shape, X_valid.shape ((<span class="hljs-number">16000</span>, <span cla
 <p>  在我们对隐藏状态进行模型训练之前，最好的做法是进行一次快速检查，以确保它们对我们想要分类的情绪提供有用的表述。 在下一节中，我们将看到可视化的特征是如何提供一种快速的方式来实现这一目标的。</p>
 <h4 id="可视化训练集">可视化训练集</h4>
 <p>  由于在768个维度上实现隐藏状态的可视化至少是很棘手的，我们将使用强大的UMAP算法将向量向下投射到二维。 由于UMAP在特征被缩放到位于[0,1]区间时效果最好，我们将首先应用MinMaxScaler，然后使用umap-learn库中的UMAP实现来减少隐藏状态：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">from</span> umap <span class="hljs-keyword">import</span> UMAP 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> umap <span class="hljs-keyword">import</span> UMAP 
 <span class="hljs-keyword">from</span> sklearn.preprocessing <span class="hljs-keyword">import</span> MinMaxScaler <span class="hljs-comment"># Scale features to [0,1] range </span>
 X_scaled = MinMaxScaler().fit_transform(X_train)
 <span class="hljs-comment"># Initialize and fit UMAP </span>
@@ -697,7 +697,7 @@ df_emb.head()
 </code></pre>
 <p><img src="images/chapter2/image-20220212224045428.png" alt="image-20220212224045428"></img></p>
 <p>  结果是一个具有相同数量训练样本的数组，但只有2个特征，而不是我们开始时的768个特征 让我们进一步研究一下压缩后的数据，并分别绘制每一类的点的密度：</p>
-<pre><code class="lang-py">fig, axes = plt.subplots(<span class="hljs-number">2</span>, <span class="hljs-number">3</span>, figsize=(<span class="hljs-number">7</span>,<span class="hljs-number">5</span>)) 
+<pre><code class="lang-python">fig, axes = plt.subplots(<span class="hljs-number">2</span>, <span class="hljs-number">3</span>, figsize=(<span class="hljs-number">7</span>,<span class="hljs-number">5</span>)) 
 axes = axes.flatten() 
 cmaps = [<span class="hljs-string">"Greys"</span>, <span class="hljs-string">"Blues"</span>, <span class="hljs-string">"Oranges"</span>, <span class="hljs-string">"Reds"</span>, <span class="hljs-string">"Purples"</span>, <span class="hljs-string">"Greens"</span>] 
 labels = emotions[<span class="hljs-string">"train"</span>].features[<span class="hljs-string">"label"</span>].names 
@@ -924,7 +924,7 @@ plt.show()
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"文本分类","level":"1.4","depth":1,"next":{"title":"Transformers架构剖析","level":"1.5","depth":1,"path":"chapter3.md","ref":"chapter3.md","articles":[]},"previous":{"title":"\"Hello，Transformers\"","level":"1.3","depth":1,"path":"chapter1.md","ref":"chapter1.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter2.md","mtime":"2024-08-23T19:12:41.445Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"文本分类","level":"1.4","depth":1,"next":{"title":"Transformers架构剖析","level":"1.5","depth":1,"path":"chapter3.md","ref":"chapter3.md","articles":[]},"previous":{"title":"\"Hello，Transformers\"","level":"1.3","depth":1,"path":"chapter1.md","ref":"chapter1.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter2.md","mtime":"2025-01-05T17:59:00.401Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -978,10 +978,6 @@ plt.show()
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -998,7 +994,7 @@ plt.show()
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

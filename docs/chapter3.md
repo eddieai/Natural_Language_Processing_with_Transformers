@@ -86,7 +86,7 @@ $$
 
 我们可以通过一个名为BertViz for Jupyter的灵巧的库将注意力权重的计算方式可视化。这个库提供了几个函数，可以用来将Transformers模型中的注意力的不同方面可视化。为了使注意力权重可视化，我们可以使用神经元_视图模块，它可以追踪权重的计算，以显示查询和键向量是如何结合起来产生最终权重的。由于BertViz需要进入模型的注意力层，我们将用BertViz的模型类来实例化我们的BERT模型，然后使用show()函数来生成特定编码器层和注意力头的交互式可视化。注意，你需要点击左边的 "+"来激活注意力的可视化:
 
-```
+```python
 from transformers import AutoTokenizer 
 from bertviz.transformers_neuron_view import BertModel 
 from bertviz.neuron_view import show 
@@ -116,7 +116,7 @@ show(model, "bert", tokenizer, text, display_mode="light", layer=0, head=8)
 
 我们需要做的第一件事是对文本进行标记，所以让我们使用我们的标记器来提取输入的ID：
 
-```
+```python
 inputs = tokenizer(text, return_tensors="pt", add_special_tokens=False) 
 inputs.input_ids tensor([[ 2051, 10029, 2066, 2019, 8612]])
 
@@ -124,7 +124,7 @@ inputs.input_ids tensor([[ 2051, 10029, 2066, 2019, 8612]])
 
 正如我们在第二章中所看到的，句子中的每个标记都被映射到标记器词汇中的一个唯一的ID。为了保持简单，我们还通过设置add_special_tokens=False排除了[CLS]和[SEP]标记。接下来，我们需要创建一些密集嵌入。这里的密集意味着嵌入中的每个条目都包含一个非零值。相比之下，我们在第二章中看到的单热编码是稀疏的，因为除了一个条目外，所有条目都是零。在PyTorch中，我们可以通过使用torch.nn.Embedding层来做到这一点，该层作为每个输入ID的查询表：
 
-```
+```python
 from torch import nn 
 from transformers import AutoConfig 
 config = AutoConfig.from_pretrained(model_ckpt) 
@@ -139,7 +139,7 @@ token_emb Embedding(30522, 768)
 
 现在我们有了查找表，我们可以通过输入ID来生成嵌入：
 
-```
+```python
 inputs_embeds = token_emb(inputs.input_ids) 
 inputs_embeds.size() 
 torch.Size([1, 5, 768])
@@ -148,7 +148,7 @@ torch.Size([1, 5, 768])
 
 这给了我们一个形状为[batch_size, seq_len, hidden_dim]的张量，就像我们在第二章看到的那样。我们将推迟位置编码，所以下一步是创建查询、键和值向量，并使用点乘作为相似性函数来计算注意分数：
 
-```
+```python
 import torch from math 
 import sqrt 
 query = key = value = inputs_embeds 
@@ -170,7 +170,7 @@ torch.bmm()函数执行了一个批量矩阵-矩阵乘积，简化了注意力�
 
 现在让我们来应用softmax：
 
-```
+```python
 import torch.nn.functional as F 
 weights = F.softmax(scores, dim=-1)
 weights.sum(dim=-1) 
@@ -181,7 +181,7 @@ tensor([[1., 1., 1., 1., 1.]], grad_fn=<SumBackward1>)
 
 最后一步是将注意力权重与数值相乘：
 
-```
+```python
 attn_outputs = torch.bmm(weights, value) 
 attn_outputs.shape torch.Size([1, 5, 768])
 
@@ -193,7 +193,7 @@ attn_outputs.shape torch.Size([1, 5, 768])
 
 让我们把这些步骤包成一个函数，我们以后可以使用：
 
-```
+```python
 def scaled_dot_product_attention(query, key, value): 
 	dim_k = query.size(-1) 
 	scores = torch.bmm(query, key.transpose(1, 2)) / sqrt(dim_k)
@@ -216,7 +216,7 @@ def scaled_dot_product_attention(query, key, value):
 
 让我们来实现这个层，首先编码一个单一的注意力头：
 
-```
+```python
 class AttentionHead(nn.Module): 
 	def __init__(self, embed_dim, head_dim): 
         super().__init__() 
@@ -234,7 +234,7 @@ class AttentionHead(nn.Module):
 
 现在我们有了一个注意力头，我们可以把每个注意力头的输出拼接起来，实现完整的多头注意力层：
 
-```
+```python
 class MultiHeadAttention(nn.Module): 
 	def __init__(self, config): 
 		super().__init__() 
@@ -252,7 +252,7 @@ class MultiHeadAttention(nn.Module):
 
 请注意，注意力头的联合输出也被送入最后的线性层，以产生形状为[batch_size, seq_len, hidden_dim]的输出张量，适合下游的前馈网络。为了确认，让我们看看多头注意力层是否产生了我们输入的预期形状。在初始化MultiHeadAttention模块时，我们将先前从预训练的BERT模型中加载的配置传递给它。这确保我们使用与BERT相同的设置：
 
-```
+```python
 multihead_attn = MultiHeadAttention(config) 
 attn_output = multihead_attn(inputs_embeds) 
 attn_output.size() 
@@ -263,7 +263,7 @@ torch.Size([1, 5, 768] )
 
 它是有效的! 为了总结这一节关于注意力的内容，让我们再次使用BertViz将 "苍蝇 "这个词的两种不同用法的注意力可视化。在这里，我们可以使用BertViz的head_view()函数，通过计算预训练的模型的注意力并指出句子边界的位置：
 
-```
+```python
 from bertviz import head_view 
 from transformers import AutoModel 
 model = AutoModel.from_pretrained(model_ckpt, output_attentions=True) 
@@ -289,7 +289,7 @@ head_view(attention, tokens, sentence_b_start, heads=[8])
 
 编码器和解码器中的前馈子层只是一个简单的双层全连接神经网络，但有少许不同：它不是把整个嵌入序列作为一个单一的向量来处理，而是独立地处理每个嵌入物。由于这个原因，这个层通常被称为位置前馈层。你也可能看到它被称为核大小为1的单维卷积，通常由具有计算机视觉背景的人使用（例如，OpenAI的GPT代码库使用这种命名法）。文献中的一个经验法则是，第一层的隐藏大小是嵌入大小的四倍，最常使用的是gelu激活函数。这是内存占用最大的部位，也是扩大模型规模时最常扩展的部分。我们可以将其作为一个简单的nn.Module来实现，如下:
 
-```
+```python
 class FeedForward(nn.Module): 
 	def __init__(self, config): 
         super().__init__() 
@@ -308,7 +308,7 @@ class FeedForward(nn.Module):
 
 请注意，像nn.Linear这样的前馈层通常应用于一个（batch_size, input_dim）形状的张量，它独立地作用于批次维度的每个元素。实际上，除了最后一个维度，其他维度都是如此，所以当我们传递一个（batch_size, seq_len, hidden_dim）形状的张量时，该层会独立地应用用于批和输入序列的所有标记嵌入向量，这正是我们想要的。让我们通过传递注意力输出来测试一下:
 
-```
+```python
 feed_forward = FeedForward(config) 
 ff_outputs = feed_forward(attn_outputs) 
 ff_outputs.size() 
@@ -334,7 +334,7 @@ torch.Size([1, 5, 768])
 
 我们将使用第二种安排，因此我们可以简单地将我们的积木粘在一起，如下所示：
 
-```
+```python
 class TransformerEncoderLayer(nn.Module): 
 	def __init__(self, config): 
         super().__init__() 
@@ -355,7 +355,7 @@ class TransformerEncoderLayer(nn.Module):
 
 现在让我们用我们的输入嵌入来测试一下：
 
-```
+```python
 encoder_layer = TransformerEncoderLayer(config) 
 inputs_embeds.shape, encoder_layer(inputs_embeds).size() 
 
@@ -375,7 +375,7 @@ inputs_embeds.shape, encoder_layer(inputs_embeds).size()
 
 让我们创建一个自定义的嵌入模块，它结合了一个标记嵌入层，将输入_ids投射到一个密集的隐藏状态，同时也结合了位置嵌入，对位置_ids做同样的处理。由此产生的嵌入是两个嵌入的简单总和：
 
-```
+```python
 class Embeddings(nn.Module): 
 	def __init__(self, config): 
         super().__init__() 
@@ -418,7 +418,7 @@ Transformers模型可以使用由调制的正弦和余弦信号组成的静态�
 
 现在，让我们把所有这些放在一起，建立完整的Transformers编码器，把嵌入和编码器层结合起来：
 
-```
+```python
 class TransformerEncoder(nn.Module): 
 	def __init__(self, config): super().__init__() 
 		self.embeddings = Embeddings(config) 
@@ -433,7 +433,7 @@ class TransformerEncoder(nn.Module):
 
 让我们检查一下编码器的输出形状:
 
-```
+```python
 encoder = TransformerEncoder(config) 
 encoder(inputs.input_ids).size()
 
@@ -447,7 +447,7 @@ torch.Size([1, 5, 768])
 
 Transformers模型通常分为一个独立于任务的主体和一个特定于任务的头部。我们将在第四章看Transformers的设计模式时再次遇到这种模式。到目前为止，我们所建立的是主体，所以如果我们想建立一个文本分类器，我们需要在这个主体上附加一个分类头。我们对每个标记都有一个隐藏状态，但我们只需要做一个预测。有几种方案可以处理这个问题。传统上，这类模型中的第一个标记被用于预测，我们可以附加一个dropout和一个线性层来进行分类预测。下面的类扩展了现有的序列分类的编码器:
 
-```
+```python
 class TransformerForSequenceClassification(nn.Module): 
 	def __init__(self, config): 
 		super().__init__() 
@@ -464,7 +464,7 @@ class TransformerForSequenceClassification(nn.Module):
 
 在初始化模型之前，我们需要定义我们想预测多少个类:
 
-```
+```python
 config.num_labels = 3 
 encoder_classifier = TransformerForSequenceClassification(config) 
 encoder_classifier(inputs.input_ids).size() 
@@ -491,7 +491,7 @@ torch.Size([1, 3])
 
 让我们来看看我们需要做出的修改，以便在我们的自注意力层中加入掩码，并将编码器-解码器注意力层的实现作为一个家庭作业问题。掩蔽式自注意力的诀窍是引入一个掩蔽矩阵，在对角线的下方为1，上方为0 ：
 
-```
+```python
 seq_len = inputs.input_ids.size(-1) 
 mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0) 
 mask[0]
@@ -509,7 +509,7 @@ tensor([
 
 这里我们使用了PyTorch的tril()函数来创建下三角矩阵。一旦我们有了这个掩码矩阵，我们就可以通过使用Tensor.masked_fill()将所有的0替换成负无穷来防止每个注意头偷看未来的令牌：
 
-```
+```python
 scores.masked_fill(mask == 0, -float("inf")) 
 
 tensor([[
@@ -525,7 +525,7 @@ tensor([[
 
 通过将上限值设置为负无穷大，我们保证一旦我们在分数上取得softmax，注意力权重都是零，因为e-∞=0（记住softmax是计算归一化指数的）。我们可以通过对本章前面实现的缩放点积注意力函数的一个小改动，轻松地将这种遮蔽（masked)行为包括在内：
 
-```
+```python
 def scaled_dot_product_attention(query, key, value, mask=None): 
 	dim_k = query.size(-1) 
 	scores = torch.bmm(query, key.transpose(1, 2)) / sqrt(dim_k) 

@@ -18,7 +18,7 @@
 
 在本章中，我们将使用多语言编码器的跨语言TRansfer评估（XTREME）基准的一个子集，称为WikiANN或PAN-X。 该数据集由多种语言的维基百科文章组成，包括瑞士最常用的四种语言。 德语（62.9%）、法语（22.9%）、意大利语（8.4%）和英语（5.9%）。 每篇文章都用LOC（地点）、PER（人物）和ORG（组织）标签以 "内-外-内"（IOB2）的格式进行了注释。 在这种格式中，B-前缀表示一个实体的开始，而属于同一实体的连续标记被赋予I-前缀。 一个O标记表示该标记不属于任何实体。 例如，下面这句话：
 
-```
+```python
 Jeff Dean is a computer scientist at Google in California would be labeled in IOB2 format as shown in Table 4-1.
 
 ```
@@ -27,7 +27,7 @@ Jeff Dean is a computer scientist at Google in California would be labeled in IO
 
 要在XTREME中加载PAN-X子集之一，我们需要知道哪种数据集配置要传递给load_dataset()函数。 每当你处理一个有多个域的数据集时，你可以使用get_dataset_config_names()函数来找出哪些子集可用：
 
-```
+```python
 from datasets import get_dataset_config_names 
 xtreme_subsets = get_dataset_config_names("xtreme") 
 print(f"XTREME has {len(xtreme_subsets)} configurations") 
@@ -38,7 +38,7 @@ XTREME has 183 configurations
 
 哇，那是一个很大的配置! 让我们缩小搜索范围，只寻找以 "PAN "开头的配置：
 
-```
+```python
 panx_subsets = [s for s in xtreme_subsets if s.startswith("PAN")]
 panx_subsets[:3] ['PAN-X.af', 'PAN-X.ar', 'PAN-X.bg']
 
@@ -46,7 +46,7 @@ panx_subsets[:3] ['PAN-X.af', 'PAN-X.ar', 'PAN-X.bg']
 
 好了，看来我们已经确定了PAN-X子集的语法。 每个人都有一个两个字母的后缀，似乎是一个ISO 639-1语言代码。 这意味着，为了加载德语语料库，我们将de代码传递给load_dataset()的name参数，如下所示：
 
-```
+```python
 from datasets import load_dataset 
 load_dataset("xtreme", name="PAN-X.de")
 
@@ -56,7 +56,7 @@ load_dataset("xtreme", name="PAN-X.de")
 
 为了跟踪每一种语言，让我们创建一个Python defaultdict，将语言代码作为键，将DatasetDict类型的PAN-X语料库作为值:
 
-```
+```python
 from collections import defaultdict 
 from datasets import DatasetDict 
 langs = ["de", "fr", "it", "en"] 
@@ -76,7 +76,7 @@ for lang, frac in zip(langs, fracs):
 
 在这里，我们使用shuffle()方法来确保我们不会意外地偏离我们的数据集拆分，而select()允许我们根据fracs中的值对每个语料库进行欠采样。 让我们通过访问Dataset.num_rows属性来看看我们在训练集中每个语言有多少个例子:
 
-```
+```python
 import pandas as pd 
 pd.DataFrame({lang: [panx_ch[lang]["train"].num_rows] for lang in langs}, index=["Number of training examples"])
 
@@ -86,7 +86,7 @@ pd.DataFrame({lang: [panx_ch[lang]["train"].num_rows] for lang in langs}, index=
 
 根据设计，我们在德语中的例子比其他所有语言的总和还要多，所以我们将以德语为起点，对法语、意大利语和英语进行Zeroshot跨语言转移。 让我们检查一下德语语料库中的一个例子:
 
-```
+```python
 element = panx_ch["de"]["train"][0] 
 for key, value in element.items(): 
 	print(f"{key}: {value}") 
@@ -97,7 +97,7 @@ langs: ['de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de', 'de'] 
 
 与我们之前遇到的数据集对象一样，我们的例子中的键对应于Arrow表中的列名，而值则表示每一列中的条目。 特别是，我们看到ner_tags列对应于每个实体与一个类ID的映射。 这对人的眼睛来说有点神秘，所以让我们用熟悉的LOC、PER和ORG标签创建一个新列。 要做到这一点，首先要注意的是，我们的数据集对象有一个特征属性，指定与每一列相关的基础数据类型:
 
-```
+```python
 for key, value in panx_ch["de"]["train"].features.items(): 
 	print(f"{key}: {value}") 
 
@@ -107,7 +107,7 @@ tokens: Sequence(feature=Value(dtype='string', id=None), length=-1, id=None) ner
 
 序列类指定该字段包含一个特征列表，在ner_tags的情况下，它对应于ClassLabel特征列表。 让我们从训练集中挑出这个特征，如下:
 
-```
+```python
 tags = panx_ch["de"]["train"].features["ner_tags"].feature 
 print(tags) 
 
@@ -117,7 +117,7 @@ ClassLabel(num_classes=7, names=['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC
 
 我们可以使用第二章中遇到的ClassLabel.int2str()方法，在我们的训练集中为每个标签创建一个带有类名的新列。 我们将使用map()方法返回一个dict，其键对应于新的列名，其值是一个类名的列表:
 
-```
+```python
 def create_tag_names(batch): 
 	return {"ner_tags_str": [tags.int2str(idx) for idx in batch["ner_tags"]]} 
 panx_de = panx_ch["de"].map(create_tag_names)
@@ -126,7 +126,7 @@ panx_de = panx_ch["de"].map(create_tag_names)
 
 现在我们有了人类可读格式的标签，让我们看看训练集中第一个例子的标记和标签是如何对齐的:
 
-```
+```python
 de_example = panx_de["train"][0] 
 pd.DataFrame([de_example["tokens"], de_example["ner_tags_str"]], ['Tokens', 'Tags'])
 
@@ -140,7 +140,7 @@ LOC标签的存在是有意义的，因为句子 "2,000 Einwohnern an der Danzig
 
 
 
-```
+```python
 from collections import Counter 
 split2freqs = defaultdict(Counter) 
 for split, dataset in panx_de.items(): 
@@ -190,7 +190,7 @@ XLM-R是多语言NLU任务的最佳选择。 在下一节中，我们将探讨�
 
 XLM-R没有使用WordPiece标记器，而是使用一个名为SentencePiece的标记器，该标记器是在所有一百种语言的原始文本上训练出来的。 为了感受一下SentencePiece与WordPiece的比较，让我们以通常的方式用Transformers加载BERT和XLM-R标记器:
 
-```
+```python
 from transformers import AutoTokenizer 
 bert_model_name = "bert-base-cased" 
 xlmr_model_name = "xlm-roberta-base" 
@@ -201,7 +201,7 @@ xlmr_tokenizer = AutoTokenizer.from_pretrained(xlmr_model_name)
 
 通过对一小段文字的编码，我们也可以检索到每个模型在预训练时使用的特殊标记:
 
-```
+```python
 text = "Jack Sparrow loves New York!" 
 bert_tokens = bert_tokenizer(text).tokens() 
 xlmr_tokens = xlmr_tokenizer(text).tokens()
@@ -246,7 +246,7 @@ xlmr_tokens = xlmr_tokenizer(text).tokens()
 
 SentencePiece标记器是基于一种称为Unigram的子词分割，并将每个输入文本编码为Unicode字符序列。这最后一个特点对多语言语料库特别有用，因为它允许SentencePiece对口音、标点符号以及许多语言（如日语）没有空白字符的事实不加考虑。SentencePiece的另一个特点是空白字符被分配到Unicode符号U+2581，即▁字符，也叫下四分之一块字符。这使得SentencePiece能够在没有歧义的情况下对一个序列进行去标记，而不需要依赖特定语言的预标记器。例如，在我们上一节的例子中，我们可以看到WordPiece丢失了 "York "和"！"之间没有空白的信息。相比之下，SentencePiece保留了标记化文本中的空白，因此我们可以毫无歧义地转换回原始文本：
 
-```
+```python
 "".join(xlmr_tokens).replace(u"\u2581", " ")
 '<s> Jack Sparrow loves New York!</s>'
 
@@ -295,7 +295,7 @@ Transformers 是围绕每个架构和任务的专用类来组织的。与不同�
 
 为了开始工作，我们需要一个数据结构来表示我们的XLM-R NER标记器。首先，我们需要一个配置对象来初始化模型，以及一个forward()函数来生成输出。让我们继续建立我们的XLM-R类，用于标记分类：
 
-```
+```python
 import torch.nn as nn from transformers
 import XLMRobertaConfig from transformers.modeling_outputs
 import TokenClassifierOutput from transformers.models.roberta.modeling_roberta
@@ -336,7 +336,7 @@ config_class确保我们在初始化一个新模型时使用标准的XLM-R设置
 
 现在我们准备加载我们的标记分类模型。我们需要在模型名称之外提供一些额外的信息，包括我们将用于标记每个实体的标签，以及每个标签与ID的映射，反之亦然。所有这些信息都可以从我们的tags变量中得到，作为一个ClassLabel对象，它有一个names属性，我们可以用它来导出映射。
 
-```
+```python
 index2tag = {idx: tag for idx, tag in enumerate(tags.names)} 
 tag2index = {tag: idx for idx, tag in enumerate(tags.names)}
 
@@ -346,7 +346,7 @@ tag2index = {tag: idx for idx, tag in enumerate(tags.names)}
 
 
 
-```
+```python
 from transformers import AutoConfig 
 xlmr_config = AutoConfig.from_pretrained(xlmr_model_name, num_labels=tags.num_classes, id2label=index2tag, label2id=tag2index)
 
@@ -356,7 +356,7 @@ AutoConfig类包含了一个模型的架构蓝图。当我们用AutoModel.from_p
 
 现在，我们可以像往常一样用带有额外配置参数的from_pretrained()函数加载模型权重。注意，我们没有在我们的自定义模型类中实现加载预训练的权重；我们通过继承RobertaPreTrainedModel免费获得这个功能：
 
-```
+```python
 import torch device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 xlmr_model = (XLMRobertaForTokenClassification .from_pretrained(xlmr_model_name, config=xlmr_config) .to(device))
 
@@ -364,7 +364,7 @@ xlmr_model = (XLMRobertaForTokenClassification .from_pretrained(xlmr_model_name,
 
 作为一个快速检查，我们已经正确地初始化了标记器和模型，让我们在已知实体的小序列上测试预测：
 
-```
+```python
 input_ids = xlmr_tokenizer.encode(text, return_tensors="pt") 
 pd.DataFrame([xlmr_tokens, input_ids[0].numpy()], index=["Tokens", "Input IDs"])
 
@@ -378,7 +378,7 @@ pd.DataFrame([xlmr_tokens, input_ids[0].numpy()], index=["Tokens", "Input IDs"])
 
 
 
-```
+```python
 outputs = xlmr_model(input_ids.to(device)).logits 
 predictions = torch.argmax(outputs, dim=-1) 
 print(f"Number of tokens in sequence: {len(xlmr_tokens)}") 
@@ -391,7 +391,7 @@ Shape of outputs: torch.Size([1, 10, 7])
 
 这里我们看到对数的形状是[batch_size, num_tokens, num_tags]，每个标记在七个可能的NER标记中都有一个对数。通过对序列的枚举，我们可以很快看到预训练模型的预测：
 
-```
+```python
 preds = [tags.names[p] for p in predictions[0].cpu().numpy()] 
 pd.DataFrame([xlmr_tokens, preds], index=["Tokens", "Tags"])
 
@@ -401,7 +401,7 @@ pd.DataFrame([xlmr_tokens, preds], index=["Tokens", "Tags"])
 
 不出所料，我们的随机权重的标记分类层还有很多不足之处；让我们在一些标记的数据上进行微调，使其变得更好！在这之前，让我们把前面的步骤封装在以后使用的辅助函数中。在这样做之前，让我们把前面的步骤打包成一个辅助函数，供以后使用：
 
-```
+```python
 def tag_text(text, tags, model, tokenizer):
 	# Get tokens with special characters 
 	tokens = tokenizer(text).tokens() 
@@ -423,7 +423,7 @@ def tag_text(text, tags, model, tokenizer):
 
 现在我们已经确定标记器和模型可以对单个例子进行编码，我们的下一步是对整个数据集进行标记，以便我们可以将其传递给XLM-R模型进行微调。正如我们在第二章中所看到的，Datasets提供了一种快速的方法，用map()操作对数据集对象进行标记化。要实现这一点，请回忆一下，我们首先需要定义一个具有最小签名的函数：
 
-```
+```python
 function(examples: Dict[str, List]) -> Dict[str, List]
 
 ```
@@ -432,14 +432,14 @@ function(examples: Dict[str, List]) -> Dict[str, List]
 
 按照Transformers文档中的方法，让我们看看这在我们的单一德语例子中是如何工作的，首先收集单词和标签作为普通列表：
 
-```
+```python
 words, labels = de_example["tokens"], de_example["ner_tags"]
 
 ```
 
 接下来，我们对每个词进行标记，并使用is_split_into_words参数来告诉标记器，我们的输入序列已经被分割成单词：
 
-```
+```python
 tokenized_input = xlmr_tokenizer(de_example["tokens"], is_split_into_words=True) 
 tokens = xlmr_tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"]) 
 pd.DataFrame([tokens], index=["Tokens"])
@@ -450,7 +450,7 @@ pd.DataFrame([tokens], index=["Tokens"])
 
 在这个例子中，我们可以看到标记器将 "Einwohnern "分成两个子词，"▁Einwohner "和 "n"。由于我们遵循的惯例是只有"▁Einwohner "应该与B-LOC标签相关联，我们需要一种方法来掩盖第一个子词之后的子词表示。幸运的是，tokenized_input是一个包含word_ids()函数的类，可以帮助我们实现这个目标：
 
-```
+```python
 word_ids = tokenized_input.word_ids() 
 pd.DataFrame([tokens, word_ids], index=["Tokens", "Word IDs"])
 
@@ -460,7 +460,7 @@ pd.DataFrame([tokens, word_ids], index=["Tokens", "Word IDs"])
 
 在这里我们可以看到，word_ids已经将每个子词映射到单词序列中的相应索引，所以第一个子词"▁2.000 "被分配到索引0，而"▁Einwohner "和 "n "被分配到索引1（因为 "Einwohnern "是单词中的第二个单词）。我们还可以看到，像< s>和< /s>这样的特殊标记被映射为无。让我们把-100设为这些特殊标记和我们希望在训练中屏蔽的子词的标签：
 
-```
+```python
 previous_word_idx = None 
 label_ids = [] 
 for word_idx in word_ids: 
@@ -483,7 +483,7 @@ pd.DataFrame([tokens, word_ids, label_ids, labels], index=index)
 
 就这样了 我们可以清楚地看到标签ID是如何与标记对齐的，所以让我们通过定义一个包含所有逻辑的单一函数，将其扩展到整个数据集：
 
-```
+```python
 def tokenize_and_align_labels(examples): 
 	tokenized_inputs = xlmr_tokenizer(examples["tokens"], truncation=True, is_split_into_words=True) 
 	labels = [] 
@@ -503,7 +503,7 @@ def tokenize_and_align_labels(examples):
 
 我们现在有了对每个分裂进行编码所需的所有成分，所以让我们写一个我们可以迭代的函数：
 
-```
+```python
 def encode_panx_dataset(corpus): 
 	return corpus.map(tokenize_and_align_labels, batched=True, remove_columns=['langs', 'ner_tags', 'tokens'])
 
@@ -511,7 +511,7 @@ def encode_panx_dataset(corpus):
 
 将这个函数应用于DatasetDict对象，我们就可以得到每个分割的编码数据集对象。让我们用它来对我们的德语语料库进行编码：
 
-```
+```python
 panx_de_encoded = encode_panx_dataset(panx_ch["de"])
 
 ```
@@ -522,7 +522,7 @@ panx_de_encoded = encode_panx_dataset(panx_ch["de"])
 
 评估NER模型与评估文本分类模型类似，通常报告精度、召回率和F-score的结果。唯一的微妙之处在于，一个实体的所有单词都需要被正确预测，这样才能算作正确的预测。幸运的是，有一个叫seqeval的漂亮库，是为这类任务设计的。例如，给定一些占位的NER标签和模型预测，我们可以通过seqeval的classification_report()函数来计算度量：
 
-```
+```python
 from seqeval.metrics import classification_report 
 y_true = [["O", "O", "O", "B-MISC", "I-MISC", "I-MISC", "O"], ["B-PER", "I-PER", "O"]] 
 y_pred = [["O", "O", "B-MISC", "I-MISC", "I-MISC", "I-MISC", "O"], ["B-PER", "I-PER", "O"]] 
@@ -534,7 +534,7 @@ print(classification_report(y_true, y_pred))
 
 正如我们所看到的，seqeval期望预测和标签为列表，每个列表对应于我们验证集或测试集中的一个例子。为了在训练过程中整合这些指标，我们需要一个函数来获取模型的输出并将其转换为seqeval所期望的列表。下面的函数通过确保我们忽略与后续子词相关的标签ID来完成这个任务：
 
-```
+```python
 import numpy as np 
 def align_predictions(predictions, label_ids): 
 	preds = np.argmax(predictions, axis=2) 
@@ -559,7 +559,7 @@ def align_predictions(predictions, label_ids):
 
 我们现在有了对我们的模型进行微调的所有材料！我们的第一个策略是在PAN-X的德语子集上对我们的基本模型进行微调，然后评估它在法语和意大利语上的零散跨语言表现。我们的第一个策略是在PAN-X的德语子集上微调我们的基础模型，然后评估它在法语、意大利语和英语上的零起点跨语言性能。像往常一样，我们将使用Transformers训练器来处理我们的训练循环，所以首先我们需要使用TrainingArguments类来定义训练属性：
 
-```
+```python
 from transformers import TrainingArguments 
 num_epochs = 3 
 batch_size = 24 
@@ -573,7 +573,7 @@ training_args = TrainingArguments( output_dir=model_name, log_level="error", num
 
 这也是确保我们登录到Hugging Face Hub的一个好时机（如果你在终端工作，你可以执行huggingface-cli login命令）。
 
-```
+```python
 from huggingface_hub 
 import notebook_login notebook_login()
 
@@ -581,7 +581,7 @@ import notebook_login notebook_login()
 
 我们还需要告诉Trainer如何在验证集上计算指标，所以在这里我们可以使用之前定义的align_predictions()函数，以seqeval需要的格式提取预测和标签，以计算F-score：
 
-```
+```python
 from seqeval.metrics import f1_score 
 def compute_metrics(eval_pred): 
 	y_pred, y_true = align_predictions(eval_pred.predictions, eval_pred.label_ids)
@@ -591,7 +591,7 @@ def compute_metrics(eval_pred):
 
 最后一步是定义一个数据整理器，这样我们就可以把每个输入序列填充到一个批次的最大序列长度。Transformers提供了一个 专用于标记分类的数据整理器，它将与输入一起填充标签。
 
-```
+```python
 from transformers import DataCollatorForTokenClassification 
 data_collator = DataCollatorForTokenClassification(xlmr_tokenizer)
 
@@ -601,7 +601,7 @@ data_collator = DataCollatorForTokenClassification(xlmr_tokenizer)
 
 我们将在本章中训练几个模型，所以我们将通过创建model_init()方法来避免为每个训练者初始化一个新的模型。这个方法会加载一个未训练过的模型，并在调用train()的开始阶段被调用:
 
-```
+```python
 def model_init(): 
 	return (XLMRobertaForTokenClassification .from_pretrained(xlmr_model_name, config=xlmr_config) .to(device))
 
@@ -609,7 +609,7 @@ def model_init():
 
 现在我们可以将所有这些信息连同编码的数据集一起传递给Trainer:
 
-```
+```python
 from transformers import Trainer 
 trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, train_dataset=panx_de_encoded["train"], eval_dataset=panx_de_encoded["validation"], tokenizer=xlmr_tokenizer)
 
@@ -617,7 +617,7 @@ trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_
 
 然后按如下方式运行训练循环，并将最终模型推送给Hub:
 
-```
+```python
 trainer.train() trainer.push_to_hub(commit_message="Training completed!")
 
 ```
@@ -626,7 +626,7 @@ trainer.train() trainer.push_to_hub(commit_message="Training completed!")
 
 这些F1分数对于一个NER模型来说是相当不错的。为了确认我们的模型按预期工作，让我们在我们的简单例子的德语翻译上测试它:
 
-```
+```python
 text_de = "Jeff Dean ist ein Informatiker bei Google in Kalifornien" 
 tag_text(text_de, tags, trainer.model, xlmr_tokenizer)
 
@@ -652,7 +652,7 @@ tag_text(text_de, tags, trainer.model, xlmr_tokenizer)
 
 让我们定义一个我们可以应用于验证集的方法：
 
-```
+```python
 from torch.nn.functional import cross_entropy 
 def forward_pass_with_label(batch): 
 	# Convert dict of lists to list of dicts suitable for data collator 
@@ -678,7 +678,7 @@ def forward_pass_with_label(batch):
 
 现在我们可以使用map()将这个函数应用于整个验证集，并将所有的数据加载到一个DataFrame中进行进一步分析：
 
-```
+```python
 valid_set = panx_de_encoded["validation"] 
 valid_set = valid_set.map(forward_pass_with_label, batched=True, batch_size=32) 
 df = valid_set.to_pandas()
@@ -687,7 +687,7 @@ df = valid_set.to_pandas()
 
 代币和标签仍然是用它们的ID编码的，所以让我们把代币和标签映射回字符串，以便更容易阅读结果。对于标签为-100的填充代币，我们分配一个特殊的标签，即IGN，这样我们就可以在以后过滤它们。我们还通过将损失和预测标签字段截断到输入的长度来摆脱所有的填充物：
 
-```
+```python
 index2tag[-100] = "IGN" 
 df["input_tokens"] = df["input_ids"].apply( lambda x: xlmr_tokenizer.convert_ids_to_tokens(x)) 
 df["predicted_label"] = df["predicted_label"].apply( lambda x: [index2tag[i] for i in x]) 
@@ -702,7 +702,7 @@ df.head(1)
 
 每一列包含每个样本的标记、标签、预测标签等的列表。让我们通过拆开这些列表来逐一看看这些标记。这些列表。pandas.Series.explode()函数允许我们在一行中完全做到这一点，它为原始行列表中的每个元素创建一个行。由于一行中的所有列表都有相同的长度，我们可以对所有列进行并行处理。我们还放弃了我们命名为IGN的填充代币，因为它们的损失反正是零。最后，我们将损失（仍然是numpy.Array对象）转换成标准的浮点数：
 
-```
+```python
 df_tokens = df.apply(pd.Series.explode) 
 df_tokens = df_tokens.query("labels != 'IGN'") 
 df_tokens["loss"] = df_tokens["loss"].astype(float).round(2) 
@@ -714,7 +714,7 @@ df_tokens.head(7)
 
 有了这种形式的数据，我们现在可以按输入标记进行分组，并用计数、平均值和总和对每个标记的损失进行汇总。最后，我们根据损失的总和对汇总的数据进行排序，看看哪些标记在验证集中积累了最多的损失：
 
-```
+```python
 ( 
 df_tokens.groupby("input_tokens")[["loss"]] 
 .agg(["count", "mean", "sum"]) 
@@ -745,7 +745,7 @@ df_tokens.groupby("input_tokens")[["loss"]]
 
   
 
-```
+```python
 ( 
 df_tokens.groupby("labels")[["loss"]] 
 .agg(["count", "mean", "sum"]) 
@@ -764,7 +764,7 @@ df_tokens.groupby("labels")[["loss"]]
 
 我们可以通过绘制标记分类的混淆矩阵来进一步分解，我们看到一个组织的开始经常与随后的I-ORG标记相混淆:
 
-```
+```python
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix 
 def plot_confusion_matrix(y_preds, y_true, labels): 
 	cm = confusion_matrix(y_true, y_preds, normalize="true") 
@@ -791,7 +791,7 @@ plot_confusion_matrix(df_tokens["labels"], df_tokens["predicted_label"], tags.na
 
 我们先前注意到的另一件事是，括号和斜线的损失相对较高。让我们来看看几个带有开头小括号的序列的例子:
 
-```
+```python
 df_tmp = df.loc[df["input_tokens"].apply(lambda x: u"\u2581(" in x)].head(2) 
 for sample in get_samples(df_tmp): 
 	display(sample)
@@ -810,7 +810,7 @@ for sample in get_samples(df_tmp):
 
 现在我们已经在德语上对XLM-R进行了微调，我们可以通过Trainer的predict()方法来评估它转移到其他语言的能力。由于我们计划评估多种语言，让我们创建一个简单的函数，为我们做这件事：
 
-```
+```python
 def get_f1_score(trainer, dataset): 
 	return trainer.predict(dataset).metrics["test_f1"]
 
@@ -818,7 +818,7 @@ def get_f1_score(trainer, dataset):
 
 我们可以用这个函数来检查测试集的性能，并在一个dict中记录我们的分数：
 
-```
+```python
 f1_scores = defaultdict(dict) 
 f1_scores["de"]["de"] = get_f1_score(trainer, panx_de_encoded["test"]) 
 print(f"F1-score of [de] model on [de] dataset: {f1_scores['de']['de']:.3f}")
@@ -829,7 +829,7 @@ F1-score of [de] model on [de] dataset: 0.868
 
 对于一个NER任务来说，这些结果相当不错。我们的指标在85%左右，我们可以看到该模型在ORG实体上似乎最吃力，可能是因为这些实体在训练数据中最不常见，而且许多组织名称在XLM-R的词汇中很罕见。其他语言的情况如何？为了热身，让我们看看我们在德语上微调的模型在法语上的表现如何：
 
-```
+```python
 text_fr = "Jeff Dean est informaticien chez Google en Californie" 
 tag_text(text_fr, tags, trainer.model, xlmr_tokenizer)
 
@@ -839,7 +839,7 @@ tag_text(text_fr, tags, trainer.model, xlmr_tokenizer)
 
 还不错! 虽然这两种语言的名称和组织都是一样的，但该模型确实能够正确标记 "Kalifornien "的法语翻译。接下来，让我们通过编写一个简单的函数来量化我们的德语模型在整个法语测试集上的表现，该函数对数据集进行编码并生成分类报告：
 
-```
+```python
 def evaluate_lang_performance(lang, trainer):
 	panx_ds = encode_panx_dataset(panx_ch[lang]) 
 	return get_f1_score(trainer, panx_ds["test"]) 
@@ -856,7 +856,7 @@ F1-score of [de] model on [fr] dataset: 0.714
 
 接下来，让我们评估一下在意大利语上的表现。由于意大利语也是一种罗曼语，我们期望得到一个与法语类似的结果:
 
-```
+```python
 f1_scores["de"]["it"] = evaluate_lang_performance("it", trainer) 
 print(f"F1-score of [de] model on [it] dataset: {f1_scores['de']['it']:.3f}") 
 
@@ -866,7 +866,7 @@ F1-score of [de] model on [it] dataset: 0.692
 
 事实上，我们的期望得到了F-scores的证实。最后，让我们来看看英语的表现，它属于日耳曼语系的语言:
 
-```
+```python
 f1_scores["de"]["en"] = evaluate_lang_performance("en", trainer) 
 print(f"F1-score of [de] model on [en] dataset: {f1_scores['de']['en']:.3f}") 
 
@@ -884,7 +884,7 @@ F1-score of [de] model on [en] dataset: 0.589
 
 为了简单起见，我们将保持对德语语料库进行微调时的超参数，只是我们将调整TrainingArguments的logging_steps参数，以考虑到训练集规模的变化。我们可以用一个简单的函数把这一切包起来，该函数接收一个对应于单语语料库的DatasetDict对象，通过num_samples对其进行降样，并对XLM-R进行微调，以返回最佳历时的度量：
 
-```
+```python
 def train_on_subset(dataset, num_samples): 
 	train_ds = dataset["train"].shuffle(seed=42).select(range(num_samples)) 
 	valid_ds = dataset["validation"] 
@@ -900,14 +900,14 @@ def train_on_subset(dataset, num_samples):
 
 正如我们对德语语料库的微调一样，我们也需要将法语语料库编码为输入ID、注意力掩码和标签ID：
 
-```
+```python
 panx_fr_encoded = encode_panx_dataset(panx_ch["fr"])
 
 ```
 
 接下来，让我们通过在250个例子的小型训练集上运行来检查我们的函数是否有效：
 
-```
+```python
 training_args.push_to_hub = False 
 metrics_df = train_on_subset(panx_fr_encoded, 250) 
 
@@ -919,7 +919,7 @@ metrics_df
 
 我们可以看到，在只有250个例子的情况下，法语的微调在很大程度上低于德语的零枪转移。现在让我们把训练集的大小增加到500、1000、2000和4000个例子，以了解性能的提高：
 
-```
+```python
 for num_samples in [500, 1000, 2000, 4000]: 
 	metrics_df = metrics_df.append( train_on_subset(panx_fr_encoded, num_samples), ignore_index=True)
 
@@ -927,7 +927,7 @@ for num_samples in [500, 1000, 2000, 4000]:
 
 我们可以通过绘制测试集上的F-scores作为增加训练集大小的函数，来比较法语样本的微调与德语的零点跨语言转移之间的比较：
 
-```
+```python
 fig, ax = plt.subplots() 
 ax.axhline(f1_scores["de"]["fr"], ls="--", color="r") 
 metrics_df.set_index("num_samples").plot(ax=ax) 
@@ -948,7 +948,7 @@ plt.show()
 
 到目前为止，我们已经看到，从德语到法语或意大利语的零拍跨语言转移产生了约15点的性能下降。缓解这种情况的一个方法是同时对多种语言进行微调。为了看看我们能得到什么类型的收益，让我们首先使用 concatenate_datasets()函数，将德语和法语语料库连接起来：
 
-```
+```python
 from datasets import concatenate_datasets 
 def concatenate_splits(corpora): 
 	multi_corpus = DatasetDict() 
@@ -961,7 +961,7 @@ panx_de_fr_encoded = concatenate_splits([panx_de_encoded, panx_fr_encoded])
 
 对于训练，我们将再次使用前几节的超参数，因此我们可以简单地更新训练器中的记录步骤、模型和数据集：
 
-```
+```python
 training_args.logging_steps = len(panx_de_fr_encoded["train"]) // batch_size 
 training_args.push_to_hub = True 
 training_args.output_dir = "xlm-roberta-base-finetuned-panx-de-fr" 
@@ -973,7 +973,7 @@ trainer.push_to_hub(commit_message="Training completed!")
 
 让我们来看看该模型在每种语言的测试集上的表现：
 
-```
+```python
 for lang in langs: 
 	f1 = evaluate_lang_performance(lang, trainer) 
 	print(f"F1-score of [de-fr] model on [{lang}] dataset: {f1:.3f}") 
@@ -990,7 +990,7 @@ for lang in langs:
 
 让我们通过比较在每种语言上的微调和在所有语料库上的多语言学习的性能来完成我们的分析。由于我们已经对德语语料库进行了微调，我们可以用train_on_subset()函数对其余语言进行微调，num_samples等于训练集的例子数量。
 
-```
+```python
 corpora = [panx_de_encoded] 
 # Exclude German from iteration 
 for lang in langs[1:]: 
@@ -1007,14 +1007,14 @@ for lang in langs[1:]:
 
 现在我们已经对每种语言的语料库进行了微调，下一步是将所有的分片串联起来，创建一个所有四种语言的多语言语料库。与之前的德语和法语分析一样，我们可以使用concatenate_splits()函数来为我们在上一步生成的语料库列表上完成这一步骤：
 
-```
+```python
 corpora_encoded = concatenate_splits(corpora)
 
 ```
 
 现在我们有了我们的多语言语料库，我们用训练器运行熟悉的步骤：
 
-```
+```python
 training_args.logging_steps = len(corpora_encoded["train"]) // batch_size 
 training_args.output_dir = "xlm-roberta-base-finetuned-panx-all"
 trainer = Trainer(model_init=model_init, args=training_args, data_collator=data_collator, compute_metrics=compute_metrics, tokenizer=xlmr_tokenizer, train_dataset=corpora_encoded["train"], eval_dataset=corpora_encoded["validation"]) 
@@ -1025,7 +1025,7 @@ trainer.push_to_hub(commit_message="Training completed!")
 
 最后一步是在每种语言的测试集上生成训练器的预测结果。这将使我们深入了解多语言学习的真正效果。我们将在f1_scores字典中收集F-scores，然后创建一个DataFrame，总结我们多语言实验的主要结果:
 
-```
+```python
 for idx, lang in enumerate(langs): 
 	f1_scores["all"][lang] = get_f1_score(trainer, corpora[idx]["test"]) 
 scores_data = {"de": f1_scores["de"], "each": {lang: f1_scores[lang][lang] for lang in langs}, "all": f1_scores["all"]} 

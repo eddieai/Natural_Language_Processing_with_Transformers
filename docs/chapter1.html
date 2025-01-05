@@ -6,7 +6,7 @@
         <title>"Hello，Transformers" · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -391,19 +391,22 @@
 <p>  你将在下一节中看到这一点，在那里我们显示，只需几行代码，Transformers就可以应用于解决一些你可能在野外遇到的最常见的NLP应用。</p>
 <h2 id="transformers-应用示例">Transformers 应用示例</h2>
 <p>  每个NLP任务都是从一段文字开始的，比如下面这段关于某个在线订单的客户反馈，是捏造的。</p>
-<pre><code>text = """Dear Amazon, last week I ordered an Optimus Prime action figure from your online store in Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead! As a lifelong enemy of the Decepticons, I hope you can understand my dilemma. To resolve the issue, I demand an exchange of Megatron for the Optimus Prime figure I ordered. Enclosed are copies of my records concerning this purchase. I expect to hear from you soon. Sincerely, Bumblebee."""
-</code></pre><p>  根据你的应用，你所处理的文本可能是一份法律合同、一份产品描述，或者完全是其他东西。 在客户反馈的情况下，你可能想知道反馈是正面的还是负面的。这项任务被称为情感分析，是我们将在第二章探讨的更广泛的文本分类主题的一部分。 现在，让我们来看看使用Transforms从我们的文本中提取情感需要什么。</p>
+<pre><code class="lang-python">text = <span class="hljs-string">"""Dear Amazon, last week I ordered an Optimus Prime action figure from your online store in Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead! As a lifelong enemy of the Decepticons, I hope you can understand my dilemma. To resolve the issue, I demand an exchange of Megatron for the Optimus Prime figure I ordered. Enclosed are copies of my records concerning this purchase. I expect to hear from you soon. Sincerely, Bumblebee."""</span>
+</code></pre>
+<p>  根据你的应用，你所处理的文本可能是一份法律合同、一份产品描述，或者完全是其他东西。 在客户反馈的情况下，你可能想知道反馈是正面的还是负面的。这项任务被称为情感分析，是我们将在第二章探讨的更广泛的文本分类主题的一部分。 现在，让我们来看看使用Transforms从我们的文本中提取情感需要什么。</p>
 <h2 id="文本分类">文本分类</h2>
 <p>  正如我们在后面的章节中所看到的，Transforms有一个分层的API，允许你在不同的抽象层次上与库交互。 在这一章中，我们将从管道开始，它抽象出将原始文本转换为一组来自微调模型的预测所需的所有步骤。</p>
 <p>  在Transformers中，我们通过调用pipeline()函数并提供我们感兴趣的任务的名称来实例化一个流水线。</p>
-<pre><code>from transformers import pipeline 
-classifier = pipeline("text-classification")
-</code></pre><p>  你第一次运行这段代码时，你会看到一些进度条出现，因为流水线会自动从Hugging Face Hub下载模型权重。 当你第二次实例化管道时，本程序库会注意到你已经下载了权重，并将使用缓存的版本来代替。 默认情况下，文本分类流水线使用一个为情感分析设计的模型，但它也支持多类和多标签分类。</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> pipeline 
+classifier = pipeline(<span class="hljs-string">"text-classification"</span>)
+</code></pre>
+<p>  你第一次运行这段代码时，你会看到一些进度条出现，因为流水线会自动从Hugging Face Hub下载模型权重。 当你第二次实例化管道时，本程序库会注意到你已经下载了权重，并将使用缓存的版本来代替。 默认情况下，文本分类流水线使用一个为情感分析设计的模型，但它也支持多类和多标签分类。</p>
 <p>  现在我们有了我们的流水线，让我们产生一些预测！ 每个流水线接受一串文本（或一串字符串）作为输入，并返回一个预测列表。 每个预测都是一个Python字典，所以我们可以用Pandas把它们很好地显示为一个DataFrame。</p>
-<pre><code>import pandas as pd 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd 
 outputs = classifier(text) 
 pd.DataFrame(outputs)
-</code></pre><table>
+</code></pre>
+<table>
 <thead>
 <tr>
 <th></th>
@@ -423,54 +426,59 @@ pd.DataFrame(outputs)
 <p>  现在让我们来看看另一项常见的任务，即识别文本中的命名实体。</p>
 <h2 id="命名实体识别-（ner">命名实体识别 （NER)</h2>
 <p>  预测客户反馈的情绪是很好的第一步，但你经常想知道反馈是否是关于某个特定的项目或服务。 在NLP中，像产品、地点和人这样的真实世界的对象被称为命名实体，从文本中提取它们被称为命名实体识别（NER）。 我们可以通过加载相应的流水线并将我们的客户评论输入其中来应用NER。</p>
-<pre><code>ner_tagger = pipeline("ner", aggregation_strategy="simple")
+<pre><code class="lang-python">ner_tagger = pipeline(<span class="hljs-string">"ner"</span>, aggregation_strategy=<span class="hljs-string">"simple"</span>)
 outputs = ner_tagger(text) 
 pd.DataFrame(outputs)
-</code></pre><p><img src="images/chapter1/image-20220212171510470.png" alt="image-20220212171510470"></img></p>
+</code></pre>
+<p><img src="images/chapter1/image-20220212171510470.png" alt="image-20220212171510470"></img></p>
 <p>  你可以看到，管道检测到了所有的实体，还为每个实体分配了一个类别，如ORG（组织）、LOC（地点）或PER（人）。 在这里，我们使用了aggregation_strategy参数，根据模型的预测对单词进行分组。 例如，实体 "擎天柱 "是由两个词组成的，但被分配到一个单一的类别。 MISC（杂项）。 分数告诉我们该模型对它所识别的实体有多大的信心。 我们可以看到，它对 "霸天虎 "和第一次出现的 "威震天 "最没有信心，这两个东西它都没能作为一个单一的实体进行分组。</p>
 <p><strong>注意：</strong></p>
 <p>看到前面表格中单词栏里那些奇怪的哈希符号（#）了吗？ 这些都是由模型的标记器产生的，标记器将单词分割成称为标记的原子单元。 你将在第二章中了解所有关于标记化的知识。</p>
 <p>  提取文本中的所有命名实体是很好的，但有时我们希望提出更有针对性的问题。 这就是我们可以使用问题回答的地方。</p>
 <h2 id="问答系统">问答系统</h2>
 <p>  在问题回答中，我们向模型提供一段称为上下文的文字，以及一个我们想提取答案的问题。 然后该模型返回与答案相对应的文本跨度。 让我们看看当我们问一个关于客户反馈的具体问题时，我们会得到什么。</p>
-<pre><code>reader = pipeline("question-answering") 
-question = "What does the customer want?" 
+<pre><code class="lang-python">reader = pipeline(<span class="hljs-string">"question-answering"</span>) 
+question = <span class="hljs-string">"What does the customer want?"</span> 
 outputs = reader(question=question, context=text) 
 pd.DataFrame([outputs])
-</code></pre><p><img src="images/chapter1/image-20220212172128577.png" alt="image-20220212172128577"></img></p>
+</code></pre>
+<p><img src="images/chapter1/image-20220212172128577.png" alt="image-20220212172128577"></img></p>
 <p>  我们可以看到，与答案一起，管道还返回了起点和终点的整数，这些整数对应于找到答案跨度的字符索引（就像NER标签一样）。 有几种类型的问题回答，我们将在第7章中进行研究，上面所示的这种特殊的问题回答被称为提取式问题回答，因为答案是直接从文本中提取的。</p>
 <p>  通过这种方法，你可以从客户的反馈中快速阅读和提取相关信息。 但是，如果你收到堆积如山的冗长投诉，而你又没有时间全部阅读，怎么办？ 让我们看看归纳模型是否能提供帮助!</p>
 <h2 id="摘要">摘要</h2>
 <p>  文本总结的目标是将一个长文本作为输入，并生成一个包含所有相关事实的简短版本。 这是一项比以前复杂得多的任务，因为它要求模型产生连贯的文本。 在现在应该是一个熟悉的模式中，我们可以将一个总结管道实例化如下：</p>
-<pre><code>summarizer = pipeline("summarization") 
-outputs = summarizer(text, max_length=45, clean_up_tokenization_spaces=True) 
-print(outputs[0]['summary_text'])
+<pre><code class="lang-python">summarizer = pipeline(<span class="hljs-string">"summarization"</span>) 
+outputs = summarizer(text, max_length=<span class="hljs-number">45</span>, clean_up_tokenization_spaces=<span class="hljs-literal">True</span>) 
+<span class="hljs-built_in">print</span>(outputs[<span class="hljs-number">0</span>][<span class="hljs-string">'summary_text'</span>])
 
-Bumblebee ordered an Optimus Prime action figure from your online store in Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead.
-</code></pre><p>  这个摘要还不算太糟! 虽然原文的部分内容被复制了，但该模型能够抓住问题的本质，并正确识别出 "大黄蜂"（出现在最后）是投诉的作者。 在这个例子中，你还可以看到，我们向流水线传递了一些关键字参数，如max_length和clean_up_tokenization_spaces。 这些允许我们在运行时对输出进行调整。</p>
+Bumblebee ordered an Optimus Prime action figure <span class="hljs-keyword">from</span> your online store <span class="hljs-keyword">in</span> Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead.
+</code></pre>
+<p>  这个摘要还不算太糟! 虽然原文的部分内容被复制了，但该模型能够抓住问题的本质，并正确识别出 "大黄蜂"（出现在最后）是投诉的作者。 在这个例子中，你还可以看到，我们向流水线传递了一些关键字参数，如max_length和clean_up_tokenization_spaces。 这些允许我们在运行时对输出进行调整。</p>
 <p>  但是，当你得到的反馈是用你不懂的语言描述的时，会发生什么？ 你可以使用谷歌翻译，或者你可以使用你自己的Transformers为你翻译!</p>
 <h2 id="机器翻译">机器翻译</h2>
 <p>  与摘要一样，翻译是一项任务，其输出包括生成的文本。 让我们使用一个翻译流水线，将一个英文文本翻译成德文。</p>
-<pre><code>translator = pipeline("translation_en_to_de", model="Helsinki-NLP/opus-mt-en-de") 
-outputs = translator(text, clean_up_tokenization_spaces=True, min_length=100) 
-print(outputs[0]['translation_text']) 
+<pre><code class="lang-python">translator = pipeline(<span class="hljs-string">"translation_en_to_de"</span>, model=<span class="hljs-string">"Helsinki-NLP/opus-mt-en-de"</span>) 
+outputs = translator(text, clean_up_tokenization_spaces=<span class="hljs-literal">True</span>, min_length=<span class="hljs-number">100</span>) 
+<span class="hljs-built_in">print</span>(outputs[<span class="hljs-number">0</span>][<span class="hljs-string">'translation_text'</span>]) 
 
 
-Sehr geehrter Amazon, letzte Woche habe ich eine Optimus Prime Action Figur aus Ihrem Online-Shop in Deutschland bestellt. Leider, als ich das Paket öffnete, entdeckte ich zu meinem Entsetzen, dass ich stattdessen eine Action Figur vo
+Sehr geehrter Amazon, letzte Woche habe ich eine Optimus Prime Action Figur aus Ihrem Online-Shop <span class="hljs-keyword">in</span> Deutschland bestellt. Leider, als ich das Paket öffnete, entdeckte ich zu meinem Entsetzen, dass ich stattdessen eine Action Figur vo
 Megatron geschickt worden war! Als lebenslanger Feind der Decepticons, Ich hoffe, Sie können mein Dilemma verstehen. Um das Problem zu lösen, Ich fordere einen Austausch von Megatron für die Optimus Prime Figur habe ich bestellt. Anbei sind Kopien meiner Aufzeichnungen über diesen Kauf. Ich erwarte, bald von Ihnen zu hören. Aufrichtig, Bumblebee.
-</code></pre><p>  同样，该模型产生了一个非常好的翻译，正确地使用了德语的正式代词，如 "Ihrem "和 "Sie"。 这里我们还展示了你如何覆盖流水线中的默认模型，为你的应用选择最好的模型--你可以在Hugging Face Hub上找到成千上万种语言对的模型。 在我们退一步看整个 Hugging face 生态系统之前，让我们检查一下最后一个应用。</p>
+</code></pre>
+<p>  同样，该模型产生了一个非常好的翻译，正确地使用了德语的正式代词，如 "Ihrem "和 "Sie"。 这里我们还展示了你如何覆盖流水线中的默认模型，为你的应用选择最好的模型--你可以在Hugging Face Hub上找到成千上万种语言对的模型。 在我们退一步看整个 Hugging face 生态系统之前，让我们检查一下最后一个应用。</p>
 <h2 id="文本生成">文本生成</h2>
 <p>  比方说，你希望能够通过访问自动完成功能对客户的反馈提供更快的回复。 有了文本生成模型，你可以按以下方式进行：</p>
-<pre><code>generator = pipeline("text-generation") 
-response = "Dear Bumblebee, I am sorry to hear that your order was mixed up." 
-prompt = text + "\n\nCustomer service response:\n" + response
-outputs = generator(prompt, max_length=200) 
-print(outputs[0]['generated_text'])
+<pre><code class="lang-python">generator = pipeline(<span class="hljs-string">"text-generation"</span>) 
+response = <span class="hljs-string">"Dear Bumblebee, I am sorry to hear that your order was mixed up."</span> 
+prompt = text + <span class="hljs-string">"\n\nCustomer service response:\n"</span> + response
+outputs = generator(prompt, max_length=<span class="hljs-number">200</span>) 
+<span class="hljs-built_in">print</span>(outputs[<span class="hljs-number">0</span>][<span class="hljs-string">'generated_text'</span>])
 
 
-Dear Amazon, last week I ordered an Optimus Prime action figure from your online store in Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead! As a lifelong enemy of the Decepticons, I hope you can understand my dilemma. To resolve the issue, I demand an exchange of Megatron for the Optimus Prime figure I ordered. Enclosed are copies of my records concerning this purchase. I expect to hear from you soon. Sincerely, Bumblebee. Customer service response: Dear Bumblebee, I am sorry to hear that your order was mixed up. The order was completely mislabeled, which is very common in our online store, but I can appreciate it because it was my understanding from this site and our customer service of the previous day that your order was not made correct in our mind
-and that we are in a process of resolving this matter. We can assure you that your order
-</code></pre><p>  好吧，也许我们不会想用这种完成方式来安抚大黄蜂，但你会明白大概的意思。</p>
+Dear Amazon, last week I ordered an Optimus Prime action figure <span class="hljs-keyword">from</span> your online store <span class="hljs-keyword">in</span> Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead! As a lifelong enemy of the Decepticons, I hope you can understand my dilemma. To resolve the issue, I demand an exchange of Megatron <span class="hljs-keyword">for</span> the Optimus Prime figure I ordered. Enclosed are copies of my records concerning this purchase. I expect to hear <span class="hljs-keyword">from</span> you soon. Sincerely, Bumblebee. Customer service response: Dear Bumblebee, I am sorry to hear that your order was mixed up. The order was completely mislabeled, which <span class="hljs-keyword">is</span> very common <span class="hljs-keyword">in</span> our online store, but I can appreciate it because it was my understanding <span class="hljs-keyword">from</span> this site <span class="hljs-keyword">and</span> our customer service of the previous day that your order was <span class="hljs-keyword">not</span> made correct <span class="hljs-keyword">in</span> our mind
+<span class="hljs-keyword">and</span> that we are <span class="hljs-keyword">in</span> a process of resolving this matter. We can assure you that your order
+</code></pre>
+<p>  好吧，也许我们不会想用这种完成方式来安抚大黄蜂，但你会明白大概的意思。</p>
 <p>  现在你已经看到了Transformers模型的一些很酷的应用，你可能想知道训练在哪里发生。 我们在本章中使用的所有模型都是公开可用的，并且已经为手头的任务进行了微调。 然而，一般来说，你会想在自己的数据上对模型进行微调，在下面的章节中，你将学习如何做到这一点。</p>
 <p>  但是，训练一个模型只是任何NLP项目的一小部分--能够有效地处理数据，与同事分享结果，并使你的工作可重复，也是关键的组成部分。 幸运的是，Transformers被一个大的有用工具的生态系统所包围，支持现代机器学习工作流程的大部分。 让我们来看看。</p>
 <h2 id="hugging-face-软件生态">Hugging face 软件生态</h2>
@@ -566,7 +574,7 @@ and that we are in a process of resolving this matter. We can assure you that yo
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"\"Hello，Transformers\"","level":"1.3","depth":1,"next":{"title":"文本分类","level":"1.4","depth":1,"path":"chapter2.md","ref":"chapter2.md","articles":[]},"previous":{"title":"序","level":"1.2","depth":1,"path":"preface.md","ref":"preface.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter1.md","mtime":"2024-08-23T19:12:41.442Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"\"Hello，Transformers\"","level":"1.3","depth":1,"next":{"title":"文本分类","level":"1.4","depth":1,"path":"chapter2.md","ref":"chapter2.md","articles":[]},"previous":{"title":"序","level":"1.2","depth":1,"path":"preface.md","ref":"preface.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter1.md","mtime":"2025-01-05T17:59:00.401Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -620,10 +628,6 @@ and that we are in a process of resolving this matter. We can assure you that yo
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -640,7 +644,7 @@ and that we are in a process of resolving this matter. We can assure you that yo
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

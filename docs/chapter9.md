@@ -52,7 +52,7 @@ GitHub的REST API将pull请求视为问题，因此我们的数据集包含了�
 
 一旦我们下载了所有的问题，我们就可以用Pandas加载它们:
 
-```
+```python
 import pandas as pd 
 dataset_url = "https://git.io/nlp-with-transformers" 
 df_issues = pd.read_json(dataset_url, lines=True) 
@@ -64,7 +64,7 @@ DataFrame shape: (9930, 26)
 
 我们的数据集中有近一万个问题，通过查看单行，我们可以看到从GitHub API中检索的信息包含许多字段，如URL、ID、日期、用户、标题、正文以及标签:
 
-```
+```python
 cols = ["url", "id", "title", "user", "labels", "state", "created_at", "body"] 
 
 df_issues.loc[2, cols].to_frame()
@@ -75,7 +75,7 @@ df_issues.loc[2, cols].to_frame()
 
 标签列是我们感兴趣的东西，每一行都包含一个JSON对象的列表，其中有关于每个标签的元数据:
 
-```
+```python
 [ 
     { 
         "id":2659267025, "node_id":"MDU6TGFiZWwyNjU5MjY3MDI1", 
@@ -91,7 +91,7 @@ df_issues.loc[2, cols].to_frame()
 
 为了我们的目的，我们只对每个标签对象的名称字段感兴趣，所以让我们用标签名称覆盖标签列:
 
-```
+```python
 df_issues["labels"] = (df_issues["labels"] .apply(lambda x: [meta["name"] for meta in x])) 
 df_issues[["labels"]].head()
 
@@ -101,7 +101,7 @@ df_issues[["labels"]].head()
 
 现在，标签栏中的每一行都是GitHub的标签列表，所以我们可以计算每一行的长度，以找出每个问题的标签数量:
 
-```
+```python
 df_issues["labels"].apply(lambda x : len(x)).value_counts().to_frame().T
 
 ```
@@ -110,7 +110,7 @@ df_issues["labels"].apply(lambda x : len(x)).value_counts().to_frame().T
 
 这表明，大多数问题都有零个或一个标签，而有一个以上标签的则少得多。接下来，让我们看看数据集中最频繁出现的前10个标签。在Pandas中，我们可以通过 "explode  (展开)"标签列来实现，这样列表中的每个标签都会成为一行，然后简单地计算每个标签的出现次数:
 
-```
+```python
 df_counts = df_issues["labels"].explode().value_counts() 
 print(f"Number of labels: {len(df_counts)}") 
 # Display the top-8 label categories df_counts.to_frame().head(8).T
@@ -125,7 +125,7 @@ Number of labels: 65
 
 下面的代码对数据集进行过滤，以获得我们要处理的标签子集，同时对名称进行标准化处理，使其更容易阅读：
 
-```
+```python
 label_map = {"Core: Tokenization": "tokenization", "New model": "new model", "Core: Modeling": "model training", "Usage": "usage", "Core: Pipeline": "pipeline", "TensorFlow": "tensorflow or tf", "PyTorch": "pytorch", "Examples": "examples", "Documentation": "documentation"} 
 
 def filter_labels(x): 
@@ -138,7 +138,7 @@ all_labels = list(label_map.values())
 
 现在我们来看看新标签的分布情况：
 
-```
+```python
 df_counts = df_issues["labels"].explode().value_counts() 
 df_counts.to_frame().T
 
@@ -148,7 +148,7 @@ df_counts.to_frame().T
 
 在本章的后面，我们会发现将未标记的问题作为一个单独的训练分割来处理是很有用的，所以我们创建一个新的列，表示该问题是否是未标记的:
 
-```
+```python
 df_issues["split"] = "unlabeled" 
 mask = df_issues["labels"].apply(lambda x: len(x)) > 0 
 df_issues.loc[mask, "split"] = "labeled"
@@ -160,7 +160,7 @@ df_issues["split"].value_counts().to_frame()
 
 现在让我们来看一个例子:
 
-```
+```python
 for column in ["title", "body", "labels"]: 
 	print(f"{column}: {df_issues[column].iloc[26][:500]}\n") 
 
@@ -177,14 +177,14 @@ labels: ['new model']
 
 在这个例子中，我们提出了一个新的模型架构，所以新模型标签是有意义的。我们还可以看到，标题包含了对我们的分类器有用的信息，所以让我们把它与正文字段中的问题描述连接起来:
 
-```
+```python
 df_issues["text"] = (df_issues .apply(lambda x: x["title"] + "\n\n" + x["body"], axis=1))
 
 ```
 
 在我们看其余的数据之前，让我们检查一下数据中是否有重复的部分，并通过drop_duplicates()方法将它们删除:
 
-```
+```python
 len_before = len(df_issues) 
 df_issues = df_issues.drop_duplicates(subset="text") 
 print(f"Removed {(len_before-len(df_issues))/len_before:.2%} duplicates.")
@@ -195,7 +195,7 @@ Removed 1.88% duplicates.
 
 我们可以看到，在我们的数据集中有一些重复的问题，但它们只占很小的比例。正如我们在其他章节中所做的那样，快速看一下我们文本中的字数也是一个好主意，看看当我们截断到每个模型的上下文大小时，我们是否会失去很多信息:
 
-```
+```python
 import numpy as np import matplotlib.pyplot as plt 
 
 (df_issues["text"].str.split().apply(len) .hist(bins=np.linspace(0, 500, 50), grid=False, edgecolor="C0")) 
@@ -214,7 +214,7 @@ plt.show()
 
 对于多标签问题来说，创建训练集和验证集是比较麻烦的，因为没有保证所有标签的平衡。然而，它可以被近似，我们可以使用Scikit-multilearn库，它是专门为此目的而设置的。我们需要做的第一件事是将我们的标签集，如pytorch和标记化，转换成模型可以处理的格式。在这里，我们可以使用Scikit-learn的MultiLabel Binarizer类，它接收一个标签名称的列表，并创建一个矢量，其中零代表没有的标签，一代表现在的标签。我们可以通过在all_labels上拟合MultiLabelBinarizer来测试，学习标签名称到ID的映射，如下所示:
 
-```
+```python
 from sklearn.preprocessing import MultiLabelBinarizer 
 mlb = MultiLabelBinarizer() 
 mlb.fit([all_labels]) 
@@ -228,7 +228,7 @@ array([[0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0]])
 
 为了创建分割，我们可以使用Scikit-multilearn的iterative_train_test_split()函数，它可以迭代地创建训练/测试分割以实现平衡标签。我们把它包装成一个可以应用于DataFrames的函数。由于该函数期望有一个二维特征矩阵，我们需要在进行分割之前给可能的索引增加一个维度。
 
-```
+```python
 from skmultilearn.model_selection import iterative_train_test_split 
 def balanced_split(df, test_size=0.5): 
 	ind = np.expand_dims(np.arange(len(df)), axis=1) 
@@ -240,7 +240,7 @@ def balanced_split(df, test_size=0.5):
 
 有了balanced_split()函数，我们可以把数据分成有监督和无监督的数据集，然后为有监督的部分创建平衡的训练、验证和测试集:
 
-```
+```python
 from sklearn.model_selection import train_test_split 
 df_clean = df_issues[["text", "labels", "split"]].reset_index(drop=True).copy() 
 df_unsup = df_clean.loc[df_clean["split"] == "unlabeled", ["text", "labels"]] 
@@ -254,7 +254,7 @@ df_valid, df_test = balanced_split(df_tmp, test_size=0.5)
 
 最后，让我们创建一个包含所有分片的DatasetDict，这样我们就可以轻松地对数据集进行标记，并与Trainer整合。在这里，我们将使用漂亮的from_pandas()方法，直接从相应的Pandas DataFrame中加载每个分片:
 
-```
+```python
 from datasets import Dataset, DatasetDict 
 
 ds = DatasetDict({ "train": Dataset.from_pandas(df_train.reset_index(drop=True)), "valid": Dataset.from_pandas(df_valid.reset_index(drop=True)), "test": Dataset.from_pandas(df_test.reset_index(drop=True)), "unsup": Dataset.from_pandas(df_unsup.reset_index(drop=True))})
@@ -267,7 +267,7 @@ ds = DatasetDict({ "train": Dataset.from_pandas(df_train.reset_index(drop=True))
 
 该数据集具有我们在本章要研究的两个特点：稀疏的标记数据和多标签分类。训练集只有220个例子可供训练，即使是迁移学习，这也是一个挑战。为了深入研究本章中每种方法在很少的标签数据下的表现，我们还将创建样本更少的训练数据片。然后，我们可以将样本的数量与性能作对比，研究各种制度。我们将从每个标签只有8个样本开始，然后使用iterative_train_test_split()函数建立切片，直到覆盖全部的训练集:
 
-```
+```python
 np.random.seed(0) 
 all_indices = np.expand_dims(list(range(len(ds["train"]))), axis=1) 
 indices_pool = all_indices 
@@ -290,7 +290,7 @@ train_slices = [np.squeeze(train_slice) for train_slice in train_slices]
 
 请注意，这种迭代方法只是将样本近似地分割成所需的大小，因为在给定的分割大小下并不总是能够找到平衡的分割:
 
-```
+```python
 print("Target split sizes:") 
 print(train_samples) 
 print("Actual split sizes:") 
@@ -311,7 +311,7 @@ Target split sizes: [8, 16, 32, 64, 128, 223] Actual split sizes: [10, 19, 36, 6
 
 因此，让我们通过训练一个基线模型来开始我们的分析。对于文本分类来说，一个很好的基线是Naive Bayes分类器，因为它非常简单，可以快速训练，并且对输入的扰动相当稳健。Naive Bayes的Scikit-learn实现并不支持开箱即用的多标签分类，但幸运的是，我们可以再次使用Scikitmultilearn库，将这个问题作为一个单对单的分类任务，我们为L标签训练L个二进制分类器。首先，让我们使用一个多标签二值化器，在我们的训练集中创建一个新的标签_ids列。我们可以使用map()函数来一次性搞定所有的处理:
 
-```
+```python
 ef prepare_labels(batch): 
 	batch["label_ids"] = mlb.transform(batch["labels"]) 
 	return batch 
@@ -321,7 +321,7 @@ ds = ds.map(prepare_labels, batched=True)
 
 为了衡量我们的分类器的性能，我们将使用微观和宏观的F-scores，其中前者跟踪频繁标签的性能，后者跟踪不考虑频率的所有标签。由于我们将在不同大小的训练片段中评估每个模型，让我们创建一个defaultdict，用一个列表来存储每个片段的得分:
 
-```
+```python
 from collections import defaultdict
 
 macro_scores, micro_scores = defaultdict(list), defaultdict(list)
@@ -330,7 +330,7 @@ macro_scores, micro_scores = defaultdict(list), defaultdict(list)
 
 现在我们终于准备好训练我们的基线了! 下面是训练模型的代码，并在不断增加的训练集规模中评估我们的分类器:
 
-```
+```python
 from sklearn.naive_bayes import MultinomialNB 
 from sklearn.metrics import classification_report 
 from skmultilearn.problem_transform import BinaryRelevance 
@@ -359,7 +359,7 @@ for train_slice in train_slices:
 
 通过下面的辅助函数，我们可以绘制这个实验的结果:
 
-```
+```python
 import matplotlib.pyplot as plt 
 def plot_metrics(micro_scores, macro_scores, sample_sizes, current_model): 
 	fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 4), sharey=True) 
@@ -402,7 +402,7 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Naive Bayes")
 
 让我们用下面这个玩具问题来进一步说明：假设你有两个孩子，其中一个喜欢有汽车的电影，而另一个更喜欢有动物的电影。不幸的是，他们已经看过所有你知道的电影，所以你想建立一个函数，告诉你新电影是关于什么主题的。自然而然地，你转向Transformers来完成这项任务。首先要尝试的是将BERT-base加载到fill-mask流水线中，该流水线使用掩码语言模型来预测掩码标记的内容：
 
-```
+```python
 from transformers import pipeline 
 pipe = pipeline("fill-mask", model="bert-base-uncased")
 
@@ -410,7 +410,7 @@ pipe = pipeline("fill-mask", model="bert-base-uncased")
 
 接下来，让我们构建一个小的电影描述，并在其中添加一个带有遮蔽词的提示。提示的目的是引导模型，帮助我们进行分类。填充-屏蔽流水线会返回最可能的标记来填充被屏蔽的地方：
 
-```
+```python
 movie_desc = "The main characters of the movie madacascar \ are a lion, a zebra, a giraffe, and a hippo. " 
 prompt = "The movie is about [MASK]." 
 output = pipe(movie_desc + prompt) 
@@ -427,7 +427,7 @@ Token hunting: 0.013%
 
 显然，该模型只预测了与动物有关的标记。我们也可以把这个问题转过来，我们可以向流水线查询几个给定标记的概率，而不是获得最可能的标记。对于这个任务，我们可能会选择汽车和动物，所以我们可以把它们作为目标传递给流水线：
 
-```
+```python
 output = pipe(movie_desc + prompt, targets=["animals", "cars"]) 
 for element in output: 
 	print(f"Token {element['token_str']}:\t{element['score']:.3f}%") 
@@ -439,7 +439,7 @@ Token cars: 0.001%
 
 不出所料，对象征性的汽车的预测概率要比对动物的预测概率小得多。让我们看看这是否也适用于更接近于汽车的描述：
 
-```
+```python
 movie_desc = "In the movie transformers aliens \ can morph into a wide range of vehicles." 
 output = pipe(movie_desc + prompt, targets=["animals", "cars"]) 
 for element in output: 
@@ -468,7 +468,7 @@ Token animals: 0.006%
 
 Transformers有一个内置的MNLI模型用于零样本分类。我们可以通过一个流水线来初始化它，如下所示：
 
-```
+```python
 from transformers import pipeline 
 pipe = pipeline("zero-shot-classification", device=0)
 
@@ -476,7 +476,7 @@ pipe = pipeline("zero-shot-classification", device=0)
 
 device=0的设置可以确保模型在GPU上运行，而不是默认的CPU，以加快推理速度。要对一个文本进行分类，我们只需要把它和标签名称一起传递给流水线。此外，我们可以设置multi_label=True，以确保返回所有的分数，而不是只返回单标签分类的最大分数：
 
-```
+```python
 sample = ds["train"][0] 
 print(f"Labels: {sample['labels']}") 
 output = pipe(sample["text"], all_labels, multi_label=True) 
@@ -514,7 +514,7 @@ pipeline, 0.16
 
 让我们写一个函数，通过零拍流水线送入一个例子，然后通过运行map()将其扩展到整个验证集：
 
-```
+```python
 def zero_shot_pipeline(example): 
 	output = pipe(example["text"], all_labels, multi_label=True) 
 	example["predicted_labels"] = output["labels"] 
@@ -533,7 +533,7 @@ ds_zero_shot = ds["valid"].map(zero_shot_pipeline)
 
 为了帮助我们确定哪种方法最好，让我们写一个get_preds()函数，应用其中一种方法来检索预测结果：
 
-```
+```python
 def get_preds(example, threshold=None, topk=None): 
 	preds = [] 
 	if threshold: 
@@ -551,7 +551,7 @@ def get_preds(example, threshold=None, topk=None):
 
 接下来，让我们写第二个函数，get_clf_report()，它从数据集中返回带有预测标签的Scikit-learn分类报告：
 
-```
+```python
 def get_clf_report(ds): 
 	y_true = np.array(ds["label_ids"]) 
 	y_pred = np.array(ds["pred_label_ids"]) 
@@ -561,7 +561,7 @@ def get_clf_report(ds):
 
 有了这两个函数，让我们从top-k方法开始，增加k的几个值，然后绘制整个验证集的微观和宏观F分数：
 
-```
+```python
 macros, micros = [], [] 
 topks = [1, 2, 3, 4] 
 for topk in topks: 
@@ -582,7 +582,7 @@ plt.show()
 
 从图中我们可以看出，通过选择每个例子中得分最高的标签（顶部1），可以获得最佳结果。考虑到我们的数据集中的大多数例子只有一个标签，这也许并不令人惊讶。现在让我们来比较一下这与设置阈值的区别，这样我们就有可能预测每个例子有一个以上的标签：
 
-```
+```python
 macros, micros = [], [] 
 thresholds = np.linspace(0.01, 1, 100) 
 for threshold in thresholds: 
@@ -601,7 +601,7 @@ plt.show()
 
 ![image-20220215081127519](images/chapter9/image-20220215081127519.png)
 
-```
+```python
 best_t, best_micro = thresholds[np.argmax(micros)], np.max(micros) 
 print(f'Best threshold (micro): {best_t} with F1-score {best_micro:.2f}.') best_t, best_macro = thresholds[np.argmax(macros)], np.max(macros) 
 print(f'Best threshold (micro): {best_t} with F1-score {best_macro:.2f}.')
@@ -615,7 +615,7 @@ Best threshold (micro): 0.72 with F1-score 0.42.
 
 由于top-1方法表现最好，让我们用它来比较零样本分类与测试集上的Naive Bayes：
 
-```
+```python
 ds_zero_shot = ds['test'].map(zero_shot_pipeline) 
 ds_zero_shot = ds_zero_shot.map(get_preds, fn_kwargs={'topk': 1})
 clf_report = get_clf_report(ds_zero_shot) 
@@ -683,7 +683,7 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Zero Shot")
 
 
 
-```
+```python
 from transformers import set_seed 
 import nlpaug.augmenter.word as naw
 
@@ -702,7 +702,7 @@ Augmented text: transformers'the most popular toys
 
 
 
-```
+```python
 def augment_text(batch, transformations_per_example=1): 
 	text_aug, label_ids = [], [] 
 	for text, labels in zip(batch["text"], batch["label_ids"]): 
@@ -719,14 +719,14 @@ def augment_text(batch, transformations_per_example=1):
 
 现在，当我们把这个函数传递给map()方法时，我们可以用transformations_per_example这个参数生成任意数量的新例子。我们可以在我们的代码中使用这个函数来训练Naive Bayes分类器，只需在我们选择分片后添加一行:
 
-```
+```python
 ds_train_sample = ds_train_sample.map(augment_text, batched=True, remove_columns=ds_train_sample.column_names).shuffle(seed=42)
 
 ```
 
 包括这一点并重新运行分析，产生了这里所示的图表:
 
-```
+```python
 plot_metrics(micro_scores, macro_scores, train_samples, "Naive Bayes + Aug")
 
 ```
@@ -775,7 +775,7 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Naive Bayes + Aug")
 
 
 
-```
+```python
 import torch 
 from transformers import AutoTokenizer, AutoModel 
 model_ckpt = "miguelvictor/python-gpt2-large" 
@@ -802,7 +802,7 @@ def embed_text(examples):
 
 现在我们可以得到每个分割的嵌入。请注意，GPT风格的模型没有填充标记，因此我们需要添加一个，然后才能像前面的代码中实现的那样以分批的方式获得嵌入。我们将为此目的回收字符串末尾的标记:
 
-```
+```python
 tokenizer.pad_token = tokenizer.eos_token 
 embs_train = ds["train"].map(embed_text, batched=True, batch_size=16) 
 embs_valid = ds["valid"].map(embed_text, batched=True, batch_size=16) 
@@ -812,7 +812,7 @@ embs_test = ds["test"].map(embed_text, batched=True, batch_size=16)
 
 现在我们有了所有的嵌入，我们需要建立一个系统来搜索它们。我们可以写一个函数来计算，比如说，我们要查询的一个新的文本嵌入和训练集中现有的嵌入之间的余弦相似度。另外，我们也可以使用数据集的一个内置结构，叫做FAISS索引。我们已经在第七章中遇到了FAISS。你可以把它看作是一个嵌入的搜索引擎，我们一会儿会仔细看看它是如何工作的。我们可以通过add_faiss_index()使用数据集的一个现有字段来创建一个FAISS索引，也可以通过add_faiss_index_from_external_arrays()将新的嵌入数据加载到数据集。让我们使用前一个函数将我们的训练嵌入物添加到数据集中，如下所示:
 
-```
+```python
 embs_train.add_faiss_index("embedding")
 
 ```
@@ -821,7 +821,7 @@ embs_train.add_faiss_index("embedding")
 
 
 
-```
+```python
 i, k = 0, 3
 # Select the first query and 3 nearest neighbors 
 rn, nl = "\r\n\r\n", "\n"
@@ -878,7 +878,7 @@ LABELS: ['new model']
 
 
 
-```
+```python
 def get_sample_preds(sample, m): 
 	return (np.sum(sample["label_ids"], axis=0) >= m).astype(int) 
 def find_best_k_m(ds_train, valid_queries, valid_labels, max_k=17):
@@ -901,7 +901,7 @@ target_names=mlb.classes_, zero_division=0, output_dict=True)
 
 让我们检查一下所有训练样本的最佳值是多少，并将所有k和m配置的分数可视化:
 
-```
+```python
 valid_labels = np.array(embs_valid["label_ids"]) 
 valid_queries = np.array(embs_valid["embedding"], dtype=np.float32) 
 perf_micro, perf_macro = find_best_k_m(embs_train, valid_queries, valid_labels) 
@@ -925,7 +925,7 @@ plt.show()
 
 
 
-```
+```python
 k, m = np.unravel_index(perf_micro.argmax(), perf_micro.shape) 
 print(f"Best k: {k}, best m: {m}") 
 Best k: 15, best m: 5
@@ -938,7 +938,7 @@ Best k: 15, best m: 5
 
 
 
-```
+```python
 embs_train.drop_index("embedding") 
 test_labels = np.array(embs_test["label_ids"]) 
 test_queries = np.array(embs_test["embedding"], dtype=np.float32) 
@@ -1018,7 +1018,7 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Embedding")
 
 
 
-```
+```python
 import torch 
 from transformers import (AutoTokenizer, AutoConfig, AutoModelForSequenceClassification) 
 
@@ -1035,7 +1035,7 @@ ds_enc = ds_enc.remove_columns(['labels', 'text'])
 
 多标签损失函数希望标签的类型是浮动的，因为它也允许类概率而不是离散的标签。因此，我们需要改变列 label_ids 的类型。由于从元素上改变列的格式与Arrow的类型格式不相称，我们将做一个小小的变通。首先，我们创建一个带有标签的新列。该列的格式是由第一个元素推断出来的。然后，我们删除原来的列，重命名新的列以取代原来的列:
 
-```
+```python
 ds_enc.set_format("torch") 
 ds_enc = ds_enc.map(lambda x: {"label_ids_f": x["label_ids"].to(torch.float)}, remove_columns=["label_ids"]) 
 ds_enc = ds_enc.rename_column("label_ids_f", "label_ids")
@@ -1048,7 +1048,7 @@ ds_enc = ds_enc.rename_column("label_ids_f", "label_ids")
 
 
 
-```
+```python
 from transformers import Trainer, TrainingArguments 
 training_args_fine_tune = TrainingArguments( output_dir="./results", num_train_epochs=20, learning_rate=3e-5, lr_scheduler_type='constant', per_device_train_batch_size=4, per_device_eval_batch_size=32, weight_decay=0.0, evaluation_strategy="epoch", save_strategy="epoch",logging_strategy="epoch", load_best_model_at_end=True, metric_for_best_model='micro f1', save_total_limit=1, log_level='error')
 
@@ -1060,7 +1060,7 @@ training_args_fine_tune = TrainingArguments( output_dir="./results", num_train_e
 
 
 
-```
+```python
 from scipy.special import expit as sigmoid 
 def compute_metrics(pred): 
 	y_true = pred.label_ids
@@ -1077,7 +1077,7 @@ def compute_metrics(pred):
 
 
 
-```
+```python
 config = AutoConfig.from_pretrained(model_ckpt) 
 config.num_labels = len(all_labels) 
 config.problem_type = "multi_label_classification" 
@@ -1116,7 +1116,7 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Fine-tune (vanilla)")
 
 
 
-```
+```python
 prompt = """\ Translate English to French: thanks => """
 
 ```
@@ -1157,7 +1157,7 @@ prompt = """\ Translate English to French: thanks => """
 
 除了文本中的普通标记外，标记器还将特殊标记添加到序列中，如用于分类和下句预测的[CLS]和[SEP]标记。当我们做屏蔽式语言建模时，我们要确保我们不会训练模型来预测这些标记。出于这个原因，我们将它们从损失中屏蔽掉，我们可以通过设置return_special_tokens_mask=True，在标记化时得到一个屏蔽。让我们用这个设置对文本进行重新标记。
 
-```
+```python
 def tokenize(batch):
 	return tokenizer(batch["text"], truncation=True, max_length=128, return_special_tokens_mask=True) 
 	ds_mlm = ds.map(tokenize, batched=True) 
@@ -1173,7 +1173,7 @@ def tokenize(batch):
 
 
 
-```
+```python
 from transformers import DataCollatorForLanguageModeling, set_seed 
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
 
@@ -1183,7 +1183,7 @@ data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probabi
 
 
 
-```
+```python
 set_seed(3) 
 data_collator.return_tensors = "np" 
 inputs = tokenizer("Transformers are awesome!", return_tensors="np") 
@@ -1201,7 +1201,7 @@ pd.DataFrame({ "Original tokens": tokenizer.convert_ids_to_tokens(inputs["input_
 
 
 
-```
+```python
 data_collator.return_tensors = "pt"
 
 ```
@@ -1212,7 +1212,7 @@ data_collator.return_tensors = "pt"
 
 
 
-```
+```python
 from transformers import AutoModelForMaskedLM 
 
 training_args = TrainingArguments( output_dir = f"{model_ckpt}-issues-128", per_device_train_batch_size=32, logging_strategy="epoch", evaluation_strategy="epoch", save_strategy="no", num_train_epochs=16, push_to_hub=True, log_level="error", report_to="none") 
@@ -1230,7 +1230,7 @@ trainer.push_to_hub("Training complete!")
 
 
 
-```
+```python
 df_log = pd.DataFrame(trainer.state.log_history) 
 
 (df_log.dropna(subset=["eval_loss"]).reset_index()["eval_loss"] .plot(label="Validation")) 
@@ -1261,7 +1261,7 @@ plt.show()
 
 
 
-```
+```python
 model_ckpt = f'{model_ckpt}-issues-128' 
 config = AutoConfig.from_pretrained(model_ckpt) 
 config.num_labels = len(all_labels) 
@@ -1281,7 +1281,7 @@ train_dataset=ds_enc["train"].select(train_slice), eval_dataset=ds_enc["valid"],
 
 将结果与基于vanilla BERT的微调进行比较，我们看到，我们得到了一个优势，特别是在低数据领域。在有更多标记数据的情况下，我们也获得了几个百分点：
 
-```
+```python
 plot_metrics(micro_scores, macro_scores, train_samples, "Fine-tune (DA)")
 
 ```

@@ -6,7 +6,7 @@
         <title>Transformers架构剖析 · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -368,14 +368,15 @@
 <li>更新标记嵌入。一旦计算出注意力权重，我们就把它们与值向量v1, ..., vn相乘，以获得嵌入x′i = ∑j wjivj的更新表示。</li>
 </ol>
 <p>我们可以通过一个名为BertViz for Jupyter的灵巧的库将注意力权重的计算方式可视化。这个库提供了几个函数，可以用来将Transformers模型中的注意力的不同方面可视化。为了使注意力权重可视化，我们可以使用神经元_视图模块，它可以追踪权重的计算，以显示查询和键向量是如何结合起来产生最终权重的。由于BertViz需要进入模型的注意力层，我们将用BertViz的模型类来实例化我们的BERT模型，然后使用show()函数来生成特定编码器层和注意力头的交互式可视化。注意，你需要点击左边的 "+"来激活注意力的可视化:</p>
-<pre><code>from transformers import AutoTokenizer 
-from bertviz.transformers_neuron_view import BertModel 
-from bertviz.neuron_view import show 
-model_ckpt = "bert-base-uncased" tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer 
+<span class="hljs-keyword">from</span> bertviz.transformers_neuron_view <span class="hljs-keyword">import</span> BertModel 
+<span class="hljs-keyword">from</span> bertviz.neuron_view <span class="hljs-keyword">import</span> show 
+model_ckpt = <span class="hljs-string">"bert-base-uncased"</span> tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
 model = BertModel.from_pretrained(model_ckpt) 
-text = "time flies like an arrow" 
-show(model, "bert", tokenizer, text, display_mode="light", layer=0, head=8)
-</code></pre><p><img src="images/chapter3/image-20220214092045741.png" alt="image-20220214092045741"></img></p>
+text = <span class="hljs-string">"time flies like an arrow"</span> 
+show(model, <span class="hljs-string">"bert"</span>, tokenizer, text, display_mode=<span class="hljs-string">"light"</span>, layer=<span class="hljs-number">0</span>, head=<span class="hljs-number">8</span>)
+</code></pre>
+<p><img src="images/chapter3/image-20220214092045741.png" alt="image-20220214092045741"></img></p>
 <p>从可视化中，我们可以看到查询向量和键向量的值被表示为垂直带，每个带的强度对应于幅度。连接线根据标记之间的注意力度进行加权，我们可以看到 "苍蝇 "的查询向量与 "箭头 "的键向量有最强的重叠。</p>
 <p><strong>揭开查询、键和值的神秘面纱</strong> 
 查询、键和值向量的概念在你第一次遇到它们的时候可能显得有点神秘。它们的名字是受信息检索系统的启发，但我们可以用一个简单的比喻来解释它们的意义。想象一下，你在超市里购买晚餐所需的所有材料。你有这道菜的食谱，每一种所需的原料都可以被认为是一个查询。当你扫描货架时，你看标签（键），并检查它们是否与你清单上的成分相匹配（相似性功能）。如果有匹配的，那么你就从货架上取走这个物品（值）。在这个比喻中，每一个与成分相匹配的标签，你只能得到杂货店中的一个物品。自注意力是一个更抽象和 "平滑 "的版本：超市里的每一个标签都与成分相匹配，其结果是每个键都与查询相匹配。因此，如果你的清单包括一打鸡蛋，那么你最终可能会抓到10个鸡蛋，一个煎蛋，和一个鸡翅。</p>
@@ -384,120 +385,133 @@ show(model, "bert", tokenizer, text, display_mode="light", layer=0, head=8)
 <p>我们将在本章中使用PyTorch来实现Transformer架构，但TensorFlow中的步骤是类似的。我们在表3-1中提供了这两个框架中最重要的函数之间的映射。</p>
 <p><img src="images/chapter3/image-20220214092703482.png" alt="image-20220214092703482"></img></p>
 <p>我们需要做的第一件事是对文本进行标记，所以让我们使用我们的标记器来提取输入的ID：</p>
-<pre><code>inputs = tokenizer(text, return_tensors="pt", add_special_tokens=False) 
-inputs.input_ids tensor([[ 2051, 10029, 2066, 2019, 8612]])
-</code></pre><p>正如我们在第二章中所看到的，句子中的每个标记都被映射到标记器词汇中的一个唯一的ID。为了保持简单，我们还通过设置add_special_tokens=False排除了[CLS]和[SEP]标记。接下来，我们需要创建一些密集嵌入。这里的密集意味着嵌入中的每个条目都包含一个非零值。相比之下，我们在第二章中看到的单热编码是稀疏的，因为除了一个条目外，所有条目都是零。在PyTorch中，我们可以通过使用torch.nn.Embedding层来做到这一点，该层作为每个输入ID的查询表：</p>
-<pre><code>from torch import nn 
-from transformers import AutoConfig 
+<pre><code class="lang-python">inputs = tokenizer(text, return_tensors=<span class="hljs-string">"pt"</span>, add_special_tokens=<span class="hljs-literal">False</span>) 
+inputs.input_ids tensor([[ <span class="hljs-number">2051</span>, <span class="hljs-number">10029</span>, <span class="hljs-number">2066</span>, <span class="hljs-number">2019</span>, <span class="hljs-number">8612</span>]])
+</code></pre>
+<p>正如我们在第二章中所看到的，句子中的每个标记都被映射到标记器词汇中的一个唯一的ID。为了保持简单，我们还通过设置add_special_tokens=False排除了[CLS]和[SEP]标记。接下来，我们需要创建一些密集嵌入。这里的密集意味着嵌入中的每个条目都包含一个非零值。相比之下，我们在第二章中看到的单热编码是稀疏的，因为除了一个条目外，所有条目都是零。在PyTorch中，我们可以通过使用torch.nn.Embedding层来做到这一点，该层作为每个输入ID的查询表：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> torch <span class="hljs-keyword">import</span> nn 
+<span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoConfig 
 config = AutoConfig.from_pretrained(model_ckpt) 
 token_emb = nn.Embedding(config.vocab_size, config.hidden_size) 
-token_emb Embedding(30522, 768)
-</code></pre><p>这里我们使用AutoConfig类来加载与bert-base-uncased模型相关的config.json文件。在Transformers中，每个模型都被分配了一个配置文件，它指定了各种超参数，如vocab_size和hidden_size，在我们的例子中，它告诉我们每个输入ID将被映射到存储在nn.Embedding中的30,522个嵌入向量之一，每个向量的大小为768。AutoConfig类还存储了额外的元数据，如标签名称，用于格式化模型的预测。</p>
+token_emb Embedding(<span class="hljs-number">30522</span>, <span class="hljs-number">768</span>)
+</code></pre>
+<p>这里我们使用AutoConfig类来加载与bert-base-uncased模型相关的config.json文件。在Transformers中，每个模型都被分配了一个配置文件，它指定了各种超参数，如vocab_size和hidden_size，在我们的例子中，它告诉我们每个输入ID将被映射到存储在nn.Embedding中的30,522个嵌入向量之一，每个向量的大小为768。AutoConfig类还存储了额外的元数据，如标签名称，用于格式化模型的预测。</p>
 <p>请注意，此时的标记嵌入是独立于其上下文的。这意味着同音异义词（拼写相同但含义不同的词），如前面例子中的 "苍蝇"，具有相同的表示。随后的注意力层的作用将是混合这些标记嵌入，以消除歧义，并将每个标记的表示与它的上下文内容联系起来。</p>
 <p>现在我们有了查找表，我们可以通过输入ID来生成嵌入：</p>
-<pre><code>inputs_embeds = token_emb(inputs.input_ids) 
+<pre><code class="lang-python">inputs_embeds = token_emb(inputs.input_ids) 
 inputs_embeds.size() 
-torch.Size([1, 5, 768])
-</code></pre><p>这给了我们一个形状为[batch_size, seq_len, hidden_dim]的张量，就像我们在第二章看到的那样。我们将推迟位置编码，所以下一步是创建查询、键和值向量，并使用点乘作为相似性函数来计算注意分数：</p>
-<pre><code>import torch from math 
-import sqrt 
+torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>])
+</code></pre>
+<p>这给了我们一个形状为[batch_size, seq_len, hidden_dim]的张量，就像我们在第二章看到的那样。我们将推迟位置编码，所以下一步是创建查询、键和值向量，并使用点乘作为相似性函数来计算注意分数：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch <span class="hljs-keyword">from</span> math 
+<span class="hljs-keyword">import</span> sqrt 
 query = key = value = inputs_embeds 
-dim_k = key.size(-1) 
-scores = torch.bmm(query, key.transpose(1,2)) / sqrt(dim_k) 
+dim_k = key.size(-<span class="hljs-number">1</span>) 
+scores = torch.bmm(query, key.transpose(<span class="hljs-number">1</span>,<span class="hljs-number">2</span>)) / sqrt(dim_k) 
 scores.size() 
 
-torch.Size([1, 5, 5])
-</code></pre><p>这就为该批次中的每个样本创建了一个5×5的注意力分数矩阵。我们稍后会看到，查询、键和值向量是通过对嵌入的独立权重矩阵WQ,K,V产生的，但现在为了简单起见，我们让它们保持相等。在缩放点积注意力中，点积被嵌入向量的大小所缩放，这样我们在训练中就不会得到太多的大数字，从而导致我们接下来要应用的softmax达到饱和。</p>
+torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">5</span>])
+</code></pre>
+<p>这就为该批次中的每个样本创建了一个5×5的注意力分数矩阵。我们稍后会看到，查询、键和值向量是通过对嵌入的独立权重矩阵WQ,K,V产生的，但现在为了简单起见，我们让它们保持相等。在缩放点积注意力中，点积被嵌入向量的大小所缩放，这样我们在训练中就不会得到太多的大数字，从而导致我们接下来要应用的softmax达到饱和。</p>
 <p><strong>注意事项</strong></p>
 <p>torch.bmm()函数执行了一个批量矩阵-矩阵乘积，简化了注意力分数的计算，其中查询和键向量的形状为[batch_size, seq_len, hidden_dim]。如果我们忽略了批次维度，我们可以通过简单地转置钥匙张量来计算每个查询和钥匙向量之间的点乘，使其具有[hidden_dim, seq_len]的形状，然后使用矩阵乘积来收集[seq_len, seq_len]矩阵中所有的点乘。由于我们想独立地对批次中的所有序列做这件事，我们使用torch.bmm()，它需要两批矩阵并将第一批中的每个矩阵与第二批中的相应矩阵相乘。</p>
 <p>现在让我们来应用softmax：</p>
-<pre><code>import torch.nn.functional as F 
-weights = F.softmax(scores, dim=-1)
-weights.sum(dim=-1) 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch.nn.functional <span class="hljs-keyword">as</span> F 
+weights = F.softmax(scores, dim=-<span class="hljs-number">1</span>)
+weights.<span class="hljs-built_in">sum</span>(dim=-<span class="hljs-number">1</span>) 
 
-tensor([[1., 1., 1., 1., 1.]], grad_fn=&lt;SumBackward1&gt;)
-</code></pre><p>最后一步是将注意力权重与数值相乘：</p>
-<pre><code>attn_outputs = torch.bmm(weights, value) 
-attn_outputs.shape torch.Size([1, 5, 768])
-</code></pre><p>就这样，我们已经完成了所有的步骤，实现了一个简化的自注意力形式！注意，整个过程只是两个矩阵乘法和一个softmax。请注意，整个过程只是两个矩阵乘法和一个softmax，所以你可以把 "自注意力 "看成是一种花哨的平均化形式。</p>
+tensor([[<span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>]], grad_fn=&lt;SumBackward1&gt;)
+</code></pre>
+<p>最后一步是将注意力权重与数值相乘：</p>
+<pre><code class="lang-python">attn_outputs = torch.bmm(weights, value) 
+attn_outputs.shape torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>])
+</code></pre>
+<p>就这样，我们已经完成了所有的步骤，实现了一个简化的自注意力形式！注意，整个过程只是两个矩阵乘法和一个softmax。请注意，整个过程只是两个矩阵乘法和一个softmax，所以你可以把 "自注意力 "看成是一种花哨的平均化形式。</p>
 <p>让我们把这些步骤包成一个函数，我们以后可以使用：</p>
-<pre><code>def scaled_dot_product_attention(query, key, value): 
-    dim_k = query.size(-1) 
-    scores = torch.bmm(query, key.transpose(1, 2)) / sqrt(dim_k)
-    weights = F.softmax(scores, dim=-1) 
-    return torch.bmm(weights, value)
-</code></pre><p>我们的注意力机制在查询和键向量相等的情况下，会给上下文中相同的词分配一个非常大的分数，特别是给当前的词本身：查询与自身的点积总是1。但是在实践中，一个词的含义会被上下文中的互补词所告知，而不是相同的词--例如，"苍蝇 "的含义通过纳入 "时间 "和 "箭头 "的信息比另外提到的 "苍蝇 "更好定义。我们怎样才能促进这种行为呢？</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">scaled_dot_product_attention</span>(<span class="hljs-params">query, key, value</span>): 
+    dim_k = query.size(-<span class="hljs-number">1</span>) 
+    scores = torch.bmm(query, key.transpose(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>)) / sqrt(dim_k)
+    weights = F.softmax(scores, dim=-<span class="hljs-number">1</span>) 
+    <span class="hljs-keyword">return</span> torch.bmm(weights, value)
+</code></pre>
+<p>我们的注意力机制在查询和键向量相等的情况下，会给上下文中相同的词分配一个非常大的分数，特别是给当前的词本身：查询与自身的点积总是1。但是在实践中，一个词的含义会被上下文中的互补词所告知，而不是相同的词--例如，"苍蝇 "的含义通过纳入 "时间 "和 "箭头 "的信息比另外提到的 "苍蝇 "更好定义。我们怎样才能促进这种行为呢？</p>
 <p>让我们允许模型通过使用三种不同的线性投影将我们的初始标记向量投射到三个不同的空间，为查询、键和标记的值创建一组不同的向量。</p>
 <h2 id="多头注意力">多头注意力</h2>
 <p>在我们的简单例子中，我们只是 "按原样 "使用嵌入来计算注意力分数和权重，但这远远不是故事的全部。在实践中，自注意力层对每个嵌入物进行了三个独立的线性转换，以生成查询、键和值向量。这些变换对嵌入进行投射，每个投射都有自己的一套可学习的参数，这使得自注意力层能够注意力序列的不同语义方面。</p>
 <p>事实证明，拥有多组线性投射也是有益的，每组投射代表一个所谓的注意头。由此产生的多头注意力层如图3-5所示。但为什么我们需要一个以上的注意头呢？原因是，一个头的softmax往往主要集中在相似性的一个方面。有了几个头，模型就可以同时注意力几个方面了。例如，一个头可以专注于主语与动词的互动，而另一个头则可以找到附近的形容词。显然，我们并没有将这些关系手工制作到模型中，它们完全是从数据中学习的。如果你熟悉计算机视觉模型，你可能会发现它与卷积神经网络中的过滤器很相似。其中一个过滤器负责检测人脸，另一个负责在图像中寻找汽车的车轮。</p>
 <p><img src="images/chapter3/image-20220214093659668.png" alt="image-20220214093659668"></img></p>
 <p>让我们来实现这个层，首先编码一个单一的注意力头：</p>
-<pre><code>class AttentionHead(nn.Module): 
-    def __init__(self, embed_dim, head_dim): 
-        super().__init__() 
-        self.q = nn.Linear(embed_dim, head_dim) 
-        self.k = nn.Linear(embed_dim, head_dim) 
-        self.v = nn.Linear(embed_dim, head_dim) 
-    def forward(self, hidden_state): 
-        attn_outputs = scaled_dot_product_attention( self.q(hidden_state), self.k(hidden_state), self.v(hidden_state)) 
-        return attn_outputs
-</code></pre><p>在这里，我们初始化了三个独立的线性层，将矩阵乘法应用于嵌入向量，产生形状为[batch_size, seq_len, head_dim]的张量，其中head_dim是我们要投射的维数。虽然head_dim不一定要小于令牌的嵌入维数（embed_dim），但在实践中，它被选择为embed_dim的倍数，以便每个头的计算量是恒定的。例如，BERT有12个注意头，所以每个头的尺寸是768/12=64。</p>
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">AttentionHead</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, embed_dim, head_dim</span>): 
+        <span class="hljs-built_in">super</span>().__init__() 
+        <span class="hljs-variable language_">self</span>.q = nn.Linear(embed_dim, head_dim) 
+        <span class="hljs-variable language_">self</span>.k = nn.Linear(embed_dim, head_dim) 
+        <span class="hljs-variable language_">self</span>.v = nn.Linear(embed_dim, head_dim) 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, hidden_state</span>): 
+        attn_outputs = scaled_dot_product_attention( <span class="hljs-variable language_">self</span>.q(hidden_state), <span class="hljs-variable language_">self</span>.k(hidden_state), <span class="hljs-variable language_">self</span>.v(hidden_state)) 
+        <span class="hljs-keyword">return</span> attn_outputs
+</code></pre>
+<p>在这里，我们初始化了三个独立的线性层，将矩阵乘法应用于嵌入向量，产生形状为[batch_size, seq_len, head_dim]的张量，其中head_dim是我们要投射的维数。虽然head_dim不一定要小于令牌的嵌入维数（embed_dim），但在实践中，它被选择为embed_dim的倍数，以便每个头的计算量是恒定的。例如，BERT有12个注意头，所以每个头的尺寸是768/12=64。</p>
 <p>现在我们有了一个注意力头，我们可以把每个注意力头的输出拼接起来，实现完整的多头注意力层：</p>
-<pre><code>class MultiHeadAttention(nn.Module): 
-    def __init__(self, config): 
-        super().__init__() 
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MultiHeadAttention</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): 
+        <span class="hljs-built_in">super</span>().__init__() 
         embed_dim = config.hidden_size 
         num_heads = config.num_attention_heads 
         head_dim = embed_dim // num_heads 
-        self.heads = nn.ModuleList( [AttentionHead(embed_dim, head_dim) for _ in range(num_heads)] ) 
-        self.output_linear = nn.Linear(embed_dim, embed_dim) 
-    def forward(self, hidden_state): 
-        x = torch.cat([h(hidden_state) for h in self.heads], dim=-1) 
-        x = self.output_linear(x) 
-        return x
-</code></pre><p>请注意，注意力头的联合输出也被送入最后的线性层，以产生形状为[batch_size, seq_len, hidden_dim]的输出张量，适合下游的前馈网络。为了确认，让我们看看多头注意力层是否产生了我们输入的预期形状。在初始化MultiHeadAttention模块时，我们将先前从预训练的BERT模型中加载的配置传递给它。这确保我们使用与BERT相同的设置：</p>
-<pre><code>multihead_attn = MultiHeadAttention(config) 
+        <span class="hljs-variable language_">self</span>.heads = nn.ModuleList( [AttentionHead(embed_dim, head_dim) <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(num_heads)] ) 
+        <span class="hljs-variable language_">self</span>.output_linear = nn.Linear(embed_dim, embed_dim) 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, hidden_state</span>): 
+        x = torch.cat([h(hidden_state) <span class="hljs-keyword">for</span> h <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>.heads], dim=-<span class="hljs-number">1</span>) 
+        x = <span class="hljs-variable language_">self</span>.output_linear(x) 
+        <span class="hljs-keyword">return</span> x
+</code></pre>
+<p>请注意，注意力头的联合输出也被送入最后的线性层，以产生形状为[batch_size, seq_len, hidden_dim]的输出张量，适合下游的前馈网络。为了确认，让我们看看多头注意力层是否产生了我们输入的预期形状。在初始化MultiHeadAttention模块时，我们将先前从预训练的BERT模型中加载的配置传递给它。这确保我们使用与BERT相同的设置：</p>
+<pre><code class="lang-python">multihead_attn = MultiHeadAttention(config) 
 attn_output = multihead_attn(inputs_embeds) 
 attn_output.size() 
 
-torch.Size([1, 5, 768] )
-</code></pre><p>它是有效的! 为了总结这一节关于注意力的内容，让我们再次使用BertViz将 "苍蝇 "这个词的两种不同用法的注意力可视化。在这里，我们可以使用BertViz的head_view()函数，通过计算预训练的模型的注意力并指出句子边界的位置：</p>
-<pre><code>from bertviz import head_view 
-from transformers import AutoModel 
-model = AutoModel.from_pretrained(model_ckpt, output_attentions=True) 
-sentence_a = "time flies like an arrow" 
-sentence_b = "fruit flies like a banana" 
-viz_inputs = tokenizer(sentence_a, sentence_b, return_tensors='pt') 
+torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>] )
+</code></pre>
+<p>它是有效的! 为了总结这一节关于注意力的内容，让我们再次使用BertViz将 "苍蝇 "这个词的两种不同用法的注意力可视化。在这里，我们可以使用BertViz的head_view()函数，通过计算预训练的模型的注意力并指出句子边界的位置：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> bertviz <span class="hljs-keyword">import</span> head_view 
+<span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoModel 
+model = AutoModel.from_pretrained(model_ckpt, output_attentions=<span class="hljs-literal">True</span>) 
+sentence_a = <span class="hljs-string">"time flies like an arrow"</span> 
+sentence_b = <span class="hljs-string">"fruit flies like a banana"</span> 
+viz_inputs = tokenizer(sentence_a, sentence_b, return_tensors=<span class="hljs-string">'pt'</span>) 
 attention = model(**viz_inputs).attentions 
-sentence_b_start = (viz_inputs.token_type_ids == 0).sum(dim=1) 
-tokens = tokenizer.convert_ids_to_tokens(viz_inputs.input_ids[0]) 
-head_view(attention, tokens, sentence_b_start, heads=[8])
-</code></pre><p><img src="images/chapter3/image-20220214094130488.png" alt="image-20220214094130488"></img></p>
+sentence_b_start = (viz_inputs.token_type_ids == <span class="hljs-number">0</span>).<span class="hljs-built_in">sum</span>(dim=<span class="hljs-number">1</span>) 
+tokens = tokenizer.convert_ids_to_tokens(viz_inputs.input_ids[<span class="hljs-number">0</span>]) 
+head_view(attention, tokens, sentence_b_start, heads=[<span class="hljs-number">8</span>])
+</code></pre>
+<p><img src="images/chapter3/image-20220214094130488.png" alt="image-20220214094130488"></img></p>
 <p>这个可视化图显示了注意力权重，它是连接嵌入被更新的标记（左边）和被注意力的每个词（右边）的线条。线条的强度表示注意力权重的强度，暗线代表接近1的值，暗线代表接近0的值。在这个例子中，输入由两个句子组成，[CLS]和[SEP]标记是我们在第二章中遇到的BERT的标记器中的特殊标记。从可视化中我们可以看到的一点是，在属于同一个句子的单词之间，注意力权重是最强的，这表明BERT可以告诉它应该注意力同一个句子中的单词。然而，对于 "苍蝇 "这个词，我们可以看到，BERT在第一个句子中认定 "arrow "是重要的，而在第二个句子中认定 "fruit "和 "banana "是重要的。这些注意权重使模型能够区分 "flies "作为动词或名词的使用，这取决于它出现的语境!</p>
 <p>现在我们已经涵盖了注意力，让我们来看看如何实现编码器层的缺失部分：位置导向的前馈网络。</p>
 <h3 id="前馈层">前馈层</h3>
 <p>编码器和解码器中的前馈子层只是一个简单的双层全连接神经网络，但有少许不同：它不是把整个嵌入序列作为一个单一的向量来处理，而是独立地处理每个嵌入物。由于这个原因，这个层通常被称为位置前馈层。你也可能看到它被称为核大小为1的单维卷积，通常由具有计算机视觉背景的人使用（例如，OpenAI的GPT代码库使用这种命名法）。文献中的一个经验法则是，第一层的隐藏大小是嵌入大小的四倍，最常使用的是gelu激活函数。这是内存占用最大的部位，也是扩大模型规模时最常扩展的部分。我们可以将其作为一个简单的nn.Module来实现，如下:</p>
-<pre><code>class FeedForward(nn.Module): 
-    def __init__(self, config): 
-        super().__init__() 
-        self.linear_1 = nn.Linear(config.hidden_size, config.intermediate_size) 
-        self.linear_2 = nn.Linear(config.intermediate_size, config.hidden_size) 
-        self.gelu = nn.GELU() 
-        self.dropout = nn.Dropout(config.hidden_dropout_prob) 
-    def forward(self, x): 
-        x = self.linear_1(x) 
-        x = self.gelu(x) 
-        x = self.linear_2(x) 
-        x = self.dropout(x) 
-        return x
-</code></pre><p>请注意，像nn.Linear这样的前馈层通常应用于一个（batch_size, input_dim）形状的张量，它独立地作用于批次维度的每个元素。实际上，除了最后一个维度，其他维度都是如此，所以当我们传递一个（batch_size, seq_len, hidden_dim）形状的张量时，该层会独立地应用用于批和输入序列的所有标记嵌入向量，这正是我们想要的。让我们通过传递注意力输出来测试一下:</p>
-<pre><code>feed_forward = FeedForward(config) 
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">FeedForward</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): 
+        <span class="hljs-built_in">super</span>().__init__() 
+        <span class="hljs-variable language_">self</span>.linear_1 = nn.Linear(config.hidden_size, config.intermediate_size) 
+        <span class="hljs-variable language_">self</span>.linear_2 = nn.Linear(config.intermediate_size, config.hidden_size) 
+        <span class="hljs-variable language_">self</span>.gelu = nn.GELU() 
+        <span class="hljs-variable language_">self</span>.dropout = nn.Dropout(config.hidden_dropout_prob) 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x</span>): 
+        x = <span class="hljs-variable language_">self</span>.linear_1(x) 
+        x = <span class="hljs-variable language_">self</span>.gelu(x) 
+        x = <span class="hljs-variable language_">self</span>.linear_2(x) 
+        x = <span class="hljs-variable language_">self</span>.dropout(x) 
+        <span class="hljs-keyword">return</span> x
+</code></pre>
+<p>请注意，像nn.Linear这样的前馈层通常应用于一个（batch_size, input_dim）形状的张量，它独立地作用于批次维度的每个元素。实际上，除了最后一个维度，其他维度都是如此，所以当我们传递一个（batch_size, seq_len, hidden_dim）形状的张量时，该层会独立地应用用于批和输入序列的所有标记嵌入向量，这正是我们想要的。让我们通过传递注意力输出来测试一下:</p>
+<pre><code class="lang-python">feed_forward = FeedForward(config) 
 ff_outputs = feed_forward(attn_outputs) 
 ff_outputs.size() 
 
-torch.Size([1, 5, 768])
-</code></pre><p>我们现在有了创建一个成熟的Transformers编码器层的所有要素 唯一要做的决定是在哪里放置残差连接和归一化层。让我们来看看这对模型结构有什么影响。</p>
+torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>])
+</code></pre>
+<p>我们现在有了创建一个成熟的Transformers编码器层的所有要素 唯一要做的决定是在哪里放置残差连接和归一化层。让我们来看看这对模型结构有什么影响。</p>
 <h3 id="添加归一化层（normalization）">添加归一化层（normalization）</h3>
 <p>如前所述，Transformer架构利用了层归一化和残差连接。前者将批次中的每个输入归一化，使其具有零均值和统一方差。残差连接将张量传递给模型的下一层，而不进行处理，并将其添加到处理后的张量中。当涉及到将归一化层放在Transformers的编码器或解码器层时，文献中主要有两种选择：</p>
 <p><strong>层后归一化</strong> 
@@ -507,98 +521,105 @@ torch.Size([1, 5, 768])
 <p>图3-6说明了这两种安排的区别：</p>
 <p><img src="images/chapter3/image-20220214095456970.png" alt="image-20220214095456970"></img></p>
 <p>我们将使用第二种安排，因此我们可以简单地将我们的积木粘在一起，如下所示：</p>
-<pre><code>class TransformerEncoderLayer(nn.Module): 
-    def __init__(self, config): 
-        super().__init__() 
-        self.layer_norm_1 = nn.LayerNorm(config.hidden_size) 
-        self.layer_norm_2 = nn.LayerNorm(config.hidden_size) 
-        self.attention = MultiHeadAttention(config) 
-        self.feed_forward = FeedForward(config) 
-    def forward(self, x): 
-        # Apply layer normalization and then copy input into query, key, valu
-        hidden_state = self.layer_norm_1(x) 
-        # Apply attention with a skip connection 
-        x = x + self.attention(hidden_state) 
-        # Apply feed-forward layer with a skip connection 
-        x = x + self.feed_forward(self.layer_norm_2(x)) 
-        return x
-</code></pre><p>现在让我们用我们的输入嵌入来测试一下：</p>
-<pre><code>encoder_layer = TransformerEncoderLayer(config) 
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">TransformerEncoderLayer</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): 
+        <span class="hljs-built_in">super</span>().__init__() 
+        <span class="hljs-variable language_">self</span>.layer_norm_1 = nn.LayerNorm(config.hidden_size) 
+        <span class="hljs-variable language_">self</span>.layer_norm_2 = nn.LayerNorm(config.hidden_size) 
+        <span class="hljs-variable language_">self</span>.attention = MultiHeadAttention(config) 
+        <span class="hljs-variable language_">self</span>.feed_forward = FeedForward(config) 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x</span>): 
+        <span class="hljs-comment"># Apply layer normalization and then copy input into query, key, valu</span>
+        hidden_state = <span class="hljs-variable language_">self</span>.layer_norm_1(x) 
+        <span class="hljs-comment"># Apply attention with a skip connection </span>
+        x = x + <span class="hljs-variable language_">self</span>.attention(hidden_state) 
+        <span class="hljs-comment"># Apply feed-forward layer with a skip connection </span>
+        x = x + <span class="hljs-variable language_">self</span>.feed_forward(<span class="hljs-variable language_">self</span>.layer_norm_2(x)) 
+        <span class="hljs-keyword">return</span> x
+</code></pre>
+<p>现在让我们用我们的输入嵌入来测试一下：</p>
+<pre><code class="lang-python">encoder_layer = TransformerEncoderLayer(config) 
 inputs_embeds.shape, encoder_layer(inputs_embeds).size() 
 
-(torch.Size([1, 5, 768]), torch.Size([1, 5, 768]))
-</code></pre><p>我们现在已经从头开始实现了我们的第一个Transformers编码器层 然而，我们设置编码器层的方式有一个注意事项：它们对标记的位置是完全不变的。由于多头注意力层实际上是一个花哨的加权和，所以关于标记位置的信息就会丢失。</p>
+(torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>]), torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>]))
+</code></pre>
+<p>我们现在已经从头开始实现了我们的第一个Transformers编码器层 然而，我们设置编码器层的方式有一个注意事项：它们对标记的位置是完全不变的。由于多头注意力层实际上是一个花哨的加权和，所以关于标记位置的信息就会丢失。</p>
 <p>幸运的是，有一个简单的技巧可以使用位置嵌入来纳入位置信息。让我们来看一下。</p>
 <h3 id="位置嵌入">位置嵌入</h3>
 <p>位置嵌入是基于一个简单但非常有效的想法：用一个排列在向量中的、与位置相关的数值模式来增强标记嵌入。如果该模式对每个位置都有特点，每个堆栈中的注意头和前馈层就能学会将位置信息纳入它们的转换中。</p>
 <p>有几种方法可以实现这一点，最流行的方法之一是使用可学习的模式，特别是当预训练数据集足够大时。这与标记嵌入的工作方式完全相同，但使用位置索引而不是标记ID作为输入。通过这种方法，在预训练期间就可以学到一种有效的编码标记位置的方法。</p>
 <p>让我们创建一个自定义的嵌入模块，它结合了一个标记嵌入层，将输入_ids投射到一个密集的隐藏状态，同时也结合了位置嵌入，对位置_ids做同样的处理。由此产生的嵌入是两个嵌入的简单总和：</p>
-<pre><code>class Embeddings(nn.Module): 
-    def __init__(self, config): 
-        super().__init__() 
-        self.token_embeddings = nn.Embedding(config.vocab_size, config.hidden_size) 
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size) 
-        self.layer_norm = nn.LayerNorm(config.hidden_size, eps=1e-12) 
-        self.dropout = nn.Dropout() 
-    def forward(self, input_ids): 
-        # Create position IDs for input sequence 
-        seq_length = input_ids.size(1) 
-        position_ids = torch.arange(seq_length, dtype=torch.long).unsqueeze(0)
-        # Create token and position embeddings 
-        token_embeddings = self.token_embeddings(input_ids) 
-        position_embeddings = self.position_embeddings(position_ids) 
-        # Combine token and position embeddings 
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Embeddings</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): 
+        <span class="hljs-built_in">super</span>().__init__() 
+        <span class="hljs-variable language_">self</span>.token_embeddings = nn.Embedding(config.vocab_size, config.hidden_size) 
+        <span class="hljs-variable language_">self</span>.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size) 
+        <span class="hljs-variable language_">self</span>.layer_norm = nn.LayerNorm(config.hidden_size, eps=<span class="hljs-number">1e-12</span>) 
+        <span class="hljs-variable language_">self</span>.dropout = nn.Dropout() 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, input_ids</span>): 
+        <span class="hljs-comment"># Create position IDs for input sequence </span>
+        seq_length = input_ids.size(<span class="hljs-number">1</span>) 
+        position_ids = torch.arange(seq_length, dtype=torch.long).unsqueeze(<span class="hljs-number">0</span>)
+        <span class="hljs-comment"># Create token and position embeddings </span>
+        token_embeddings = <span class="hljs-variable language_">self</span>.token_embeddings(input_ids) 
+        position_embeddings = <span class="hljs-variable language_">self</span>.position_embeddings(position_ids) 
+        <span class="hljs-comment"># Combine token and position embeddings </span>
         embeddings = token_embeddings + position_embeddings 
-        embeddings = self.layer_norm(embeddings) 
-        embeddings = self.dropout(embeddings) 
-        return embeddings 
+        embeddings = <span class="hljs-variable language_">self</span>.layer_norm(embeddings) 
+        embeddings = <span class="hljs-variable language_">self</span>.dropout(embeddings) 
+        <span class="hljs-keyword">return</span> embeddings 
     embedding_layer = Embeddings(config) 
     embedding_layer(inputs.input_ids).size() 
 
-    torch.Size([1, 5, 768])
-</code></pre><p>我们看到，嵌入层现在为每个标记创建了一个单一的、密集的嵌入。</p>
+    torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>])
+</code></pre>
+<p>我们看到，嵌入层现在为每个标记创建了一个单一的、密集的嵌入。</p>
 <p>虽然可学习的位置嵌入很容易实现并被广泛使用，但也有一些替代方法。</p>
 <p><strong>绝对位置表示法</strong></p>
 <p>Transformers模型可以使用由调制的正弦和余弦信号组成的静态模式来编码标记的位置。在没有大量数据可用的情况下，这种方法效果特别好。</p>
 <p><strong>相对位置表示法</strong> </p>
 <p>虽然绝对位置很重要，但人们可以认为，在计算嵌入时，周围的标记是最重要的。相对位置表征遵循这一直觉，并对标记之间的相对位置进行编码。这不能通过在开始时引入一个新的相对嵌入层来建立，因为每个标记的相对嵌入都会发生变化，这取决于我们在序列中的哪个位置对其进行注意力。相反，注意机制本身被修改了，增加了考虑到标记之间相对位置的条款。像DeBERTa这样的模型就使用这样的表述。</p>
 <p>现在，让我们把所有这些放在一起，建立完整的Transformers编码器，把嵌入和编码器层结合起来：</p>
-<pre><code>class TransformerEncoder(nn.Module): 
-    def __init__(self, config): super().__init__() 
-        self.embeddings = Embeddings(config) 
-        self.layers = nn.ModuleList([TransformerEncoderLayer(config) for _ in range(config.num_hidden_layers)]) 
-    def forward(self, x): x = self.embeddings(x) 
-        for layer in self.layers: 
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">TransformerEncoder</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): <span class="hljs-built_in">super</span>().__init__() 
+        <span class="hljs-variable language_">self</span>.embeddings = Embeddings(config) 
+        <span class="hljs-variable language_">self</span>.layers = nn.ModuleList([TransformerEncoderLayer(config) <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(config.num_hidden_layers)]) 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x</span>): x = <span class="hljs-variable language_">self</span>.embeddings(x) 
+        <span class="hljs-keyword">for</span> layer <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>.layers: 
             x = lay
-        return x
-</code></pre><p>让我们检查一下编码器的输出形状:</p>
-<pre><code>encoder = TransformerEncoder(config) 
+        <span class="hljs-keyword">return</span> x
+</code></pre>
+<p>让我们检查一下编码器的输出形状:</p>
+<pre><code class="lang-python">encoder = TransformerEncoder(config) 
 encoder(inputs.input_ids).size()
 
-torch.Size([1, 5, 768])
-</code></pre><p>我们可以看到，我们为批次中的每个标记得到一个隐藏状态。这种输出格式使得架构非常灵活，我们可以很容易地将其调整为各种应用，例如预测掩码语言建模中的缺失标记，或者预测问题回答中答案的开始和结束位置。在下一节中，我们将看到如何建立一个像我们在第二章中使用的分类器。</p>
+torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">5</span>, <span class="hljs-number">768</span>])
+</code></pre>
+<p>我们可以看到，我们为批次中的每个标记得到一个隐藏状态。这种输出格式使得架构非常灵活，我们可以很容易地将其调整为各种应用，例如预测掩码语言建模中的缺失标记，或者预测问题回答中答案的开始和结束位置。在下一节中，我们将看到如何建立一个像我们在第二章中使用的分类器。</p>
 <h3 id="添加一个分类头">添加一个分类头</h3>
 <p>Transformers模型通常分为一个独立于任务的主体和一个特定于任务的头部。我们将在第四章看Transformers的设计模式时再次遇到这种模式。到目前为止，我们所建立的是主体，所以如果我们想建立一个文本分类器，我们需要在这个主体上附加一个分类头。我们对每个标记都有一个隐藏状态，但我们只需要做一个预测。有几种方案可以处理这个问题。传统上，这类模型中的第一个标记被用于预测，我们可以附加一个dropout和一个线性层来进行分类预测。下面的类扩展了现有的序列分类的编码器:</p>
-<pre><code>class TransformerForSequenceClassification(nn.Module): 
-    def __init__(self, config): 
-        super().__init__() 
-        self.encoder = TransformerEncoder(config) 
-        self.dropout = nn.Dropout(config.hidden_dropout_prob) 
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels) 
-    def forward(self, x): 
-        x = self.encoder(x)[:, 0, :] 
-        # select hidden state of [CLS] token 
-        x = self.dropout(x) 
-        x = self.classifier(x) 
-        return x
-</code></pre><p>在初始化模型之前，我们需要定义我们想预测多少个类:</p>
-<pre><code>config.num_labels = 3 
+<pre><code class="lang-python"><span class="hljs-keyword">class</span> <span class="hljs-title class_">TransformerForSequenceClassification</span>(nn.Module): 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, config</span>): 
+        <span class="hljs-built_in">super</span>().__init__() 
+        <span class="hljs-variable language_">self</span>.encoder = TransformerEncoder(config) 
+        <span class="hljs-variable language_">self</span>.dropout = nn.Dropout(config.hidden_dropout_prob) 
+        <span class="hljs-variable language_">self</span>.classifier = nn.Linear(config.hidden_size, config.num_labels) 
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x</span>): 
+        x = <span class="hljs-variable language_">self</span>.encoder(x)[:, <span class="hljs-number">0</span>, :] 
+        <span class="hljs-comment"># select hidden state of [CLS] token </span>
+        x = <span class="hljs-variable language_">self</span>.dropout(x) 
+        x = <span class="hljs-variable language_">self</span>.classifier(x) 
+        <span class="hljs-keyword">return</span> x
+</code></pre>
+<p>在初始化模型之前，我们需要定义我们想预测多少个类:</p>
+<pre><code class="lang-python">config.num_labels = <span class="hljs-number">3</span> 
 encoder_classifier = TransformerForSequenceClassification(config) 
 encoder_classifier(inputs.input_ids).size() 
 
 
-torch.Size([1, 3])
-</code></pre><p>这正是我们一直在寻找的东西。对于批次中的每个例子，我们在输出中得到了每个类别的非正常化对数。这对应于我们在第二章中用来检测推文中的情绪的BERT模型。</p>
+torch.Size([<span class="hljs-number">1</span>, <span class="hljs-number">3</span>])
+</code></pre>
+<p>这正是我们一直在寻找的东西。对于批次中的每个例子，我们在输出中得到了每个类别的非正常化对数。这对应于我们在第二章中用来检测推文中的情绪的BERT模型。</p>
 <p>这就结束了我们对编码器的分析，以及我们如何将其与特定任务的头结合起来。现在让我们把注意力（双关语）投向解码器。</p>
 <h3 id="解码器">解码器</h3>
 <p>如图3-7所示，解码器和编码器的主要区别是，解码器有两个注意子层：</p>
@@ -607,37 +628,40 @@ torch.Size([1, 3])
 <strong>编码器-解码器注意力层</strong> 
 对编码器堆栈的输出键和值向量进行多头注意力，解码器的中间表示作为查询。这样，编码器-解码器注意力层就学会了如何将来自两个不同序列的标记联系起来，比如两种不同的语言。解码器可以访问每个块中的编码器键和值。</p>
 <p>让我们来看看我们需要做出的修改，以便在我们的自注意力层中加入掩码，并将编码器-解码器注意力层的实现作为一个家庭作业问题。掩蔽式自注意力的诀窍是引入一个掩蔽矩阵，在对角线的下方为1，上方为0 ：</p>
-<pre><code>seq_len = inputs.input_ids.size(-1) 
-mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(0) 
-mask[0]
+<pre><code class="lang-python">seq_len = inputs.input_ids.size(-<span class="hljs-number">1</span>) 
+mask = torch.tril(torch.ones(seq_len, seq_len)).unsqueeze(<span class="hljs-number">0</span>) 
+mask[<span class="hljs-number">0</span>]
 
 
 tensor([
-[1., 0., 0., 0., 0.], 
-[1., 1., 0., 0., 0.], 
-[1., 1., 1., 0., 0.], 
-[1., 1., 1., 1., 0.], 
-[1., 1., 1., 1., 1.]
+[<span class="hljs-number">1.</span>, <span class="hljs-number">0.</span>, <span class="hljs-number">0.</span>, <span class="hljs-number">0.</span>, <span class="hljs-number">0.</span>], 
+[<span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">0.</span>, <span class="hljs-number">0.</span>, <span class="hljs-number">0.</span>], 
+[<span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">0.</span>, <span class="hljs-number">0.</span>], 
+[<span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">0.</span>], 
+[<span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>, <span class="hljs-number">1.</span>]
 ])
-</code></pre><p>这里我们使用了PyTorch的tril()函数来创建下三角矩阵。一旦我们有了这个掩码矩阵，我们就可以通过使用Tensor.masked_fill()将所有的0替换成负无穷来防止每个注意头偷看未来的令牌：</p>
-<pre><code>scores.masked_fill(mask == 0, -float("inf")) 
+</code></pre>
+<p>这里我们使用了PyTorch的tril()函数来创建下三角矩阵。一旦我们有了这个掩码矩阵，我们就可以通过使用Tensor.masked_fill()将所有的0替换成负无穷来防止每个注意头偷看未来的令牌：</p>
+<pre><code class="lang-python">scores.masked_fill(mask == <span class="hljs-number">0</span>, -<span class="hljs-built_in">float</span>(<span class="hljs-string">"inf"</span>)) 
 
 tensor([[
-[26.8082, -inf, -inf, -inf, -inf], 
-[-0.6981, 26.9043, -inf, -inf, -inf], 
-[-2.3190, 1.2928, 27.8710, -inf, -inf], 
-[-0.5897, 0.3497, -0.3807, 27.5488, -inf], 
-[ 0.5275, 2.0493, -0.4869, 1.6100, 29.0893]]], grad_fn=&lt;MaskedFillBackward0&gt;)
-</code></pre><p><img src="images/chapter3/image-20220214103608150.png" alt="image-20220214103608150"></img></p>
+[<span class="hljs-number">26.8082</span>, -inf, -inf, -inf, -inf], 
+[-<span class="hljs-number">0.6981</span>, <span class="hljs-number">26.9043</span>, -inf, -inf, -inf], 
+[-<span class="hljs-number">2.3190</span>, <span class="hljs-number">1.2928</span>, <span class="hljs-number">27.8710</span>, -inf, -inf], 
+[-<span class="hljs-number">0.5897</span>, <span class="hljs-number">0.3497</span>, -<span class="hljs-number">0.3807</span>, <span class="hljs-number">27.5488</span>, -inf], 
+[ <span class="hljs-number">0.5275</span>, <span class="hljs-number">2.0493</span>, -<span class="hljs-number">0.4869</span>, <span class="hljs-number">1.6100</span>, <span class="hljs-number">29.0893</span>]]], grad_fn=&lt;MaskedFillBackward0&gt;)
+</code></pre>
+<p><img src="images/chapter3/image-20220214103608150.png" alt="image-20220214103608150"></img></p>
 <p>通过将上限值设置为负无穷大，我们保证一旦我们在分数上取得softmax，注意力权重都是零，因为e-∞=0（记住softmax是计算归一化指数的）。我们可以通过对本章前面实现的缩放点积注意力函数的一个小改动，轻松地将这种遮蔽（masked)行为包括在内：</p>
-<pre><code>def scaled_dot_product_attention(query, key, value, mask=None): 
-    dim_k = query.size(-1) 
-    scores = torch.bmm(query, key.transpose(1, 2)) / sqrt(dim_k) 
-    if mask is not None: 
-        scores = scores.masked_fill(mask == 0, float("-inf")) 
-    weights = F.softmax(scores, dim=-1) 
-    return weights.bmm(value)
-</code></pre><p>从这里开始，建立解码层是一件很简单的事情；我们向读者指出Andrej Karpathy的minGPT的出色实现，以了解细节。</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">scaled_dot_product_attention</span>(<span class="hljs-params">query, key, value, mask=<span class="hljs-literal">None</span></span>): 
+    dim_k = query.size(-<span class="hljs-number">1</span>) 
+    scores = torch.bmm(query, key.transpose(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>)) / sqrt(dim_k) 
+    <span class="hljs-keyword">if</span> mask <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>: 
+        scores = scores.masked_fill(mask == <span class="hljs-number">0</span>, <span class="hljs-built_in">float</span>(<span class="hljs-string">"-inf"</span>)) 
+    weights = F.softmax(scores, dim=-<span class="hljs-number">1</span>) 
+    <span class="hljs-keyword">return</span> weights.bmm(value)
+</code></pre>
+<p>从这里开始，建立解码层是一件很简单的事情；我们向读者指出Andrej Karpathy的minGPT的出色实现，以了解细节。</p>
 <p>我们在这里给了你很多技术信息，但现在你应该对Transformer架构的每一块都有很好的理解。在我们继续为比文本分类更高级的任务建立模型之前，让我们回过头来看看不同的Transformer模型的情况以及它们之间的关系，以此来完善本章。</p>
 <p><strong>揭开编码器-解码器注意力的神秘面纱</strong> </p>
 <p>让我们来看看我们是否能对编码器-解码器注意力的奥秘做出一些解释。想象一下，你（解码器）在课堂上参加考试。你的任务是根据之前的单词（解码器输入）来预测下一个单词，这听起来很简单，但却非常难（你自己试试，预测本书中的一段话的下一个单词）。幸运的是，你的邻居（编码器）有完整的文本。不幸的是，他们是一个外国交换生，文本是他们的母语。狡猾的学生们，你们还是想出了一个办法来作弊。你画了一幅小漫画，说明你已经拥有的文本（Query），并把它给你的邻居。他们试着找出符合该描述的段落（Key），画一幅描述该段落后面的词的漫画（Value），然后把它传回给你。有了这个系统，你就能在考试中获胜。</p>
@@ -737,7 +761,7 @@ BERT的预训练有两个目标，一是预测文本中的掩蔽标记，二是�
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Transformers架构剖析","level":"1.5","depth":1,"next":{"title":"多语言命名实体识别","level":"1.6","depth":1,"path":"chapter4.md","ref":"chapter4.md","articles":[]},"previous":{"title":"文本分类","level":"1.4","depth":1,"path":"chapter2.md","ref":"chapter2.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter3.md","mtime":"2024-08-23T19:12:41.445Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Transformers架构剖析","level":"1.5","depth":1,"next":{"title":"多语言命名实体识别","level":"1.6","depth":1,"path":"chapter4.md","ref":"chapter4.md","articles":[]},"previous":{"title":"文本分类","level":"1.4","depth":1,"path":"chapter2.md","ref":"chapter2.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter3.md","mtime":"2025-01-05T17:59:00.391Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -791,10 +815,6 @@ BERT的预训练有两个目标，一是预测文本中的掩蔽标记，二是�
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -811,7 +831,7 @@ BERT的预训练有两个目标，一是预测文本中的掩蔽标记，二是�
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

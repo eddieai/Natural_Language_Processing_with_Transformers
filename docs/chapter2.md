@@ -20,7 +20,7 @@
 
 &emsp;&emsp;我们将使用Datasets 类库从Hugging Face Hub下载数据。 我们可以使用list_datasets()函数来查看Hub上有哪些数据集可用。
 
-```py
+```python
 from datasets import list_datasets 
 all_datasets = list_datasets() 
 print(f"There are {len(all_datasets)} datasets currently available on the Hub") 
@@ -33,14 +33,14 @@ There are 1753 datasets currently available on the Hub The first 10 are: ['acron
 
 &emsp;&emsp;我们看到每个数据集都有一个名字，所以让我们用load_dataset()函数加载情感数据集。
 
-```py
+```python
 from datasets import load_dataset
 emotions = load_dataset("emotion")
 ```
 
 如果我们看一下我们的emotion对象的内部：
 
-```py
+```python
 emotions
 
 DatasetDict(
@@ -54,7 +54,7 @@ DatasetDict(
 
 我们看到它类似于一个Python字典，每个键都对应于不同的分割。 我们可以使用通常的字典语法来访问一个单独的分割：
 
-```py
+```python
 train_ds = emotions["train"]
 train_ds 
 
@@ -73,7 +73,7 @@ len(train_ds)
 
 或通过其索引访问一个单一的例子：
 
-```py
+```python
 train_ds[0] 
 
 {'label': 0, 'text': 'i didnt feel humiliated'}
@@ -83,7 +83,7 @@ train_ds[0]
 
 这里我们看到，单行被表示为一个字典，其中的键对应于列名：
 
-```py
+```python
 train_ds.column_names
 
 ['text', 'label']
@@ -94,7 +94,7 @@ train_ds.column_names
 
 并且值是推文和情感类型。 这反映出Datasets是基于Apache Arrow的，它定义了一种类型化的列式格式，比本地Python更节省内存。 我们可以通过访问Dataset对象的特征属性来了解在引擎盖下使用了哪些数据类型：
 
-```py
+```python
 print(train_ds.features)
 
 {'text': Value(dtype='string', id=None), 'label': ClassLabel(num_classes=6, names=['sadness', 'joy', 'love', 'anger', 'fear', 'surprise'], names_file=None, id=None)}
@@ -103,7 +103,7 @@ print(train_ds.features)
 
 在这种情况下，文本列的数据类型是字符串，而标签列是一个特殊的ClassLabel对象，包含了关于类名和它们与整数的映射信息。 我们也可以用一个切片来访问几条记录：
 
-```py
+```python
 print(train_ds[:5])
 
 {'text': ['i didnt feel humiliated', 'i can go from feeling so hopeless to so damned hopeful just from being around someone who cares and is awake', 'im grabbing a minute to post i feel greedy wrong', 'i am ever feeling nostalgic about the fireplace i will know that it is still on the property', 'i am feeling grouchy'], 'label': [0, 0, 3, 2, 3]}
@@ -112,7 +112,7 @@ print(train_ds[:5])
 
 注意，在这种情况下，字典中的值现在是一个List，而不是单个元素。 我们也可以通过名称来获得完整的列：
 
-```py
+```python
 print(train_ds["text"][:5]) 
 
 ['i didnt feel humiliated', 'i can go from feeling so hopeless to so damned hopeful just from being around someone who cares and is awake', 'im grabbing a minute to post i feel greedy wrong', 'i am ever feeling nostalgic about the fireplace i will know that it is still on the property', 'i am feeling grouchy']
@@ -133,7 +133,7 @@ print(train_ds["text"][:5])
 
 正如你所看到的，对于每一种数据格式，我们只需要将相关的加载脚本传递给load_dataset()函数，以及指定一个或多个文件的路径或URL的 data_files 参数。 例如，情感数据集的源文件实际上托管在Dropbox上，所以加载数据集的另一种方法是先下载其中一个分割文件。 
 
-```py
+```python
 dataset_url = "https://www.dropbox.com/s/1pzkadrvffbqw6o/train.txt" 
 
 !wget {dataset_url} 
@@ -166,7 +166,7 @@ emotions_remote = load_dataset("csv", data_files=dataset_url, sep=";", names=["t
 
 虽然Datasets提供了很多底层的功能来切分我们的数据，但将Dataset对象转换为Pandas DataFrame通常是很方便的，这样我们就可以访问高层的API来实现数据可视化。 为了实现转换，数据集提供了一个set_format()方法，允许我们改变数据集的输出格式。 请注意，这并不改变底层的数据格式（这是一个箭头表），如果需要，你可以在以后切换到另一种格式：
 
-```py
+```python
 import pandas as pd 
 emotions.set_format(type="pandas") 
 df = emotions["train"][:] 
@@ -178,7 +178,7 @@ df.head()
 
 正如你所看到的，列标题被保留了下来，前几行与我们之前的数据视图相吻合。 然而，标签是以整数表示的，所以让我们使用标签功能的int2str()方法，在我们的DataFrame中创建一个新的列，其中有相应的标签名称：
 
-```py
+```python
 def label_int2str(row): 
     return emotions["train"].features["label"].int2str(row) 
 df["label_name"] = df["label"].apply(label_int2str) 
@@ -196,7 +196,7 @@ df.head()
 
 通过Pandas和Matplotlib，我们可以快速地将类的分布可视化，如下所示:
 
-```py
+```python
 import matplotlib.pyplot as plt
 df["label_name"].value_counts(ascending=True).plot.barh() 
 plt.title("Frequency of Classes") 
@@ -230,7 +230,7 @@ Transformers模型有一个最大的输入序列长度，被称为最大上下�
 
 
 
-```py
+```python
 df["Words Per Tweet"] = df["text"].str.split().apply(len) 
 df.boxplot("Words Per Tweet", by="label_name", grid=False, showfliers=False, color="black") 
 plt.suptitle("") 
@@ -245,7 +245,7 @@ plt.show()
 
 现在让我们想一想，如何将这些原始文本转换成适合Transformers的格式! 既然我们已经不需要DataFrame格式了，那么我们也重新设置一下我们的数据集的输出格式吧:
 
-```py
+```python
 emotions.reset_format()
 ```
 
@@ -263,7 +263,7 @@ emotions.reset_format()
 
 
 
-```py
+```python
 text = "Tokenizing text is a core task of NLP."
 tokenized_text = list(text) 
 print(tokenized_text) 
@@ -273,7 +273,7 @@ print(tokenized_text)
 
 这是一个好的开始，但我们还没有完成。 我们的模型希望每个字符都被转换为一个整数，这个过程有时被称为数值化。 做到这一点的一个简单方法是对每个独特的标记（在这种情况下是字符）用一个独特的整数进行编码：
 
-```py
+```python
 token2idx = {ch: idx for idx, ch in enumerate(sorted(set(tokenized_text)))} 
 print(token2idx) 
 {' ': 0, '.': 1, 'L': 2, 'N': 3, 'P': 4, 'T': 5, 'a': 6, 'c': 7, 'e': 8, 'f': 9, 'g': 10, 'i': 11, 'k': 12, 'n': 13, 'o': 14, 'r': 15, 's': 16, 't': 17, 'x': 18, 'z': 19}
@@ -282,7 +282,7 @@ print(token2idx)
 
 这给了我们一个从词汇表中的每个字符到一个唯一的整数的映射。 现在我们可以使用token2idx将标记化的文本转换为一个整数的列表：
 
-```py
+```python
 input_ids = [token2idx[token] for token in tokenized_text] 
 print(input_ids)
 
@@ -292,7 +292,7 @@ print(input_ids)
 
 每个标记现在都被映射到一个唯一的数字标识符（因此被称为input_ids）。 最后一步是将input_ids转换为二维独热向量的张量。 一热向量在机器学习中经常被用来编码分类数据，这些数据可以是顺序的，也可以是名义的。 例如，假设我们想对《变形金刚》电视剧中的人物名称进行编码。 一种方法是将每个名字映射到一个唯一的ID，如下所示：
 
-```py
+```python
 categorical_df = pd.DataFrame( {"Name": ["Bumblebee", "Optimus Prime", "Megatron"], "Label ID": [0,1,2]}) 
 
 categorical_df
@@ -303,7 +303,7 @@ categorical_df
 
 这种方法的问题是，它在名字之间创造了一个虚构的排序，而神经网络在学习这类关系方面确实很出色。 因此，我们可以为每个类别创建一个新的列，并在该类别为真的情况下指定为1，否则为0。 在Pandas中，这可以通过get_dummies()函数实现，如下所示：
 
-```py
+```python
 pd.get_dummies(categorical_df["Name"])
 ```
 
@@ -313,7 +313,7 @@ pd.get_dummies(categorical_df["Name"])
 
 另一方面，添加两个一热编码的结果可以很容易地被解释。 两条 "热门 "的条目表示相应的标记共同出现。 我们可以在PyTorch中通过将input_ids转换为张量并应用one_hot()函数来创建独热编码，具体方法如下：
 
-```py
+```python
 import torch
 import torch.nn.functional as F
 input_ids = torch.tensor(input_ids)
@@ -338,7 +338,7 @@ torch.Size([38, 20])
 
 通过检查第一个向量，我们可以验证一个1出现在input_ids[0]所指示的位置:
 
-```py
+```python
 print(f"Token: {tokenized_text[0]}") 
 print(f"Tensor index: {input_ids[0]}") 
 print(f"One-hot: {one_hot_encodings[0]}") 
@@ -360,7 +360,7 @@ One-hot: tensor([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
 
-```py
+```python
 tokenized_text = text.split() 
 print(tokenized_text) 
 
@@ -398,7 +398,7 @@ print(tokenized_text)
 
 
 
-```py
+```python
 from transformers import AutoTokenizer 
 model_ckpt = "distilbert-base-uncased" 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
@@ -408,7 +408,7 @@ AutoTokenizer类属于一个更大的 "auto "类集合，其工作是自动检�
 
 
 
-```py
+```python
 from transformers import DistilBertTokenizer 
 distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)
 
@@ -427,7 +427,7 @@ distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)
 
 让我们通过向它输入简单的 "对文本进行标记是NLP的一项核心任务 "的例子文本，来检查这个标记器是如何工作的：
 
-```py
+```python
 encoded_text = tokenizer(text) 
 print(encoded_text) 
 
@@ -437,7 +437,7 @@ print(encoded_text)
 
 就像字符标记化一样，我们可以看到单词已经被映射到input_ids字段中的唯一整数。 我们将在下一节讨论attention_mask字段的作用。 现在我们有了input_ids，我们可以通过使用tokenizer的convert_ids_to_tokens()方法将它们转换为tokens：
 
-```py
+```python
 tokens = tokenizer.convert_ids_to_tokens(encoded_text.input_ids) 
 print(tokens) 
 
@@ -447,7 +447,7 @@ print(tokens)
 
 我们在这里可以观察到三件事。 首先，一些特殊的[CLS]和[SEP]标记已被添加到序列的开始和结束。 这些标记因模型而异，但它们的主要作用是指示序列的开始和结束。 第二，代币都被小写了，这是这个特定检查点的一个特点。 最后，我们可以看到，"tokenizing "和 "NLP "被分成了两个标记，这是有道理的，因为它们不是常见的词。 ##izing和##p中的##前缀意味着前面的字符串不是空白。 任何带有此前缀的标记在你将标记转换为字符串时，应与前一个标记合并。 AutoTokenizer类有一个convert_tokens_to_string()方法来做这件事，所以让我们把它应用到我们的tokens中：
 
-```py
+```python
 print(tokenizer.convert_tokens_to_string(tokens)) 
 
 [CLS] tokenizing text is a core task of nlp. [SEP]
@@ -456,7 +456,7 @@ print(tokenizer.convert_tokens_to_string(tokens))
 
 AutoTokenizer类也有几个属性，提供关于标记器的信息。 例如，我们可以检查词汇量的大小：
 
-```py
+```python
 tokenizer.vocab_size 
 
 30522
@@ -465,7 +465,7 @@ tokenizer.vocab_size
 
 和相应模型的最大上下文大小：
 
-```py
+```python
 tokenizer.model_max_length 
 
 512
@@ -474,7 +474,7 @@ tokenizer.model_max_length
 
 另一个需要了解的有趣属性是模型在其前向传递中期望的字段的名称：
 
-```py
+```python
 tokenizer.model_input_names 
 
 ['input_ids', 'attention_mask']
@@ -498,7 +498,7 @@ tokenizer.model_input_names
 
 
 
-```py
+```python
 def tokenize(batch): 
 	return tokenizer(batch["text"], padding=True, truncation=True)
 
@@ -506,7 +506,7 @@ def tokenize(batch):
 
 这个函数将标记器应用于一批例子。 padding=True将用零填充例子，使其达到一个批次中最长的一个的大小，truncation=True将把例子截断到模型的最大上下文大小。 为了看看tokenize()的作用，让我们从训练集中传递一批两个例子：
 
-```py
+```python
 print(tokenize(emotions["train"][:2]))
 {'input_ids': [[101, 1045, 2134, 2102, 2514, 26608, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [101, 1045, 2064, 2175, 2013, 3110, 2061, 20625, 2000, 2061, 9636, 17772, 2074, 2013, 2108, 2105, 2619, 2040, 14977, 1998, 2003, 8300, 102]], 'attention_mask': [[1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 ,,,,],[,,,,,,,,,,,,,,,,,,,, 1, 1, 1]]}
@@ -525,14 +525,14 @@ print(tokenize(emotions["train"][:2]))
 
 一旦我们定义了一个处理函数，我们就可以用一行代码将其应用于语料库中的所有分片:
 
-```py
+```python
 emotions_encoded = emotions.map(tokenize, batched=True, batch_size=None)
 
 ```
 
 默认情况下，map()方法对语料库中的每个例子进行单独操作，所以设置batched=True将对推文进行分批编码。 因为我们设置了batch_size=None，我们的tokenize()函数将作为一个批次应用于整个数据集。 这确保了输入张量和注意力掩码在全球范围内具有相同的形状，我们可以看到这个操作为数据集增加了新的输入_ids和注意力掩码列:
 
-```py
+```python
 print(emotions_encoded["train"].column_names) 
 
 ['attention_mask', 'input_ids', 'label', 'text']
@@ -678,7 +678,7 @@ torch.Size([1, 768])
 
 &emsp;&emsp;现在我们知道如何获得单个字符串的最后隐藏状态。 让我们对整个数据集进行同样的处理，创建一个新的hidden_state列，存储所有这些向量。 正如我们对标记器所做的那样，我们将使用DatasetDict的map()方法来一次性提取所有的隐藏状态。 我们需要做的第一件事是将前面的步骤包裹在一个处理函数中：
 
-```py
+```python
 def extract_hidden_states(batch): # Place model inputs on the GPU 
     inputs = {
         k : v.to(device) for k,v in batch.items() if k in tokenizer.model_input_names
@@ -693,20 +693,20 @@ def extract_hidden_states(batch): # Place model inputs on the GPU
 
 由于我们的模型希望将张量作为输入，接下来要做的是将input_ids和attention_mask列转换为 "Torch"。 格式，如下所示：
 
-```py
+```python
 emotions_encoded.set_format("torch", columns=["input_ids", "attention_mask", "label"])
 ```
 
 然后，我们可以继续前进，一次性提取所有分片的隐藏状态：
 
-```py
+```python
 emotions_hidden = emotions_encoded.map(extract_hidden_states, batched=True)
 
 ```
 
 注意，在这种情况下，我们没有设置 batch_size=None，这意味着使用默认的 batch_size=1000 来代替。 正如预期的那样，应用extract_hidden_states()函数为我们的数据集增加了一个新的hidden_state列：
 
-```py
+```python
 emotions_hidden["train"].column_names 
 
 ['attention_mask', 'hidden_state', 'input_ids', 'label', 'text']
@@ -725,7 +725,7 @@ emotions_hidden["train"].column_names
 
 &emsp;&emsp;预处理过的数据集现在包含了我们需要在上面训练分类器的所有信息。 我们将把隐藏状态作为输入特征，把标签作为目标。 我们可以很容易地以众所周知的Scikit-learn格式创建相应的数组，如下所示：
 
-```py
+```python
 import numpy as np 
 X_train = np.array(emotions_hidden["train"]["hidden_state"]) 
 X_valid = np.array(emotions_hidden["validation"]["hidden_state"]) 
@@ -745,7 +745,7 @@ X_train.shape, X_valid.shape ((16000, 768), (2000, 768))
 
 &emsp;&emsp;由于在768个维度上实现隐藏状态的可视化至少是很棘手的，我们将使用强大的UMAP算法将向量向下投射到二维。 由于UMAP在特征被缩放到位于[0,1]区间时效果最好，我们将首先应用MinMaxScaler，然后使用umap-learn库中的UMAP实现来减少隐藏状态：
 
-```py
+```python
 from umap import UMAP 
 from sklearn.preprocessing import MinMaxScaler # Scale features to [0,1] range 
 X_scaled = MinMaxScaler().fit_transform(X_train)
@@ -762,7 +762,7 @@ df_emb.head()
 
 &emsp;&emsp;结果是一个具有相同数量训练样本的数组，但只有2个特征，而不是我们开始时的768个特征 让我们进一步研究一下压缩后的数据，并分别绘制每一类的点的密度：
 
-```py
+```python
 fig, axes = plt.subplots(2, 3, figsize=(7,5)) 
 axes = axes.flatten() 
 cmaps = ["Greys", "Blues", "Oranges", "Reds", "Purples", "Greens"] 

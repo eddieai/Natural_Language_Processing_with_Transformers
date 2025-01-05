@@ -10,7 +10,7 @@
 
 CNN/DailyMail数据集由大约300,000对新闻文章及其相应的摘要组成，这些摘要由CNN和DailyMail在其文章中附加的要点组成。该数据集的一个重要方面是，摘要是抽象的，而不是摘录的，这意味着它们由新的句子而不是简单的摘录组成。该数据集可在Hub上找到；我们将使用3.0.0版本，这是一个为摘要而设置的非匿名版本。我们可以用类似于分割的方式来选择版本，我们在第四章中看到，用版本关键词来选择。因此，让我们潜入其中，看一看：
 
-```
+```python
 from datasets import load_dataset 
 dataset = load_dataset("cnn_dailymail", version="3.0.0")
 print(f"Features: {dataset['train'].column_names}") 
@@ -21,7 +21,7 @@ Features: ['article', 'highlights', 'id']
 
 该数据集有三列：文章，其中包含新闻文章，亮点与摘要，以及唯一标识每篇文章的ID。我们来看看一篇文章的摘录：
 
-```
+```python
 sample = dataset["train"][1] 
 print(f""" Article (excerpt of 500 characters, total length: {len(sample["article"])}): """) 
 print(sample["article"][:500]) print(f'\nSummary (length: {len(sample["highlights"])}):')
@@ -45,7 +45,7 @@ Usain Bolt wins third gold of world championship . Anchors Jamaica to 4x100m rel
 
 让我们先从质量上看一下前面的例子的输出，看看几个最流行的Transformers模型在摘要上的表现。尽管我们要探索的模型架构有不同的最大输入规模，但我们把输入文本限制为2000个字符，以便所有模型都有相同的输入，从而使输出更具有可比性：
 
-```
+```python
 sample_text = dataset["train"][1]["article"][:2000] 
 # We'll collect the generated summaries of each model in a dictionary 
 summaries = {}
@@ -54,7 +54,7 @@ summaries = {}
 
 摘要中的一个惯例是用一个换行来分隔摘要句子。我们可以在每个句号之后添加一个换行符，但是对于像 "U.S. "或 "U.N. "这样的字符串，这种简单的启发式方法会失败。自然语言工具包（NLTK）软件包包括一个更复杂的算法，可以从缩写中出现的标点符号中区分出句子的结束：
 
-```
+```python
 import nltk from nltk.tokenize import sent_tokenize
 nltk.download("punkt") 
 string = "The U.S. are a country. The U.N. is an organization." 
@@ -72,7 +72,7 @@ sent_tokenize(string)
 
 文本摘要新闻文章的一个常见基线是简单地提取文章的前三句。有了NLTK的句子标记器，我们可以很容易地实现这样一个基线：
 
-```
+```python
 def three_sentence_summary(text): 
 	return "\n".join(sent_tokenize(text)[:3]) 
 summaries["baseline"] = three_sentence_summary(sample_text)
@@ -85,7 +85,7 @@ summaries["baseline"] = three_sentence_summary(sample_text)
 
 我们已经在第5章中看到GPT-2如何在给定的提示下生成文本。该模型的一个令人惊讶的特点是，我们也可以用它来生成摘要，只需在输入文本的末尾加上 "TL;DR"。"TL;DR"（太长了；没看懂）的表达方式在Reddit等平台上经常被用来表示一个长帖子的简短版本。我们将通过使用Transformers中的pipeline()函数重新创建原始论文的程序来开始我们的文本摘要实验。我们创建一个文本生成流水线并加载大型GPT-2模型：
 
-```
+```python
 from transformers import pipeline, set_seed 
 set_seed(42) 
 pipe = pipeline("text-generation", model="gpt2-xl") 
@@ -104,7 +104,7 @@ summaries["gpt2"] = "\n".join( sent_tokenize(pipe_out[0]["generated_text"][len(g
 
 我们可以用pipeline()函数直接加载T5进行文本摘要，它还负责以文本到文本的格式对输入进行格式化，所以我们不需要在输入前加上 "summaryize"。
 
-```
+```python
 pipe = pipeline("summarization", model="t5-large") 
 pipe_out = pipe(sample_text) 
 summaries["t5"] = "\n".join(sent_tokenize(pipe_out[0]["summary_text"]))
@@ -119,7 +119,7 @@ BART也使用编码器-解码器结构，并被训练为重建被破坏的输入
 
 
 
-```
+```python
 pipe = pipeline("summarization", model="facebook/bart-large-cnn") 
 pipe_out = pipe(sample_text) 
 summaries["bart"] = "\n".join(sent_tokenize(pipe_out[0]["summary_text"]))
@@ -134,7 +134,7 @@ summaries["bart"] = "\n".join(sent_tokenize(pipe_out[0]["summary_text"]))
 
 这个模型对换行符有一个特殊的标记，这就是为什么我们不需要send_tokenize()函数:
 
-```
+```python
 pipe = pipeline("summarization", model="google/pegasus-cnn_dailymail") 
 pipe_out = pipe(sample_text) 
 summaries["pegasus"] = pipe_out[0]["summary_text"].replace(" .<n>", ".\n")
@@ -145,7 +145,7 @@ summaries["pegasus"] = pipe_out[0]["summary_text"].replace(" .<n>", ".\n")
 
 现在，我们已经用四个不同的模型生成了摘要，让我们来比较一下结果。请记住，一个模型根本没有在数据集上训练过（GPT-2），一个模型在这个任务中进行了微调（T5），两个模型专门在这个任务中进行了微调（BART和PEGASUS）。让我们来看看这些模型所产生的文本摘要:
 
-```
+```python
 print("GROUND TRUTH") 
 print(dataset["train"][1]["highlights"]) 
 print("") 
@@ -221,7 +221,7 @@ BLEU的概念很简单：我们不是看生成的文本中有多少个标记与�
 
 我们现在已经研究了一些理论，但我们真正想做的是计算一些生成文本的分数。这是否意味着我们需要在Python中实现所有这些逻辑？不用担心，Datasets也提供了度量标准！加载度量标准的工作方式与加载文本一样。加载度量的工作方式与加载数据集一样。
 
-```
+```python
 from datasets import load_metric 
 bleu_metric = load_metric("sacrebleu")
 
@@ -229,7 +229,7 @@ bleu_metric = load_metric("sacrebleu")
 
 bleu_metric对象是Metric类的一个实例，其工作方式类似于一个聚合器：你可以通过add()添加单个实例，或者通过add_batch()添加整个批次。一旦你添加了所有你需要评估的样本，你就可以调用compute()，然后计算出度量。这将返回一个包含若干数值的字典，例如每个n-gram的精度、长度惩罚以及最终的BLEU分数。让我们来看看之前的例子：
 
-```
+```python
 import pandas as pd 
 import numpy as np 
 bleu_metric.add( prediction="the the the the the the", reference=["the cat is on the mat"]) 
@@ -249,7 +249,7 @@ pd.DataFrame.from_dict(results, orient="index", columns=["Value"])
 
 我们可以看到1-gram的精度确实是2/6，而2/3/4-gram的精度都是0。（关于单个指标的更多信息，如counts和bp，见SacreBLEU库）。这意味着几何平均数为零，因此BLEU分数也为零。让我们看一下另一个预测几乎正确的例子：
 
-```
+```python
 bleu_metric.add( prediction="the cat is on mat", reference=["the cat is on the mat"])
 results = bleu_metric.compute(smooth_method="floor", smooth_value=0) 
 results["precisions"] = [np.round(p, 2)for p in results["precisions"]] 
@@ -283,14 +283,14 @@ ROUGE分数是专门为文本摘要等应用而开发的，在这些应用中，
 
 
 
-```
+```python
 rouge_metric = load_metric("rouge")
 
 ```
 
 我们已经用GPT-2和其他模型生成了一组摘要，现在我们有一个指标来系统地比较这些摘要。让我们将ROUGE得分应用于所有模型生成的摘要：
 
-```
+```python
 reference = dataset["train"][1]["highlights"] 
 records = [] 
 rouge_names = ["rouge1", "rouge2", "rougeL", "rougeLsum"] 
@@ -317,7 +317,7 @@ pd.DataFrame.from_records(records, index=summaries.keys())
 
 现在，我们已经具备了正确评估该模型的所有条件：我们有一个带有CNN/DailyMail测试集的数据集，我们有一个带有ROUGE的衡量标准，我们有一个文本摘要模型。我们只需要把这些碎片放在一起。让我们首先评估一下三句话基线的性能：
 
-```
+```python
 def evaluate_summaries_baseline(dataset, metric, column_text="article", 			column_summary="highlights"): 
     summaries = [three_sentence_summary(text) for text in dataset[column_text]] 
     metric.add_batch(predictions=summaries, references=dataset[column_summary]) 
@@ -328,7 +328,7 @@ def evaluate_summaries_baseline(dataset, metric, column_text="article", 			colum
 
 现在我们将把这个函数应用于数据的一个子集。由于CNN/DailyMail数据集的测试部分包括大约10,000个样本，为所有这些文章生成摘要需要大量时间。回顾第五章，每一个生成的标记都需要通过模型进行前向传递；因此，为每个样本生成100个标记就需要100万次前向传递，如果我们使用波束搜索，这个数字还要乘以波束的数量。为了保持相对较快的计算速度，我们将对测试集进行子采样，在1000个样本上运行评估。这应该会给我们一个更稳定的分数估计，同时在单个GPU上对PEGASUS模型完成的时间不到一小时：
 
-```
+```python
 est_sampled = dataset["test"].shuffle(seed=42).select(range(1000)) 
 score = evaluate_summaries_baseline(test_sampled, rouge_metric) 
 rouge_dict = dict((rn, score[rn].mid.fmeasure) for rn in rouge_names) pd.DataFrame.from_dict(rouge_dict, orient="index", columns=["baseline"]).T
@@ -339,7 +339,7 @@ rouge_dict = dict((rn, score[rn].mid.fmeasure) for rn in rouge_names) pd.DataFra
 
 分数大多比前一个例子差，但仍然比GPT-2取得的分数好！这就是为什么我们要用GPT-2来评价PEGASUS模型。现在让我们实现同样的评价函数来评价PEGASUS模型：
 
-```
+```python
 from tqdm import tqdm import torch 
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 def chunks(list_of_elements, batch_size): 
@@ -362,7 +362,7 @@ def evaluate_summaries_pegasus(dataset, metric, model, tokenizer, batch_size=16,
 
 让我们来解读一下这个评估代码。首先，我们把数据集分成较小的批次，以便我们可以同时处理。然后，对于每个批次，我们对输入的文章进行标记，并将其送入generate()函数，以使用波束搜索产生摘要。我们使用与论文中提出的相同的生成参数。新的长度惩罚参数确保模型不会产生过长的序列。最后，我们对生成的文本进行解码，替换<n>标记，并将解码后的文本与参考文献一起添加到指标中。最后，我们计算并返回ROUGE的分数。现在让我们用用于seq2seq生成任务的AutoModelForSeq2SeqLM类再次加载模型，并评估它：
 
-```
+```python
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer 
 model_ckpt = "google/pegasus-cnn_dailymail" 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
@@ -385,7 +385,7 @@ pd.DataFrame(rouge_dict, index=["pegasus"])
 
 我们已经研究了很多关于文本摘要和评估的细节，所以让我们把这些用于训练一个自定义的文本摘要模型吧 在我们的应用中，我们将使用三星开发的SAMSum数据集，该数据集由一系列的对话和简短的摘要组成。在企业环境中，这些对话可能代表了客户和支持中心之间的互动，因此，生成准确的摘要可以帮助改善客户服务，并检测客户请求中的共同模式。让我们加载它并看看一个例子：
 
-```
+```python
 dataset_samsum = load_dataset("samsum") 
 split_lengths = [len(dataset_samsum[split])for split in dataset_samsum] 
 print(f"Split lengths: {split_lengths}") 
@@ -422,7 +422,7 @@ Summary: Hannah needs Betty's number but Amanda doesn't have it. She needs to co
 
 首先，我们将用PEGASUS运行同样的文本摘要流水线，看看输出是什么样子的。我们可以重新使用我们用于生成CNN/DailyMail摘要的代码：
 
-```
+```python
 pipe_out = pipe(dataset_samsum["test"][0]["dialogue"]) 
 print("Summary:") 
 print(pipe_out[0]["summary_text"].replace(" .<n>", ".\n")) 
@@ -437,7 +437,7 @@ Amanda: Just text him .
 
 我们可以看到，该模型大多试图通过提取对话中的关键句子来进行文本摘要。这在CNN/DailyMail数据集上可能效果相对较好，但SAMSum中的文本摘要更加抽象。让我们通过在测试集上运行完整的ROUGE评估来确认这一点:
 
-```
+```python
 score = evaluate_summaries_pegasus(dataset_samsum["test"], rouge_metric, model, tokenizer, column_text="dialogue", column_summary="summary", batch_size=8) 
 
 rouge_dict = dict((rn, score[rn].mid.fmeasure) for rn in rouge_names) pd.DataFrame(rouge_dict, index=["pegasus"])
@@ -452,7 +452,7 @@ rouge_dict = dict((rn, score[rn].mid.fmeasure) for rn in rouge_names) pd.DataFra
 
 在我们处理数据进行训练之前，让我们快速看一下输入和输出的长度分布:
 
-```
+```python
 d_len = [len(tokenizer.encode(s)) for s in dataset_samsum["train"] ["dialogue"]] 
 s_len = [len(tokenizer.encode(s)) for s in dataset_samsum["train"]["summary"]] 
 fig, axes = plt.subplots(1, 2, figsize=(10, 3.5), sharey=True)
@@ -474,7 +474,7 @@ plt.show()
 
 让我们在为训练者建立数据整理器时牢记这些意见。首先，我们需要对数据集进行标记。现在，我们将对话和摘要的最大长度分别设置为1024和128:
 
-```
+```python
 def convert_examples_to_features(example_batch): 
 	input_encodings = tokenizer(example_batch["dialogue"], max_length=1024, truncation=True) 
 	with tokenizer.as_target_tokenizer(): 
@@ -496,7 +496,7 @@ dataset_samsum_pt.set_format(type="torch", columns=columns)
 
 因此，当我们准备我们的批次时，我们通过将标签向右移动一个来设置解码器的输入。之后，我们确保标签中的填充标记被损失函数忽略，将它们设置为-100。不过，我们实际上不需要手动做这些，因为DataCollatorForSeq2Seq来拯救我们，为我们处理所有这些步骤:
 
-```
+```python
 from transformers import DataCollatorForSeq2Seq 
 seq2seq_data_collator = DataCollatorForSeq2Seq(tokenizer, model=model) 
 
@@ -512,7 +512,7 @@ evaluation_strategy='steps', eval_steps=500, save_steps=1e6, gradient_accumulati
 
 现在让我们确保我们已经登录到Hugging Face，这样我们就可以在训练后将模型推送到Hub:
 
-```
+```python
 from huggingface_hub import notebook_login 
 notebook_login()
 
@@ -520,14 +520,14 @@ notebook_login()
 
 现在我们已经有了初始化训练器所需的一切，包括模型、标记器、训练参数和数据整理器，以及训练和评估集:
 
-```
+```python
 trainer = Trainer(model=model, args=training_args, tokenizer=tokenizer, data_collator=seq2seq_data_collator, train_dataset=dataset_samsum_pt["train"], eval_dataset=dataset_samsum_pt["validation"])
 
 ```
 
 我们已经准备好进行训练了。训练结束后，我们可以直接在测试集上运行评估函数，看看模型的表现如何:
 
-```
+```python
 trainer.train() 
 score = evaluate_summaries_pegasus( dataset_samsum["test"], rouge_metric, trainer.model, tokenizer, batch_size=2, column_text="dialogue", column_summary="summary") 
 rouge_dict = dict((rn, score[rn].mid.fmeasure) for rn in rouge_names) pd.DataFrame(rouge_dict, index=[f"pegasus"])
@@ -538,7 +538,7 @@ rouge_dict = dict((rn, score[rn].mid.fmeasure) for rn in rouge_names) pd.DataFra
 
 我们看到，ROUGE的分数比没有微调的模型有了很大的提高，所以即使之前的模型也是为文本摘要而训练的，但它并没有很好地适应新的领域。让我们把我们的模型推到Hub上:
 
-```
+```python
 trainer.push_to_hub("Training complete!")
 
 ```
@@ -553,7 +553,7 @@ trainer.push_to_hub("Training complete!")
 
 从损失和ROUGE分数来看，该模型似乎比只在CNN/DailyMail上训练的原始模型有明显的改进。让我们看看在测试集的一个样本上产生的文本摘要是什么样子的：
 
-```
+```python
 gen_kwargs = {"length_penalty": 0.8, "num_beams":8, "max_length": 128} 
 sample_text = dataset_samsum["test"][0]["dialogue"] 
 reference = dataset_samsum["test"][0]["summary"] 
@@ -583,7 +583,7 @@ Summary: Amanda can't find Betty's number. Larry called Betty last time they wer
 
 这看起来更像参考文献的摘要。似乎该模型已经学会了将对话综合成一个摘要，而不只是提取段落。现在，最终的测试：该模型在自定义输入上的效果如何？
 
-```
+```python
 custom_dialogue = """\ Thom: Hi guys, have you heard of transformers? Lewis: Yes, I used them recently! Leandro: Indeed, there is a great library by Hugging Face. Thom: I know, I helped build it ;) Lewis: Cool, maybe we should write a book about it. What do you think? Leandro: Great idea, how hard can it be?! Thom: I am in! Lewis: Awesome, let's do it together! """ 
 print(pipe(custom_dialogue, **gen_kwargs)[0]["summary_text"]）
 

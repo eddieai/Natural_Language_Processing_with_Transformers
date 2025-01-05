@@ -144,7 +144,7 @@
 
 &emsp;&emsp;每个NLP任务都是从一段文字开始的，比如下面这段关于某个在线订单的客户反馈，是捏造的。
 
-```
+```python
 text = """Dear Amazon, last week I ordered an Optimus Prime action figure from your online store in Germany. Unfortunately, when I opened the package, I discovered to my horror that I had been sent an action figure of Megatron instead! As a lifelong enemy of the Decepticons, I hope you can understand my dilemma. To resolve the issue, I demand an exchange of Megatron for the Optimus Prime figure I ordered. Enclosed are copies of my records concerning this purchase. I expect to hear from you soon. Sincerely, Bumblebee."""
 
 ```
@@ -156,7 +156,7 @@ text = """Dear Amazon, last week I ordered an Optimus Prime action figure from y
 
 &emsp;&emsp;在Transformers中，我们通过调用pipeline()函数并提供我们感兴趣的任务的名称来实例化一个流水线。
 
-```
+```python
 from transformers import pipeline 
 classifier = pipeline("text-classification")
 
@@ -166,7 +166,7 @@ classifier = pipeline("text-classification")
 
 &emsp;&emsp;现在我们有了我们的流水线，让我们产生一些预测！ 每个流水线接受一串文本（或一串字符串）作为输入，并返回一个预测列表。 每个预测都是一个Python字典，所以我们可以用Pandas把它们很好地显示为一个DataFrame。
 
-```
+```python
 import pandas as pd 
 outputs = classifier(text) 
 pd.DataFrame(outputs)
@@ -185,7 +185,7 @@ pd.DataFrame(outputs)
 
 &emsp;&emsp;预测客户反馈的情绪是很好的第一步，但你经常想知道反馈是否是关于某个特定的项目或服务。 在NLP中，像产品、地点和人这样的真实世界的对象被称为命名实体，从文本中提取它们被称为命名实体识别（NER）。 我们可以通过加载相应的流水线并将我们的客户评论输入其中来应用NER。
 
-```
+```python
 ner_tagger = pipeline("ner", aggregation_strategy="simple")
 outputs = ner_tagger(text) 
 pd.DataFrame(outputs)
@@ -212,7 +212,7 @@ pd.DataFrame(outputs)
 
 &emsp;&emsp;在问题回答中，我们向模型提供一段称为上下文的文字，以及一个我们想提取答案的问题。 然后该模型返回与答案相对应的文本跨度。 让我们看看当我们问一个关于客户反馈的具体问题时，我们会得到什么。
 
-```
+```python
 reader = pipeline("question-answering") 
 question = "What does the customer want?" 
 outputs = reader(question=question, context=text) 
@@ -232,7 +232,7 @@ pd.DataFrame([outputs])
 
 &emsp;&emsp;文本总结的目标是将一个长文本作为输入，并生成一个包含所有相关事实的简短版本。 这是一项比以前复杂得多的任务，因为它要求模型产生连贯的文本。 在现在应该是一个熟悉的模式中，我们可以将一个总结管道实例化如下：
 
-```
+```python
 summarizer = pipeline("summarization") 
 outputs = summarizer(text, max_length=45, clean_up_tokenization_spaces=True) 
 print(outputs[0]['summary_text'])
@@ -249,7 +249,7 @@ Bumblebee ordered an Optimus Prime action figure from your online store in Germa
 
 &emsp;&emsp;与摘要一样，翻译是一项任务，其输出包括生成的文本。 让我们使用一个翻译流水线，将一个英文文本翻译成德文。
 
-```
+```python
 translator = pipeline("translation_en_to_de", model="Helsinki-NLP/opus-mt-en-de") 
 outputs = translator(text, clean_up_tokenization_spaces=True, min_length=100) 
 print(outputs[0]['translation_text']) 
@@ -265,7 +265,7 @@ Megatron geschickt worden war! Als lebenslanger Feind der Decepticons, Ich hoffe
 
 &emsp;&emsp;比方说，你希望能够通过访问自动完成功能对客户的反馈提供更快的回复。 有了文本生成模型，你可以按以下方式进行：
 
-```
+```python
 generator = pipeline("text-generation") 
 response = "Dear Bumblebee, I am sorry to hear that your order was mixed up." 
 prompt = text + "\n\nCustomer service response:\n" + response

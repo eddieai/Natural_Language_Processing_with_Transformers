@@ -6,7 +6,7 @@
         <title>从零开始训练Transformers · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -353,33 +353,35 @@
 </ul>
 <p>这些发现可能与在这些语料库上训练出来的模型的下游用途并不冲突。例如，在BookCorpus中言情小说的比例过高，如果该模型打算被用作言情小说的写作工具或用于建立游戏，这可能是可以接受的。</p>
 <p>让我们通过比较GPT和GPT-2的文本生成，来说明模型被数据所歪曲的概念。GPT主要是在BookCorpus上训练的，而GPT-2是在网页、博客和从Reddit链接的新闻文章上训练的。我们将在同一提示上比较两个模型的相似大小的版本，因此主要的区别是预训练数据集，我们将使用文本生成流水线来研究模型的输出:</p>
-<pre><code>from transformers import pipeline, set_seed 
-generation_gpt = pipeline("text-generation", model="openai-gpt") 
-generation_gpt2 = pipeline("text-generation", model="gpt2")
-</code></pre><p>接下来，让我们创建一个简单的函数来计算每个模型中的参数数量:</p>
-<pre><code>def model_size(model): 
-    return sum(t.numel() for t in model.parameters()) 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> pipeline, set_seed 
+generation_gpt = pipeline(<span class="hljs-string">"text-generation"</span>, model=<span class="hljs-string">"openai-gpt"</span>) 
+generation_gpt2 = pipeline(<span class="hljs-string">"text-generation"</span>, model=<span class="hljs-string">"gpt2"</span>)
+</code></pre>
+<p>接下来，让我们创建一个简单的函数来计算每个模型中的参数数量:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">model_size</span>(<span class="hljs-params">model</span>): 
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">sum</span>(t.numel() <span class="hljs-keyword">for</span> t <span class="hljs-keyword">in</span> model.parameters()) 
 
-print(f"GPT size: {model_size(generation_gpt.model)/1000**2:.1f}M parameters") 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"GPT size: <span class="hljs-subst">{model_size(generation_gpt.model)/<span class="hljs-number">1000</span>**<span class="hljs-number">2</span>:<span class="hljs-number">.1</span>f}</span>M parameters"</span>) 
 
-print(f"GPT2 size: {model_size(generation_gpt2.model)/1000**2:.1f}M parameters") 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"GPT2 size: <span class="hljs-subst">{model_size(generation_gpt2.model)/<span class="hljs-number">1000</span>**<span class="hljs-number">2</span>:<span class="hljs-number">.1</span>f}</span>M parameters"</span>) 
 
-GPT size: 116.5M parameters 
-GPT2 size: 124.4M parameters
-</code></pre><p>原始的GPT模型与最小的GPT-2模型大小差不多。现在我们可以从每个模型中生成三种不同的续写结果，每个模型都有相同的输入提示:</p>
-<pre><code>def enum_pipeline_ouputs(pipe, prompt, num_return_sequences): 
-    out = pipe(prompt, num_return_sequences=num_return_sequences, clean_up_tokenization_spaces=True) 
-    return "\n".join(f"{i+1}." + s["generated_text"] for i, s in enumerate(out)) 
+GPT size: <span class="hljs-number">116.5</span>M parameters 
+GPT2 size: <span class="hljs-number">124.4</span>M parameters
+</code></pre>
+<p>原始的GPT模型与最小的GPT-2模型大小差不多。现在我们可以从每个模型中生成三种不同的续写结果，每个模型都有相同的输入提示:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">enum_pipeline_ouputs</span>(<span class="hljs-params">pipe, prompt, num_return_sequences</span>): 
+    out = pipe(prompt, num_return_sequences=num_return_sequences, clean_up_tokenization_spaces=<span class="hljs-literal">True</span>) 
+    <span class="hljs-keyword">return</span> <span class="hljs-string">"\n"</span>.join(<span class="hljs-string">f"<span class="hljs-subst">{i+<span class="hljs-number">1</span>}</span>."</span> + s[<span class="hljs-string">"generated_text"</span>] <span class="hljs-keyword">for</span> i, s <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(out)) 
 
-prompt = "\nWhen they came back" 
-print("GPT completions:\n" + enum_pipeline_ouputs(generation_gpt, prompt, 3)) 
-print("") print("GPT-2 completions:\n" + enum_pipeline_ouputs(generation_gpt2, prompt, 3)) 
+prompt = <span class="hljs-string">"\nWhen they came back"</span> 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"GPT completions:\n"</span> + enum_pipeline_ouputs(generation_gpt, prompt, <span class="hljs-number">3</span>)) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">""</span>) <span class="hljs-built_in">print</span>(<span class="hljs-string">"GPT-2 completions:\n"</span> + enum_pipeline_ouputs(generation_gpt2, prompt, <span class="hljs-number">3</span>)) 
 GPT completions: 
-1.When they came back. 
-" we need all we can get, " jason said once they had settled into the back of the truck without anyone stopping them. " after getting out here, it 'll be up to us what to find. for now
-2. When they came back. his gaze swept over her body. he 'd dressed her, too, in the borrowed clothes that she 'd worn for the journey. " i thought it would be easier to just leave you there. " a woman like 
+<span class="hljs-number">1.</span>When they came back. 
+<span class="hljs-string">" we need all we can get, "</span> jason said once they had settled into the back of the truck without anyone stopping them. <span class="hljs-string">" after getting out here, it 'll be up to us what to find. for now
+2. When they came back. his gaze swept over her body. he 'd dressed her, too, in the borrowed clothes that she 'd worn for the journey. "</span> i thought it would be easier to just leave you there. <span class="hljs-string">" a woman like 
 3. When they came back to the house and she was sitting there with the little boy
-" don't be afraid, " he told her. she nodded slowly, her eyes wide. she was so lost in whatever she discovered that tom knew her mistake
+"</span> don<span class="hljs-string">'t be afraid, " he told her. she nodded slowly, her eyes wide. she was so lost in whatever she discovered that tom knew her mistake
 
 GPT-2 completions: 
 1. When they came back we had a big dinner and the other guys went to see what their opinion was on her. I did an hour and they were happy with it.
@@ -387,7 +389,8 @@ GPT-2 completions:
 3. When they came back to our house after the morning, I asked if she was sure. She said, "Nope." The two kids were gone that morning. I thought they were back to being a good friend.
 
 When Dost
-</code></pre><p>通过对两个模型的少量输出进行抽样，我们已经可以看到GPT生成中独特的 "浪漫 "倾斜，它通常会想象一个女人和一个男人之间浪漫互动的对话。另一方面，GPT-2是在链接到Reddit文章和来自Reddit文章的网络文本上进行训练的，在其生成中大多采用中性的 "他们"，其中包含 "博客式 "或与冒险相关的元素。</p>
+</span></code></pre>
+<p>通过对两个模型的少量输出进行抽样，我们已经可以看到GPT生成中独特的 "浪漫 "倾斜，它通常会想象一个女人和一个男人之间浪漫互动的对话。另一方面，GPT-2是在链接到Reddit文章和来自Reddit文章的网络文本上进行训练的，在其生成中大多采用中性的 "他们"，其中包含 "博客式 "或与冒险相关的元素。</p>
 <p>一般来说，任何在数据集上训练的模型都会反映出其训练数据中的语言偏见以及对群体和事件的过度或不足表达。对于与模型互动的目标受众来说，模型行为中的这些偏差是需要考虑的；对于一些有用的指南，我们推荐你参考谷歌的一篇论文，该论文提供了一个数据集开发的框架。</p>
 <p>这个简单的介绍应该让你了解到在创建大型文本语料库时面临的困难挑战。考虑到这些，现在让我们来看看如何创建我们自己的数据集吧。</p>
 <h3 id="建立一个自定义代码数据集">建立一个自定义代码数据集</h3>
@@ -412,15 +415,16 @@ When Dost
 <li>在这个数据集中，创建一个表，SQL请求的结果将被存储。</li>
 <li>在github_repos上准备并运行以下SQL查询（要保存查询结果，选择 "更多"&gt;"查询选项"，勾选 "为查询结果设置目标表 "框，并指定表名）。</li>
 </ol>
-<pre><code>SELECT 
+<pre><code class="lang-python">SELECT 
 f.repo_name, f.path, c.copies, c.size, c.content, l.license 
 FROM `bigquery-public-data.github_repos.files` AS f 
-JOIN `bigquery-public-data.github_repos.contents` AS c ON f.id = c.id 
+JOIN `bigquery-public-data.github_repos.contents` AS c ON f.<span class="hljs-built_in">id</span> = c.<span class="hljs-built_in">id</span> 
 JOIN `bigquery-public-data.github_repos.licenses` AS l ON f.repo_name = l.repo_name 
 WHERE NOT c.binary
-AND ((f.path LIKE '%.py') 
-AND (c.size BETWEEN 1024 AND 1048575))
-</code></pre><p>这个命令处理了大约2.6TB的数据，提取了2680万个文件。结果是一个大约50GB的压缩JSON文件的数据集，每个文件都包含Python文件的源代码。我们过滤掉了空文件和小文件，如<strong>init</strong>.py，这些文件并不包含很多有用的信息。我们还过滤掉了大于1MB的文件，并且下载了所有文件的许可证，这样我们以后就可以根据许可证来过滤训练数据。</p>
+AND ((f.path LIKE <span class="hljs-string">'%.py'</span>) 
+AND (c.size BETWEEN <span class="hljs-number">1024</span> AND <span class="hljs-number">1048575</span>))
+</code></pre>
+<p>这个命令处理了大约2.6TB的数据，提取了2680万个文件。结果是一个大约50GB的压缩JSON文件的数据集，每个文件都包含Python文件的源代码。我们过滤掉了空文件和小文件，如<strong>init</strong>.py，这些文件并不包含很多有用的信息。我们还过滤掉了大于1MB的文件，并且下载了所有文件的许可证，这样我们以后就可以根据许可证来过滤训练数据。</p>
 <p>接下来，我们将把结果下载到我们的本地机器上。如果你在家里尝试这样做，确保你有良好的带宽和至少50GB的可用磁盘空间。把结果表拿到你的本地机器上的最简单方法是遵循这个两步过程：</p>
 <ol>
 <li>将你的结果导出到谷歌云。
@@ -436,11 +440,13 @@ c. 在你的机器上复制你的水桶。</li>
 </ol>
 </li>
 </ol>
-<pre><code>$ gsutil -m -o "GSUtil:parallel_process_count=1" 
+<pre><code class="lang-python">$ gsutil -m -o <span class="hljs-string">"GSUtil:parallel_process_count=1"</span> 
 cp -r gs://&lt;name_of_bucket&gt;
-</code></pre><p>或者，你可以用以下命令直接从Hugging Face中心下载数据集:</p>
-<pre><code>$ git clone https://huggingface.co/datasets/transformersbook/codeparrot
-</code></pre><hr></hr>
+</code></pre>
+<p>或者，你可以用以下命令直接从Hugging Face中心下载数据集:</p>
+<pre><code class="lang-python">$ git clone https://huggingface.co/datasets/transformersbook/codeparrot
+</code></pre>
+<hr></hr>
 <p><strong>是否要过滤噪音？</strong></p>
 <p>任何人都可以创建一个GitHub仓库，所以项目的质量各不相同。对于我们希望系统在现实世界中的表现，我们需要做出一些有意识的选择。在训练数据集中有一些噪音，会使我们的系统在推理时对噪音输入更加稳健，但也会使其预测更加随机。根据预期的用途和整个系统的整合，你可以选择更多或更少的噪声数据，并增加预过滤和后过滤的操作。</p>
 <p>为了本章的教育目的，并保持数据准备代码的简洁，我们将不根据明星或用途进行过滤，而只是抓取GitHub BigQuery数据集中的所有Python文件。然而，数据准备是一个关键步骤，你应该确保尽可能地清理你的数据集。在我们的案例中，需要考虑的几件事是：是否平衡数据集中的编程语言；过滤低质量的数据（例如，通过GitHub星级或来自其他仓库的引用）；删除重复的代码样本；考虑版权信息；调查文档、评论或文档字符串中使用的语言；以及删除个人识别信息，如密码或钥匙。</p>
@@ -452,37 +458,42 @@ cp -r gs://&lt;name_of_bucket&gt;
 <h4 id="内存映射">内存映射</h4>
 <p>为了克服RAM的限制，Datasets使用了一种默认激活的零拷贝和零开销的内存映射机制。基本上，每个数据集都被缓存在硬盘上的一个文件中，该文件是RAM内存中内容的直接反映。数据集不是在RAM中加载数据集，而是打开一个指向该文件的只读指针，将其作为RAM的替代品，基本上将硬盘作为RAM内存的直接扩展。</p>
 <p>到目前为止，我们大多使用数据集来访问Hugging Face Hub上的远程数据集。在这里，我们将直接加载我们在本地存储在codeparrot资源库中的50GB压缩JSON文件。由于JSON文件是压缩的，我们首先需要对其进行解压，Datasets为我们解决了这个问题。请注意，这需要大约180GB的可用磁盘空间。不过，它几乎不会使用RAM。通过在数据集的下载配置中设置delete_extracted=True，我们可以确保尽快删除所有我们不再需要的文件：</p>
-<pre><code>from datasets import load_dataset, DownloadConfig 
-download_config = DownloadConfig(delete_extracted=True)
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> load_dataset, DownloadConfig 
+download_config = DownloadConfig(delete_extracted=<span class="hljs-literal">True</span>)
 
-dataset = load_dataset("./codeparrot", split="train", download_config=download_config)
-</code></pre><p>在引擎盖下，Hugging face Datasets通过在一个优化的缓存文件中加载所有压缩的JSON文件，提取并读取这些文件。让我们看看这个数据集加载之后有多大:</p>
-<pre><code>import psutil
-print(f"Number of python files code in dataset : {len(dataset)}") 
-ds_size = sum(os.stat(f["filename"]).st_size for f in dataset.cache_files)
-# os.stat.st_size is expressed in bytes, so we convert to GB 
-print(f"Dataset size (cache file) : {ds_size / 2**30:.2f} GB") 
-# Process.memory_info is expressed in bytes, so we convert to MB 
-print(f"RAM used: {psutil.Process(os.getpid()).memory_info().rss &gt;&gt; 20} MB") 
+dataset = load_dataset(<span class="hljs-string">"./codeparrot"</span>, split=<span class="hljs-string">"train"</span>, download_config=download_config)
+</code></pre>
+<p>在引擎盖下，Hugging face Datasets通过在一个优化的缓存文件中加载所有压缩的JSON文件，提取并读取这些文件。让我们看看这个数据集加载之后有多大:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> psutil
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Number of python files code in dataset : <span class="hljs-subst">{<span class="hljs-built_in">len</span>(dataset)}</span>"</span>) 
+ds_size = <span class="hljs-built_in">sum</span>(os.stat(f[<span class="hljs-string">"filename"</span>]).st_size <span class="hljs-keyword">for</span> f <span class="hljs-keyword">in</span> dataset.cache_files)
+<span class="hljs-comment"># os.stat.st_size is expressed in bytes, so we convert to GB </span>
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Dataset size (cache file) : <span class="hljs-subst">{ds_size / <span class="hljs-number">2</span>**<span class="hljs-number">30</span>:<span class="hljs-number">.2</span>f}</span> GB"</span>) 
+<span class="hljs-comment"># Process.memory_info is expressed in bytes, so we convert to MB </span>
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"RAM used: <span class="hljs-subst">{psutil.Process(os.getpid()).memory_info().rss &gt;&gt; <span class="hljs-number">20</span>}</span> MB"</span>) 
 
-Number of python files code in dataset : 18695559 
-Dataset size (cache file) : 183.68 GB 
-RAM memory used: 4924 MB
-</code></pre><p>正如我们所看到的，数据集比我们典型的RAM内存大得多，但我们仍然可以加载和访问它，实际上我们使用的内存量非常有限。</p>
+Number of python files code <span class="hljs-keyword">in</span> dataset : <span class="hljs-number">18695559</span> 
+Dataset size (cache file) : <span class="hljs-number">183.68</span> GB 
+RAM memory used: <span class="hljs-number">4924</span> MB
+</code></pre>
+<p>正如我们所看到的，数据集比我们典型的RAM内存大得多，但我们仍然可以加载和访问它，实际上我们使用的内存量非常有限。</p>
 <p>你可能想知道这是否会使我们的训练受到I/O限制。在实践中，与模型处理计算相比，NLP数据的加载通常是非常轻的，所以这很少是一个问题。此外，zerocopy/zero-overhead格式在引擎盖下使用Apache Arrow，这使得访问任何元素都非常高效。根据你的硬盘速度和批量大小，在数据集上的迭代通常可以以万分之几到几GB/s的速度完成。这很好，但如果你不能腾出足够的磁盘空间在本地存储完整的数据集怎么办？每个人都知道那种无助的感觉，当你收到磁盘已满的警告，需要痛苦地试图通过寻找要删除的隐藏文件来找回几GB的空间。幸运的是，如果你使用数据集的流式功能，你就不需要将完整的数据集存储在本地了！"。</p>
 <h4 id="流式访问">流式访问</h4>
 <p>一些数据集（达到1TB或更多）即使在一个标准的硬盘上也很难装下。在这种情况下，除了扩大你所使用的服务器的规模之外，还有一个办法就是将数据集流化。对于一些可以逐行读取的压缩或未压缩的文件格式，如JSON行、CSV或文本（原始或zip、gzip或zstandard压缩），也可以使用数据集。让我们直接从压缩的JSON文件加载我们的数据集，而不是从它们创建一个缓存文件：</p>
-<pre><code>streamed_dataset = load_dataset('./codeparrot', split="train", streaming=True)
-</code></pre><p>正如你所看到的，加载数据集是瞬间完成的! 在流模式下，压缩的JSON文件将被打开，并在空中读取。我们的数据集现在是一个IterableDataset对象。这意味着我们不能访问其中的随机元素，比如streamed_dataset[1264]，但我们需要按顺序读取，比如用 next(iter(streamed_dataset))。仍然可以使用shuffle()这样的方法，但是这些方法的操作方式是获取一个例子的缓冲区并在这个缓冲区内进行洗牌（缓冲区的大小是可以调整的）。当几个文件以原始文件的形式提供时（就像我们这里的184个文件），shuffle()也将为迭代随机化文件的顺序。</p>
+<pre><code class="lang-python">streamed_dataset = load_dataset(<span class="hljs-string">'./codeparrot'</span>, split=<span class="hljs-string">"train"</span>, streaming=<span class="hljs-literal">True</span>)
+</code></pre>
+<p>正如你所看到的，加载数据集是瞬间完成的! 在流模式下，压缩的JSON文件将被打开，并在空中读取。我们的数据集现在是一个IterableDataset对象。这意味着我们不能访问其中的随机元素，比如streamed_dataset[1264]，但我们需要按顺序读取，比如用 next(iter(streamed_dataset))。仍然可以使用shuffle()这样的方法，但是这些方法的操作方式是获取一个例子的缓冲区并在这个缓冲区内进行洗牌（缓冲区的大小是可以调整的）。当几个文件以原始文件的形式提供时（就像我们这里的184个文件），shuffle()也将为迭代随机化文件的顺序。</p>
 <p>我们可以看到，流式数据集的样本与非流式数据集的样本是相同的：</p>
-<pre><code>iterator = iter(streamed_dataset) 
-print(dataset[0] == next(iterator)) 
-print(dataset[1] == next(iterator)) 
-True
-True
-</code></pre><p>使用流式数据集的主要兴趣在于，加载这个数据集不会在硬盘上创建一个缓存文件，也不需要任何（大量）RAM内存。当新的一批例子被请求时，原始的原始文件被提取出来并在运行中被读取，并且只有那一批被加载到内存中。这就把我们的数据集的内存占用从180GB减少到50GB。但我们可以更进一步--我们可以不指向本地数据集，而是引用Hub上的数据集，然后直接下载样本，而不在本地下载原始文件：</p>
-<pre><code>remote_dataset = load_dataset('transformersbook/codeparrot', split="train", streaming=True)
-</code></pre><p>这个数据集的行为与前一个数据集完全一样，但在幕后即时下载实例。有了这样一个设置，我们就可以在一个（几乎）任意小的服务器上使用任意大的数据集。让我们把我们的数据集与训练和验证分开推送到Hugging Face Hub，并通过流式访问它。</p>
+<pre><code class="lang-python">iterator = <span class="hljs-built_in">iter</span>(streamed_dataset) 
+<span class="hljs-built_in">print</span>(dataset[<span class="hljs-number">0</span>] == <span class="hljs-built_in">next</span>(iterator)) 
+<span class="hljs-built_in">print</span>(dataset[<span class="hljs-number">1</span>] == <span class="hljs-built_in">next</span>(iterator)) 
+<span class="hljs-literal">True</span>
+<span class="hljs-literal">True</span>
+</code></pre>
+<p>使用流式数据集的主要兴趣在于，加载这个数据集不会在硬盘上创建一个缓存文件，也不需要任何（大量）RAM内存。当新的一批例子被请求时，原始的原始文件被提取出来并在运行中被读取，并且只有那一批被加载到内存中。这就把我们的数据集的内存占用从180GB减少到50GB。但我们可以更进一步--我们可以不指向本地数据集，而是引用Hub上的数据集，然后直接下载样本，而不在本地下载原始文件：</p>
+<pre><code class="lang-python">remote_dataset = load_dataset(<span class="hljs-string">'transformersbook/codeparrot'</span>, split=<span class="hljs-string">"train"</span>, streaming=<span class="hljs-literal">True</span>)
+</code></pre>
+<p>这个数据集的行为与前一个数据集完全一样，但在幕后即时下载实例。有了这样一个设置，我们就可以在一个（几乎）任意小的服务器上使用任意大的数据集。让我们把我们的数据集与训练和验证分开推送到Hugging Face Hub，并通过流式访问它。</p>
 <h3 id="将数据集添加到-hugging-face-hub">将数据集添加到 Hugging Face Hub</h3>
 <p>将我们的数据集推送到 Hugging Face中心，将使我们能够:</p>
 <ul>
@@ -491,29 +502,35 @@ True
 <li>与社区分享，包括你，亲爱的读者!</li>
 </ul>
 <p>为了上传数据集，我们首先需要登录我们的Hugging Face账户，在终端运行以下命令并提供相关凭证:</p>
-<pre><code>$ huggingface-cli login
-</code></pre><p>这相当于我们在以前章节中使用的notebook_login()辅助函数。一旦完成这些，我们就可以直接在Hub上创建一个新的数据集，并上传压缩的JSON文件。为了简化事情，我们将创建两个存储库：一个用于训练分割，一个用于验证分割。我们可以通过运行CLI的repo create命令来完成这一工作，如下所示：</p>
-<pre><code>$ huggingface-cli repo create --type dataset --organization transformersbook \ codeparrot-train 
-$ huggingface-cli repo create --type dataset --organization transformersbook \ codeparrot-valid
-</code></pre><p>这里我们指定存储库应该是一个数据集（与用于存储权重的模型存储库不同），以及我们想在哪个组织下存储存储库。如果你是在个人账户下运行这段代码，你可以省略--组织标志。接下来，我们需要克隆这些空的存储库到我们的本地机器上，把JSON文件复制到这些存储库中，然后把这些变化推送到Hub上。我们将从我们拥有的184个压缩的JSON文件中取出最后一个作为验证文件（即大约是我们数据集的0.5%）。执行这些命令，将版本库从Hub上克隆到你的本地机器上：</p>
-<pre><code>$ git clone https://huggingface.co/datasets/transformersbook/codeparrot-train 
+<pre><code class="lang-python">$ huggingface-cli login
+</code></pre>
+<p>这相当于我们在以前章节中使用的notebook_login()辅助函数。一旦完成这些，我们就可以直接在Hub上创建一个新的数据集，并上传压缩的JSON文件。为了简化事情，我们将创建两个存储库：一个用于训练分割，一个用于验证分割。我们可以通过运行CLI的repo create命令来完成这一工作，如下所示：</p>
+<pre><code class="lang-python">$ huggingface-cli repo create --<span class="hljs-built_in">type</span> dataset --organization transformersbook \ codeparrot-train 
+$ huggingface-cli repo create --<span class="hljs-built_in">type</span> dataset --organization transformersbook \ codeparrot-valid
+</code></pre>
+<p>这里我们指定存储库应该是一个数据集（与用于存储权重的模型存储库不同），以及我们想在哪个组织下存储存储库。如果你是在个人账户下运行这段代码，你可以省略--组织标志。接下来，我们需要克隆这些空的存储库到我们的本地机器上，把JSON文件复制到这些存储库中，然后把这些变化推送到Hub上。我们将从我们拥有的184个压缩的JSON文件中取出最后一个作为验证文件（即大约是我们数据集的0.5%）。执行这些命令，将版本库从Hub上克隆到你的本地机器上：</p>
+<pre><code class="lang-python">$ git clone https://huggingface.co/datasets/transformersbook/codeparrot-train 
 $ git clone https://huggingface.co/datasets/transformersbook/codeparrot-valid
-</code></pre><p>接下来，除了最后一个GitHub文件外，复制所有文件作为训练集：</p>
-<pre><code>$ cd codeparrot-train 
+</code></pre>
+<p>接下来，除了最后一个GitHub文件外，复制所有文件作为训练集：</p>
+<pre><code class="lang-python">$ cd codeparrot-train 
 $ cp ../codeparrot/*.json.gz . 
-$ rm ./file-000000000183.json.gz
-</code></pre><p>然后提交文件并将其推送到Hub：</p>
-<pre><code>$ git add . 
-$ git commit -m "Adding dataset files" 
+$ rm ./file-<span class="hljs-number">000000000183.j</span>son.gz
+</code></pre>
+<p>然后提交文件并将其推送到Hub：</p>
+<pre><code class="lang-python">$ git add . 
+$ git commit -m <span class="hljs-string">"Adding dataset files"</span> 
 $ git push
-</code></pre><p>现在，对验证集重复这一过程：</p>
-<pre><code>$ cd ../codeparrot-valid 
-$ cp ../codeparrot/file-000000000183.json.gz . 
-$ mv ./file-000000000183.json.gz ./file-000000000183_validation.json.gz 
+</code></pre>
+<p>现在，对验证集重复这一过程：</p>
+<pre><code class="lang-python">$ cd ../codeparrot-valid 
+$ cp ../codeparrot/file-<span class="hljs-number">000000000183.j</span>son.gz . 
+$ mv ./file-<span class="hljs-number">000000000183.j</span>son.gz ./file-000000000183_validation.json.gz 
 $ git add . 
-$ git commit -m "Adding dataset files"
+$ git commit -m <span class="hljs-string">"Adding dataset files"</span>
 $ git push
-</code></pre><p>由于要计算所有文件的哈希值，git add .步骤可能需要几分钟。上传所有的文件也会花一点时间。由于这将使我们在本章后面使用流式，然而，这并不是损失的时间，这一步将使我们在其余的实验中大大加快。注意，我们在验证文件名中加入了_validation的后缀。这将使我们以后能把它作为一个验证分片加载。</p>
+</code></pre>
+<p>由于要计算所有文件的哈希值，git add .步骤可能需要几分钟。上传所有的文件也会花一点时间。由于这将使我们在本章后面使用流式，然而，这并不是损失的时间，这一步将使我们在其余的实验中大大加快。注意，我们在验证文件名中加入了_validation的后缀。这将使我们以后能把它作为一个验证分片加载。</p>
 <p>就这样了! 我们的两个分割数据集以及完整的数据集现在都在拥抱脸部中心上线，网址如下：</p>
 <ul>
 <li><a href="https://huggingface.co/datasets/transformersbook/codeparrot" target="_blank">https://huggingface.co/datasets/transformersbook/codeparrot</a> </li>
@@ -532,18 +549,19 @@ $ git push
 </li>
 </ul>
 <p>我们可以很容易地在实践中测试每个标记器的这些特征：</p>
-<pre><code>from transformers import AutoTokenizer 
-def tok_list(tokenizer, string):
-    input_ids = tokenizer(string, add_special_tokens=False)["input_ids"] 
-    return [tokenizer.decode(tok) for tok in input_ids] 
-tokenizer_T5 = AutoTokenizer.from_pretrained("t5-base") 
-tokenizer_camembert = AutoTokenizer.from_pretrained("camembert-base") 
-print(f'T5 tokens for "sex": {tok_list(tokenizer_T5,"sex")}')
-print(f'CamemBERT tokens for "being": {tok_list(tokenizer_camembert,"being")}') 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">tok_list</span>(<span class="hljs-params">tokenizer, string</span>):
+    input_ids = tokenizer(string, add_special_tokens=<span class="hljs-literal">False</span>)[<span class="hljs-string">"input_ids"</span>] 
+    <span class="hljs-keyword">return</span> [tokenizer.decode(tok) <span class="hljs-keyword">for</span> tok <span class="hljs-keyword">in</span> input_ids] 
+tokenizer_T5 = AutoTokenizer.from_pretrained(<span class="hljs-string">"t5-base"</span>) 
+tokenizer_camembert = AutoTokenizer.from_pretrained(<span class="hljs-string">"camembert-base"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'T5 tokens for "sex": <span class="hljs-subst">{tok_list(tokenizer_T5,<span class="hljs-string">"sex"</span>)}</span>'</span>)
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'CamemBERT tokens for "being": <span class="hljs-subst">{tok_list(tokenizer_camembert,<span class="hljs-string">"being"</span>)}</span>'</span>) 
 
-T5 tokens for "sex": ['', 's', 'ex'] 
-CamemBERT tokens for "being": ['be', 'ing']
-</code></pre><p>在许多情况下，将这种短小而常见的词拆分成子部分将是低效的，因为这将增加模型的输入序列长度（其上下文有限）。因此，必须了解用于训练标记器的数据集的领域和预处理情况。标记器和模型可以编码来自数据集的偏见，对模型的下游行为有影响。为了给我们的数据集创建一个最佳的标记器，我们需要自己训练一个标记器。让我们看看如何做到这一点。</p>
+T5 tokens <span class="hljs-keyword">for</span> <span class="hljs-string">"sex"</span>: [<span class="hljs-string">''</span>, <span class="hljs-string">'s'</span>, <span class="hljs-string">'ex'</span>] 
+CamemBERT tokens <span class="hljs-keyword">for</span> <span class="hljs-string">"being"</span>: [<span class="hljs-string">'be'</span>, <span class="hljs-string">'ing'</span>]
+</code></pre>
+<p>在许多情况下，将这种短小而常见的词拆分成子部分将是低效的，因为这将增加模型的输入序列长度（其上下文有限）。因此，必须了解用于训练标记器的数据集的领域和预处理情况。标记器和模型可以编码来自数据集的偏见，对模型的下游行为有影响。为了给我们的数据集创建一个最佳的标记器，我们需要自己训练一个标记器。让我们看看如何做到这一点。</p>
 <p><strong>注意事项</strong></p>
 <p>训练一个模型需要从一组给定的权重开始，并使用来自误差信号的反向传播，在设计的目标上使模型的损失最小化，并为模型找到一组最佳的权重来完成训练目标所定义的任务。另一方面，训练标记器并不涉及反向传播或权重。它是一种创建从文本字符串到整数列表的最佳映射的方法，可以被模型所吸收。在今天的标记器中，最佳的字符串到整数的转换涉及到一个由原子字符串列表组成的词汇表，以及一个相关的方法来转换、归一化、切割或将文本字符串映射到具有该词汇表的索引列表。然后，这个索引列表是我们的神经网络的输入。</p>
 <h3 id="标记器模型-（tokenizer-model">标记器模型 （Tokenizer Model)</h3>
@@ -565,59 +583,65 @@ CamemBERT tokens for "being": ['be', 'ing']
 <h4 id="用于python的标记器">用于Python的标记器</h4>
 <p>我们需要一个自定义的标记器来满足我们的用例：对Python代码进行标记。预标记化的问题值得对编程语言进行一些讨论。如果我们在空白处分割并删除它们，我们就会失去所有的缩进信息，这在Python中对程序的语义很重要（想想while循环，或者if-then-else语句）。另一方面，换行是没有意义的，可以在不影响语义的情况下增加或删除。同样，在标点符号上进行分割，比如下划线，它被用来从几个子部分组成一个单一的变量名称，可能不像在自然语言中那样有意义。因此，使用自然语言的预标记器对代码进行标记可能是次优的。</p>
 <p>让我们看看在Hub上提供的集合中是否有对我们有用的标记器。我们想要一个保留空间的标记器，所以一个好的候选者可能是一个字节级的标记器，比如GPT-2的那个。让我们加载这个标记器并探索其标记属性:</p>
-<pre><code>from transformers import AutoTokenizer 
-python_code = r"""
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer 
+python_code = <span class="hljs-string">r"""
 def say_hello(): 
     print("Hello, World!") 
-# Print it say_hello() """ 
-tokenizer = AutoTokenizer.from_pretrained("gpt2") 
-print(tokenizer(python_code).tokens()) 
+# Print it say_hello() """</span> 
+tokenizer = AutoTokenizer.from_pretrained(<span class="hljs-string">"gpt2"</span>) 
+<span class="hljs-built_in">print</span>(tokenizer(python_code).tokens()) 
 
-['def', 'Ġsay', '_', 'hello', '():', 'Ċ', 'Ġ', 'Ġ', 'Ġ', 'Ġprint', '("', 'Hello', ',', 'ĠWorld', '!"', ')', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 'say', '_', 'hello', '()', 'Ċ']
-</code></pre><p><strong>注意事项</strong></p>
+[<span class="hljs-string">'def'</span>, <span class="hljs-string">'Ġsay'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'():'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ġ'</span>, <span class="hljs-string">'Ġ'</span>, <span class="hljs-string">'Ġ'</span>, <span class="hljs-string">'Ġprint'</span>, <span class="hljs-string">'("'</span>, <span class="hljs-string">'Hello'</span>, <span class="hljs-string">','</span>, <span class="hljs-string">'ĠWorld'</span>, <span class="hljs-string">'!"'</span>, <span class="hljs-string">')'</span>, <span class="hljs-string">'Ġ#'</span>, <span class="hljs-string">'ĠPrint'</span>, <span class="hljs-string">'Ġit'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'say'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'()'</span>, <span class="hljs-string">'Ċ'</span>]
+</code></pre>
+<p><strong>注意事项</strong></p>
 <p>Python有一个内置的tokenize模块，可以将Python代码字符串分割成有意义的单元（代码操作、注释、缩进和扣除，等等）。使用这种方法的一个问题是，这种预标记器是基于Python的，因此通常相当慢，而且受到Python全局解释器锁（GIL）的限制。另一方面，Transformers库中的大部分标记器是由Tokenizers库提供的，并且是用Rust编码的。Rust标记器的训练和使用速度要快很多个数量级，因此考虑到我们的语料库的规模，我们很可能想使用它们。</p>
 <p>这是一个相当奇怪的输出，所以让我们试着通过运行标记器流水线的各个子模块来了解这里发生了什么。首先，让我们看看在这个标记器中应用了什么规范化：</p>
-<pre><code>print(tokenizer.backend_tokenizer.normalizer)
-None
-</code></pre><p>正如我们所看到的，GPT-2标记器没有使用规范化。它直接在原始Unicode输入上工作，没有任何规范化步骤。现在让我们来看看预编码的情况：</p>
-<pre><code>print(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code)) 
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(tokenizer.backend_tokenizer.normalizer)
+<span class="hljs-literal">None</span>
+</code></pre>
+<p>正如我们所看到的，GPT-2标记器没有使用规范化。它直接在原始Unicode输入上工作，没有任何规范化步骤。现在让我们来看看预编码的情况：</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code)) 
 
-[('def', (0, 3)), ('Ġsay', (3, 7)), ('_', (7, 8)), ('hello', (8, 13)), ('():', (13, 16)), ('ĊĠĠĠ', (16, 20)), ('Ġprint', (20, 26)), ('("', (26, 28)), ('Hello', (28, 33)), (',', (33, 34)), ('ĠWorld', (34, 40)), ('!")', (40, 43)), ('Ġ#', (43, 45)), ('ĠPrint', (45, 51)), ('Ġit', (51, 54)), ('Ċ', (54, 55)), ('Ċ', (55, 56)), ('say', (56, 59)), ('_', (59, 60)), ('hello', (60, 65)), ('()', (65, 67)), ('Ċ', (67, 68))]
-</code></pre><p>这些Ġ符号是什么，伴随着标记的数字又是什么？让我们解释一下这两点，看看我们是否能更好地理解这个标记器的工作原理。</p>
+[(<span class="hljs-string">'def'</span>, (<span class="hljs-number">0</span>, <span class="hljs-number">3</span>)), (<span class="hljs-string">'Ġsay'</span>, (<span class="hljs-number">3</span>, <span class="hljs-number">7</span>)), (<span class="hljs-string">'_'</span>, (<span class="hljs-number">7</span>, <span class="hljs-number">8</span>)), (<span class="hljs-string">'hello'</span>, (<span class="hljs-number">8</span>, <span class="hljs-number">13</span>)), (<span class="hljs-string">'():'</span>, (<span class="hljs-number">13</span>, <span class="hljs-number">16</span>)), (<span class="hljs-string">'ĊĠĠĠ'</span>, (<span class="hljs-number">16</span>, <span class="hljs-number">20</span>)), (<span class="hljs-string">'Ġprint'</span>, (<span class="hljs-number">20</span>, <span class="hljs-number">26</span>)), (<span class="hljs-string">'("'</span>, (<span class="hljs-number">26</span>, <span class="hljs-number">28</span>)), (<span class="hljs-string">'Hello'</span>, (<span class="hljs-number">28</span>, <span class="hljs-number">33</span>)), (<span class="hljs-string">','</span>, (<span class="hljs-number">33</span>, <span class="hljs-number">34</span>)), (<span class="hljs-string">'ĠWorld'</span>, (<span class="hljs-number">34</span>, <span class="hljs-number">40</span>)), (<span class="hljs-string">'!")'</span>, (<span class="hljs-number">40</span>, <span class="hljs-number">43</span>)), (<span class="hljs-string">'Ġ#'</span>, (<span class="hljs-number">43</span>, <span class="hljs-number">45</span>)), (<span class="hljs-string">'ĠPrint'</span>, (<span class="hljs-number">45</span>, <span class="hljs-number">51</span>)), (<span class="hljs-string">'Ġit'</span>, (<span class="hljs-number">51</span>, <span class="hljs-number">54</span>)), (<span class="hljs-string">'Ċ'</span>, (<span class="hljs-number">54</span>, <span class="hljs-number">55</span>)), (<span class="hljs-string">'Ċ'</span>, (<span class="hljs-number">55</span>, <span class="hljs-number">56</span>)), (<span class="hljs-string">'say'</span>, (<span class="hljs-number">56</span>, <span class="hljs-number">59</span>)), (<span class="hljs-string">'_'</span>, (<span class="hljs-number">59</span>, <span class="hljs-number">60</span>)), (<span class="hljs-string">'hello'</span>, (<span class="hljs-number">60</span>, <span class="hljs-number">65</span>)), (<span class="hljs-string">'()'</span>, (<span class="hljs-number">65</span>, <span class="hljs-number">67</span>)), (<span class="hljs-string">'Ċ'</span>, (<span class="hljs-number">67</span>, <span class="hljs-number">68</span>))]
+</code></pre>
+<p>这些Ġ符号是什么，伴随着标记的数字又是什么？让我们解释一下这两点，看看我们是否能更好地理解这个标记器的工作原理。</p>
 <p>让我们从数字开始。Tokenizers有一个非常有用的功能，用于在字符串和标记之间切换，称为偏移量跟踪。对输入字符串的所有操作都会被跟踪，这样就有可能确切地知道标记化后的一个标记对应于输入字符串的哪一部分。这些数字只是表明每个标记在原始字符串中的位置；例如，第一行中的单词'hello'对应于原始字符串中的8到13个字符。如果在规范化步骤中删除了一些字符，我们仍然能够将每个标记与原始字符串中的相应部分联系起来。</p>
 <p>标记化文本的另一个奇怪的特征是看起来很奇怪的字符，如Ċ和Ġ。字节级的意思是这个标记器是在字节而不是Unicode字符上工作。每个Unicode字符由1到4个字节组成，这取决于该字符。字节的好处是，虽然Unicode字母表中有143,859个Unicode字符，但字节字母表中只有256个元素，你可以将每个Unicode字符表示为这些字节的序列。如果我们在字节上工作，我们就可以将所有从UTF-8世界中组成的字符串表达为这个256值的字母表中的较长字符串。也就是说，我们可以有一个使用只有256个字的字母表的模型，并且能够处理任何Unicode字符串。让我们来看看一些字符的字节表示是什么样子的：</p>
-<pre><code>a, e = u"a", u"€"
-byte = ord(a.encode("utf-8"))
-print(f'`{a}` is encoded as `{a.encode("utf-8")}` with a single byte: {byte}')
-byte = [ord(chr(i)) for i in e.encode("utf-8")] 
-print(f'`{e}` is encoded as `{e.encode("utf-8")}` with three bytes: {byte}') 
+<pre><code class="lang-python">a, e = <span class="hljs-string">u"a"</span>, <span class="hljs-string">u"€"</span>
+byte = <span class="hljs-built_in">ord</span>(a.encode(<span class="hljs-string">"utf-8"</span>))
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'`<span class="hljs-subst">{a}</span>` is encoded as `<span class="hljs-subst">{a.encode(<span class="hljs-string">"utf-8"</span>)}</span>` with a single byte: <span class="hljs-subst">{byte}</span>'</span>)
+byte = [<span class="hljs-built_in">ord</span>(<span class="hljs-built_in">chr</span>(i)) <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> e.encode(<span class="hljs-string">"utf-8"</span>)] 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'`<span class="hljs-subst">{e}</span>` is encoded as `<span class="hljs-subst">{e.encode(<span class="hljs-string">"utf-8"</span>)}</span>` with three bytes: <span class="hljs-subst">{byte}</span>'</span>) 
 
-`a` is encoded as `b'a'` with a single byte: 97 
-`€` is encoded as `b'\xe2\x82\xac'` with three bytes: [226, 130, 172]
-</code></pre><p>在这一点上，你可能会想：为什么要在字节级上工作？回想一下我们在第二章中关于字符和词的权衡的讨论。我们可以决定从143,859个Unicode字符中建立我们的词汇，但是我们也想在我们的词汇中包括单词--即Unicode字符的组合，所以这个（已经非常大的）尺寸只是词汇总尺寸的下限。这将使我们模型的嵌入层变得非常大，因为它包括每个词汇标记的一个向量。</p>
+`a` <span class="hljs-keyword">is</span> encoded <span class="hljs-keyword">as</span> `<span class="hljs-string">b'a'</span>` <span class="hljs-keyword">with</span> a single byte: <span class="hljs-number">97</span> 
+`€` <span class="hljs-keyword">is</span> encoded <span class="hljs-keyword">as</span> `<span class="hljs-string">b'\xe2\x82\xac'</span>` <span class="hljs-keyword">with</span> three <span class="hljs-built_in">bytes</span>: [<span class="hljs-number">226</span>, <span class="hljs-number">130</span>, <span class="hljs-number">172</span>]
+</code></pre>
+<p>在这一点上，你可能会想：为什么要在字节级上工作？回想一下我们在第二章中关于字符和词的权衡的讨论。我们可以决定从143,859个Unicode字符中建立我们的词汇，但是我们也想在我们的词汇中包括单词--即Unicode字符的组合，所以这个（已经非常大的）尺寸只是词汇总尺寸的下限。这将使我们模型的嵌入层变得非常大，因为它包括每个词汇标记的一个向量。</p>
 <p>在另一个极端，如果我们只使用256个字节的值作为我们的词汇，那么输入序列将被分割成许多小块（每个字节构成Unicode字符），因此我们的模型将不得不在长的输入上工作，并花费大量的计算能力从独立的字节中重建Unicode字符，然后再从这些字符中重建字。关于这种开销的详细研究，请参见ByT5模型发布时的论文。</p>
 <p>一个中间解决方案是通过用最常见的字节组合来扩展256个字的词汇表来构建一个中等规模的词汇表。这就是BPE算法所采取的方法。其思路是通过迭代合并词汇中最频繁出现的一对标记来创建新的词汇标记，从而逐步构建一个预定规模的词汇。例如，如果t和h非常频繁地出现在一起，比如在英语中，我们将在词汇中添加一个token th来模拟这对token，而不是将它们分开。t和h的标记被保留在词汇中，以便对它们不同时出现的情况进行标记。从基本单元的词汇开始，我们可以有效地对任何字符串进行建模。</p>
 <p><strong>警告</strong></p>
 <p>注意不要将 "字节对编码 "中的 "字节 "与 "字节级 "中的 "字节 "混淆。字节对编码这一名称来自于菲利普-盖奇在1994年提出的一种数据压缩技术，最初是对字节进行操作。与这个名字可能表明的不同，NLP中的标准BPE算法通常在Unicode字符串而不是字节上操作（尽管有一种新的BPE专门在字节上工作，称为字节级BPE）。如果我们用字节来读取我们的Unicode字符串，我们就可以重新使用一个简单的BPE子字分割算法。</p>
 <p>在NLP中使用典型的BPE算法时，只有一个问题。这些算法被设计为使用干净的Unicode字符串作为输入，而不是字节，并期望在输入中使用常规的ASCII字符，没有空格或控制字符。但是在对应于256个第一字节的Unicode字符中，有许多控制字符（换行、制表、转义、换行和其他不可打印的字符）。为了克服这个问题，GPT-2标记器首先将所有256个输入字节映射为Unicode字符串，这些字符串很容易被标准的BPE算法消化--也就是说，我们将把我们的256个基本值映射为Unicode字符串，这些字符串都对应于标准的可打印Unicode字符。</p>
 <p>这些Unicode字符每个都用1个或更多的字节编码并不是很重要；重要的是我们在最后有256个单值，形成我们的基础词汇，并且这256个值被我们的BPE算法正确处理。让我们看看这个映射与GPT-2标记器的一些例子。我们可以按以下方式访问整个映射：</p>
-<pre><code>from transformers.models.gpt2.tokenization_gpt2 
-import bytes_to_unicode 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers.models.gpt2.tokenization_gpt2 
+<span class="hljs-keyword">import</span> bytes_to_unicode 
 byte_to_unicode_map = bytes_to_unicode() 
-unicode_to_byte_map = dict((v, k) for k, v in byte_to_unicode_map.items()) 
-base_vocab = list(unicode_to_byte_map.keys()) 
-print(f'Size of our base vocabulary: {len(base_vocab)}') 
-print(f'First element: `{base_vocab[0]}`, last element: `{base_vocab[-1]}`') 
+unicode_to_byte_map = <span class="hljs-built_in">dict</span>((v, k) <span class="hljs-keyword">for</span> k, v <span class="hljs-keyword">in</span> byte_to_unicode_map.items()) 
+base_vocab = <span class="hljs-built_in">list</span>(unicode_to_byte_map.keys()) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'Size of our base vocabulary: <span class="hljs-subst">{<span class="hljs-built_in">len</span>(base_vocab)}</span>'</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'First element: `<span class="hljs-subst">{base_vocab[<span class="hljs-number">0</span>]}</span>`, last element: `<span class="hljs-subst">{base_vocab[-<span class="hljs-number">1</span>]}</span>`'</span>) 
 
-Size of our base vocabulary: 256 
+Size of our base vocabulary: <span class="hljs-number">256</span> 
 First element: `!`, last element: `Ń`
-</code></pre><p>而我们可以在表10-1中看看一些常见的字节值和相关的映射的Unicode字符。</p>
+</code></pre>
+<p>而我们可以在表10-1中看看一些常见的字节值和相关的映射的Unicode字符。</p>
 <p><img src="images/chapter10/image-20220215185603087.png" alt="image-20220215185603087"></img></p>
 <p>我们可以使用更明确的转换方式，比如将换行符映射到NEWLINE字符串，但BPE算法通常是为字符设计的。出于这个原因，为每个字节字符保留一个Unicode字符，用开箱即用的BPE算法更容易处理。现在我们已经了解了Unicode编码的黑暗魔法，我们可以更好地理解我们的标记化转换：</p>
-<pre><code>print(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code))
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code))
 
-[('def', (0, 3)), ('Ġsay', (3, 7)), ('_', (7, 8)), ('hello', (8, 13)), ('():', (13, 16)), ('ĊĠĠĠ', (16, 20)), ('Ġprint', (20, 26)), ('("', (26, 28)), ('Hello', (28, 33)), (',', (33, 34)), ('ĠWorld', (34, 40)), ('!")', (40, 43)), ('Ġ#', (43, 45)), ('ĠPrint', (45, 51)), ('Ġit', (51, 54)), ('Ċ', (54, 55)), ('Ċ', (55, 56)), ('say', (56, 59)), ('_', (59, 60)), ('hello', (60, 65)), ('()', (65, 67)), ('Ċ', (67, 68))]
-</code></pre><p>我们可以认出换行符，我们现在知道换行符被映射到Ċ，还有空格，被映射到Ġ。我们还可以看到：</p>
+[(<span class="hljs-string">'def'</span>, (<span class="hljs-number">0</span>, <span class="hljs-number">3</span>)), (<span class="hljs-string">'Ġsay'</span>, (<span class="hljs-number">3</span>, <span class="hljs-number">7</span>)), (<span class="hljs-string">'_'</span>, (<span class="hljs-number">7</span>, <span class="hljs-number">8</span>)), (<span class="hljs-string">'hello'</span>, (<span class="hljs-number">8</span>, <span class="hljs-number">13</span>)), (<span class="hljs-string">'():'</span>, (<span class="hljs-number">13</span>, <span class="hljs-number">16</span>)), (<span class="hljs-string">'ĊĠĠĠ'</span>, (<span class="hljs-number">16</span>, <span class="hljs-number">20</span>)), (<span class="hljs-string">'Ġprint'</span>, (<span class="hljs-number">20</span>, <span class="hljs-number">26</span>)), (<span class="hljs-string">'("'</span>, (<span class="hljs-number">26</span>, <span class="hljs-number">28</span>)), (<span class="hljs-string">'Hello'</span>, (<span class="hljs-number">28</span>, <span class="hljs-number">33</span>)), (<span class="hljs-string">','</span>, (<span class="hljs-number">33</span>, <span class="hljs-number">34</span>)), (<span class="hljs-string">'ĠWorld'</span>, (<span class="hljs-number">34</span>, <span class="hljs-number">40</span>)), (<span class="hljs-string">'!")'</span>, (<span class="hljs-number">40</span>, <span class="hljs-number">43</span>)), (<span class="hljs-string">'Ġ#'</span>, (<span class="hljs-number">43</span>, <span class="hljs-number">45</span>)), (<span class="hljs-string">'ĠPrint'</span>, (<span class="hljs-number">45</span>, <span class="hljs-number">51</span>)), (<span class="hljs-string">'Ġit'</span>, (<span class="hljs-number">51</span>, <span class="hljs-number">54</span>)), (<span class="hljs-string">'Ċ'</span>, (<span class="hljs-number">54</span>, <span class="hljs-number">55</span>)), (<span class="hljs-string">'Ċ'</span>, (<span class="hljs-number">55</span>, <span class="hljs-number">56</span>)), (<span class="hljs-string">'say'</span>, (<span class="hljs-number">56</span>, <span class="hljs-number">59</span>)), (<span class="hljs-string">'_'</span>, (<span class="hljs-number">59</span>, <span class="hljs-number">60</span>)), (<span class="hljs-string">'hello'</span>, (<span class="hljs-number">60</span>, <span class="hljs-number">65</span>)), (<span class="hljs-string">'()'</span>, (<span class="hljs-number">65</span>, <span class="hljs-number">67</span>)), (<span class="hljs-string">'Ċ'</span>, (<span class="hljs-number">67</span>, <span class="hljs-number">68</span>))]
+</code></pre>
+<p>我们可以认出换行符，我们现在知道换行符被映射到Ċ，还有空格，被映射到Ġ。我们还可以看到：</p>
 <ul>
 <li><p>空格，特别是连续的空格，是被保留的（例如，'ĊĠĠ'中的三个空格）。</p>
 </li>
@@ -637,12 +661,14 @@ First element: `!`, last element: `Ń`
 </li>
 </ul>
 <p>我们可以通过查看标记器的长度属性来轻松检查：</p>
-<pre><code>print(f"Size of the vocabulary: {len(tokenizer)}") 
-Size of the vocabulary: 50257
-</code></pre><p>在我们的输入代码上运行完整的流水线，我们得到了以下输出：</p>
-<pre><code>print(tokenizer(python_code).tokens()) 
-['def', 'Ġsay', '_', 'hello', '():', 'Ċ', 'Ġ', 'Ġ', 'Ġ', 'Ġprint', '("', 'Hello', ',', 'ĠWorld', '!"', ')', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 'say', '_', 'hello', '()', 'Ċ']
-</code></pre><p>我们可以看到，BPE标记器保留了大部分单词，但会将我们缩进的多个空格分割成几个连续的空格。发生这种情况是因为这个标记器并不是专门针对代码进行训练的，而是主要针对连续空格很少的文本。因此，BPE模型并没有在缩进的词汇中包括一个特定的标记。这是一个标记器模型不适合数据集领域的情况。正如我们前面所讨论的，解决方案是在目标语料库上重新训练标记器。所以，让我们开始行动吧！</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(<span class="hljs-string">f"Size of the vocabulary: <span class="hljs-subst">{<span class="hljs-built_in">len</span>(tokenizer)}</span>"</span>) 
+Size of the vocabulary: <span class="hljs-number">50257</span>
+</code></pre>
+<p>在我们的输入代码上运行完整的流水线，我们得到了以下输出：</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(tokenizer(python_code).tokens()) 
+[<span class="hljs-string">'def'</span>, <span class="hljs-string">'Ġsay'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'():'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ġ'</span>, <span class="hljs-string">'Ġ'</span>, <span class="hljs-string">'Ġ'</span>, <span class="hljs-string">'Ġprint'</span>, <span class="hljs-string">'("'</span>, <span class="hljs-string">'Hello'</span>, <span class="hljs-string">','</span>, <span class="hljs-string">'ĠWorld'</span>, <span class="hljs-string">'!"'</span>, <span class="hljs-string">')'</span>, <span class="hljs-string">'Ġ#'</span>, <span class="hljs-string">'ĠPrint'</span>, <span class="hljs-string">'Ġit'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'say'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'()'</span>, <span class="hljs-string">'Ċ'</span>]
+</code></pre>
+<p>我们可以看到，BPE标记器保留了大部分单词，但会将我们缩进的多个空格分割成几个连续的空格。发生这种情况是因为这个标记器并不是专门针对代码进行训练的，而是主要针对连续空格很少的文本。因此，BPE模型并没有在缩进的词汇中包括一个特定的标记。这是一个标记器模型不适合数据集领域的情况。正如我们前面所讨论的，解决方案是在目标语料库上重新训练标记器。所以，让我们开始行动吧！</p>
 <h3 id="训练标记器">训练标记器</h3>
 <p>让我们在语料库的一个片断上重新训练我们的字节级BPE标记器，以得到一个更适合Python代码的词汇。重新训练Transformers提供的标记器很简单。我们只需要：</p>
 <ul>
@@ -652,86 +678,100 @@ Size of the vocabulary: 50257
 </ul>
 <p>与深度学习模型不同的是，深度学习模型通常要从训练语料库中记忆很多具体细节，而标记器实际上只是被训练来提取主要的统计数据。简而言之，标记器只是被训练来知道哪些字母组合在我们的语料库中是最频繁的。</p>
 <p>因此，你不一定需要在一个非常大的语料库上训练你的标记器；语料库只需要对你的领域有代表性，并且大到足以让标记器提取具有统计学意义的措施。但是，根据语料库中的词汇量和确切的文本，标记器最终可能会存储意想不到的词。例如，在查看GPT-2标记器的词汇中最长的词时，我们可以看到这一点：</p>
-<pre><code>tokens = sorted(tokenizer.vocab.items(), key=lambda x: len(x[0]), reverse=True)
-print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[:8]]); ['ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ',
-' =================================================================', 
-' ---------------------------------------------------------------', '................................................................', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ'
-' ---------------------------------------------------------------', '================================================================', '________________________________________________________________']
-</code></pre><p>这些标记看起来像论坛上可能使用的分隔线。这很合理，因为GPT-2是在以Reddit为中心的语料库上训练的。现在让我们来看看最后被添加到词汇中的词，也就是最不频繁的词：</p>
-<pre><code>tokens = sorted(tokenizer.vocab.items(), key=lambda x: x[1], reverse=True) 
-print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[:12]]); 
+<pre><code class="lang-python">tokens = <span class="hljs-built_in">sorted</span>(tokenizer.vocab.items(), key=<span class="hljs-keyword">lambda</span> x: <span class="hljs-built_in">len</span>(x[<span class="hljs-number">0</span>]), reverse=<span class="hljs-literal">True</span>)
+<span class="hljs-built_in">print</span>([<span class="hljs-string">f'<span class="hljs-subst">{tokenizer.convert_tokens_to_string(t)}</span>'</span> <span class="hljs-keyword">for</span> t, _ <span class="hljs-keyword">in</span> tokens[:<span class="hljs-number">8</span>]]); [<span class="hljs-string">'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ'</span>,
+<span class="hljs-string">' ================================================================='</span>, 
+<span class="hljs-string">' ---------------------------------------------------------------'</span>, <span class="hljs-string">'................................................................'</span>, <span class="hljs-string">'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ'</span>
+<span class="hljs-string">' ---------------------------------------------------------------'</span>, <span class="hljs-string">'================================================================'</span>, <span class="hljs-string">'________________________________________________________________'</span>]
+</code></pre>
+<p>这些标记看起来像论坛上可能使用的分隔线。这很合理，因为GPT-2是在以Reddit为中心的语料库上训练的。现在让我们来看看最后被添加到词汇中的词，也就是最不频繁的词：</p>
+<pre><code class="lang-python">tokens = <span class="hljs-built_in">sorted</span>(tokenizer.vocab.items(), key=<span class="hljs-keyword">lambda</span> x: x[<span class="hljs-number">1</span>], reverse=<span class="hljs-literal">True</span>) 
+<span class="hljs-built_in">print</span>([<span class="hljs-string">f'<span class="hljs-subst">{tokenizer.convert_tokens_to_string(t)}</span>'</span> <span class="hljs-keyword">for</span> t, _ <span class="hljs-keyword">in</span> tokens[:<span class="hljs-number">12</span>]]); 
 
-['&lt;|endoftext|&gt;', ' gazed', ' informants', ' Collider', ' regress', 'ominated', ' amplification', 'Compar', '..."', ' (/', 'Commission', ' Hitman']
-</code></pre><p>第一个标记，&lt;|endoftext|&gt;，是用于指定文本序列结束的特殊标记，是在BPE词汇库建立后加入的。对于这些标记中的每一个，我们的模型将不得不学习一个相关的单词嵌入，而我们可能不希望嵌入矩阵包含太多的噪音单词。还请注意，在我们的建模方法中，一些非常具有时间和空间特征的世界知识（例如，像Hitman和Commission这样的专有名词）是如何在很低的水平上被嵌入的，即这些词被授予单独的令牌，在词汇中具有相关的向量。BPE标记器创建这种特定的标记，也可以说明目标词汇量太大，或者语料库包含特异性的标记。</p>
+[<span class="hljs-string">'&lt;|endoftext|&gt;'</span>, <span class="hljs-string">' gazed'</span>, <span class="hljs-string">' informants'</span>, <span class="hljs-string">' Collider'</span>, <span class="hljs-string">' regress'</span>, <span class="hljs-string">'ominated'</span>, <span class="hljs-string">' amplification'</span>, <span class="hljs-string">'Compar'</span>, <span class="hljs-string">'..."'</span>, <span class="hljs-string">' (/'</span>, <span class="hljs-string">'Commission'</span>, <span class="hljs-string">' Hitman'</span>]
+</code></pre>
+<p>第一个标记，&lt;|endoftext|&gt;，是用于指定文本序列结束的特殊标记，是在BPE词汇库建立后加入的。对于这些标记中的每一个，我们的模型将不得不学习一个相关的单词嵌入，而我们可能不希望嵌入矩阵包含太多的噪音单词。还请注意，在我们的建模方法中，一些非常具有时间和空间特征的世界知识（例如，像Hitman和Commission这样的专有名词）是如何在很低的水平上被嵌入的，即这些词被授予单独的令牌，在词汇中具有相关的向量。BPE标记器创建这种特定的标记，也可以说明目标词汇量太大，或者语料库包含特异性的标记。</p>
 <p>让我们在我们的语料库上训练一个新的标记器，并检查它学到的词汇。由于我们只需要一个合理地代表我们的数据集统计的语料库，让我们从我们的语料库中选择大约1-2GB的数据，或者大约10万个文档：</p>
-<pre><code>from tqdm.auto import tqdm 
-length = 10000
-dataset_name = 'transformersbook/codeparrot-train' 
-dataset = load_dataset(dataset_name, split="train", streaming=True) 
-iter_dataset = iter(dataset) 
-def batch_iterator(batch_size=10): 
-    for _ in tqdm(range(0, length, batch_size)): 
-        yield [next(iter_dataset)['content'] for _ in range(batch_size)] 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> tqdm.auto <span class="hljs-keyword">import</span> tqdm 
+length = <span class="hljs-number">10000</span>
+dataset_name = <span class="hljs-string">'transformersbook/codeparrot-train'</span> 
+dataset = load_dataset(dataset_name, split=<span class="hljs-string">"train"</span>, streaming=<span class="hljs-literal">True</span>) 
+iter_dataset = <span class="hljs-built_in">iter</span>(dataset) 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">batch_iterator</span>(<span class="hljs-params">batch_size=<span class="hljs-number">10</span></span>): 
+    <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> tqdm(<span class="hljs-built_in">range</span>(<span class="hljs-number">0</span>, length, batch_size)): 
+        <span class="hljs-keyword">yield</span> [<span class="hljs-built_in">next</span>(iter_dataset)[<span class="hljs-string">'content'</span>] <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(batch_size)] 
 
-new_tokenizer = tokenizer.train_new_from_iterator(batch_iterator(), vocab_size=12500, initial_alphabet=base_vocab)
-</code></pre><p>让我们调查一下我们的BPE算法所创造的第一个和最后一个词，看看我们的词汇量有多大的关联。我们跳过256字节的标记，看看此后添加的第一个标记：</p>
-<pre><code>tokens = sorted(new_tokenizer.vocab.items(), key=lambda x: x[1], reverse=False) 
+new_tokenizer = tokenizer.train_new_from_iterator(batch_iterator(), vocab_size=<span class="hljs-number">12500</span>, initial_alphabet=base_vocab)
+</code></pre>
+<p>让我们调查一下我们的BPE算法所创造的第一个和最后一个词，看看我们的词汇量有多大的关联。我们跳过256字节的标记，看看此后添加的第一个标记：</p>
+<pre><code class="lang-python">tokens = <span class="hljs-built_in">sorted</span>(new_tokenizer.vocab.items(), key=<span class="hljs-keyword">lambda</span> x: x[<span class="hljs-number">1</span>], reverse=<span class="hljs-literal">False</span>) 
 
-print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[257:280]]); 
+<span class="hljs-built_in">print</span>([<span class="hljs-string">f'<span class="hljs-subst">{tokenizer.convert_tokens_to_string(t)}</span>'</span> <span class="hljs-keyword">for</span> t, _ <span class="hljs-keyword">in</span> tokens[<span class="hljs-number">257</span>:<span class="hljs-number">280</span>]]); 
 
-[' ', ' ', ' ', ' ', 'se', 'in', ' ', 're', 'on', 'te', '\n ', '\n ', 'or', 'st', 'de', '\n ', 'th', 'le', ' =', 'lf', 'self', 'me', 'al']
-</code></pre><p>在这里我们可以看到各种标准级别的缩进和空白标记，以及简短的Python常用关键字，如self、or和in。这是一个很好的迹象，表明我们的BPE算法正在按计划工作。现在我们来看看最后一个词：</p>
-<pre><code>print([f'{new_tokenizer.convert_tokens_to_string(t)}' for t,_ in tokens[-12:]]); 
-[' capt', ' embedded', ' regarding', 'Bundle', '355', ' recv', ' dmp', ' vault', ' Mongo', ' possibly', 'implementation', 'Matches']
-</code></pre><p>这里仍有一些相对常见的词，如recv，以及一些可能来自评论的更嘈杂的词。</p>
+[<span class="hljs-string">' '</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'se'</span>, <span class="hljs-string">'in'</span>, <span class="hljs-string">' '</span>, <span class="hljs-string">'re'</span>, <span class="hljs-string">'on'</span>, <span class="hljs-string">'te'</span>, <span class="hljs-string">'\n '</span>, <span class="hljs-string">'\n '</span>, <span class="hljs-string">'or'</span>, <span class="hljs-string">'st'</span>, <span class="hljs-string">'de'</span>, <span class="hljs-string">'\n '</span>, <span class="hljs-string">'th'</span>, <span class="hljs-string">'le'</span>, <span class="hljs-string">' ='</span>, <span class="hljs-string">'lf'</span>, <span class="hljs-string">'self'</span>, <span class="hljs-string">'me'</span>, <span class="hljs-string">'al'</span>]
+</code></pre>
+<p>在这里我们可以看到各种标准级别的缩进和空白标记，以及简短的Python常用关键字，如self、or和in。这是一个很好的迹象，表明我们的BPE算法正在按计划工作。现在我们来看看最后一个词：</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>([<span class="hljs-string">f'<span class="hljs-subst">{new_tokenizer.convert_tokens_to_string(t)}</span>'</span> <span class="hljs-keyword">for</span> t,_ <span class="hljs-keyword">in</span> tokens[-<span class="hljs-number">12</span>:]]); 
+[<span class="hljs-string">' capt'</span>, <span class="hljs-string">' embedded'</span>, <span class="hljs-string">' regarding'</span>, <span class="hljs-string">'Bundle'</span>, <span class="hljs-string">'355'</span>, <span class="hljs-string">' recv'</span>, <span class="hljs-string">' dmp'</span>, <span class="hljs-string">' vault'</span>, <span class="hljs-string">' Mongo'</span>, <span class="hljs-string">' possibly'</span>, <span class="hljs-string">'implementation'</span>, <span class="hljs-string">'Matches'</span>]
+</code></pre>
+<p>这里仍有一些相对常见的词，如recv，以及一些可能来自评论的更嘈杂的词。</p>
 <p>我们也可以对我们的Python代码的简单例子进行标记，看看我们的标记器在一个简单的例子上是如何表现的：</p>
-<pre><code>print(new_tokenizer(python_code).tokens()) 
-['def', 'Ġs', 'ay', '_', 'hello', '():', 'ĊĠĠĠ', 'Ġprint', '("', 'Hello', ',', 'ĠWor', 'ld', '!")', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 's', 'ay', '_', 'hello', '()', 'Ċ']
-</code></pre><p>尽管它们不是代码关键词，但看到像World或say这样的普通英语单词被我们的标记器分割开来还是有点恼火，因为我们希望它们在语料库中出现得相当频繁。让我们检查一下所有的Python保留关键词是否都在词汇表中：</p>
-<pre><code>import keyword print(f'There are in total {len(keyword.kwlist)} Python keywords.') 
-for keyw in keyword.kwlist: 
-    if keyw not in new_tokenizer.vocab: 
-        print(f'No, keyword `{keyw}` is not in the vocabulary') 
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(new_tokenizer(python_code).tokens()) 
+[<span class="hljs-string">'def'</span>, <span class="hljs-string">'Ġs'</span>, <span class="hljs-string">'ay'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'():'</span>, <span class="hljs-string">'ĊĠĠĠ'</span>, <span class="hljs-string">'Ġprint'</span>, <span class="hljs-string">'("'</span>, <span class="hljs-string">'Hello'</span>, <span class="hljs-string">','</span>, <span class="hljs-string">'ĠWor'</span>, <span class="hljs-string">'ld'</span>, <span class="hljs-string">'!")'</span>, <span class="hljs-string">'Ġ#'</span>, <span class="hljs-string">'ĠPrint'</span>, <span class="hljs-string">'Ġit'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'s'</span>, <span class="hljs-string">'ay'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'()'</span>, <span class="hljs-string">'Ċ'</span>]
+</code></pre>
+<p>尽管它们不是代码关键词，但看到像World或say这样的普通英语单词被我们的标记器分割开来还是有点恼火，因为我们希望它们在语料库中出现得相当频繁。让我们检查一下所有的Python保留关键词是否都在词汇表中：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> keyword <span class="hljs-built_in">print</span>(<span class="hljs-string">f'There are in total <span class="hljs-subst">{<span class="hljs-built_in">len</span>(keyword.kwlist)}</span> Python keywords.'</span>) 
+<span class="hljs-keyword">for</span> keyw <span class="hljs-keyword">in</span> keyword.kwlist: 
+    <span class="hljs-keyword">if</span> keyw <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> new_tokenizer.vocab: 
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">f'No, keyword `<span class="hljs-subst">{keyw}</span>` is not in the vocabulary'</span>) 
 
-There are in total 35 Python keywords. 
-No, keyword `await` is not in the vocabulary 
-No, keyword `finally` is not in the vocabulary
-No, keyword `nonlocal` is not in the vocabulary
-</code></pre><p>似乎有几个相当频繁的关键词，比如最后，也不在词汇表中。让我们尝试使用更大的数据集样本来建立一个更大的词汇表。例如，我们可以建立一个32,768个词的词汇表（8的倍数对一些高效的GPU/TPU计算来说更好），并在两倍于此的语料片上训练标记器：</p>
-<pre><code>length = 200000 
-new_tokenizer_larger = tokenizer.train_new_from_iterator(batch_iterator(), vocab_size=32768, initial_alphabet=base_vocab)
-</code></pre><p>我们不期望在添加更多的文件时，最频繁的标记会有很大的变化，但我们看看最后的标记：</p>
-<pre><code>tokens = sorted(new_tokenizer_larger.vocab.items(), key=lambda x: x[1], reverse=False) 
-print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[-12:]]); 
+There are <span class="hljs-keyword">in</span> total <span class="hljs-number">35</span> Python keywords. 
+No, keyword `<span class="hljs-keyword">await</span>` <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the vocabulary 
+No, keyword `<span class="hljs-keyword">finally</span>` <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the vocabulary
+No, keyword `<span class="hljs-keyword">nonlocal</span>` <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the vocabulary
+</code></pre>
+<p>似乎有几个相当频繁的关键词，比如最后，也不在词汇表中。让我们尝试使用更大的数据集样本来建立一个更大的词汇表。例如，我们可以建立一个32,768个词的词汇表（8的倍数对一些高效的GPU/TPU计算来说更好），并在两倍于此的语料片上训练标记器：</p>
+<pre><code class="lang-python">length = <span class="hljs-number">200000</span> 
+new_tokenizer_larger = tokenizer.train_new_from_iterator(batch_iterator(), vocab_size=<span class="hljs-number">32768</span>, initial_alphabet=base_vocab)
+</code></pre>
+<p>我们不期望在添加更多的文件时，最频繁的标记会有很大的变化，但我们看看最后的标记：</p>
+<pre><code class="lang-python">tokens = <span class="hljs-built_in">sorted</span>(new_tokenizer_larger.vocab.items(), key=<span class="hljs-keyword">lambda</span> x: x[<span class="hljs-number">1</span>], reverse=<span class="hljs-literal">False</span>) 
+<span class="hljs-built_in">print</span>([<span class="hljs-string">f'<span class="hljs-subst">{tokenizer.convert_tokens_to_string(t)}</span>'</span> <span class="hljs-keyword">for</span> t, _ <span class="hljs-keyword">in</span> tokens[-<span class="hljs-number">12</span>:]]); 
 
-['lineEdit', 'spik', ' BC', 'pective', 'OTA', 'theus', 'FLUSH', ' excutils', '00000002', ' DIVISION', 'CursorPosition', ' InfoBar']
-</code></pre><p>简单检查一下，这里没有显示任何常规的编程关键词，这很有希望。让我们试试用新的大型标记器对我们的示例代码进行标记：</p>
-<pre><code>print(new_tokenizer_larger(python_code).tokens()) 
+[<span class="hljs-string">'lineEdit'</span>, <span class="hljs-string">'spik'</span>, <span class="hljs-string">' BC'</span>, <span class="hljs-string">'pective'</span>, <span class="hljs-string">'OTA'</span>, <span class="hljs-string">'theus'</span>, <span class="hljs-string">'FLUSH'</span>, <span class="hljs-string">' excutils'</span>, <span class="hljs-string">'00000002'</span>, <span class="hljs-string">' DIVISION'</span>, <span class="hljs-string">'CursorPosition'</span>, <span class="hljs-string">' InfoBar'</span>]
+</code></pre>
+<p>简单检查一下，这里没有显示任何常规的编程关键词，这很有希望。让我们试试用新的大型标记器对我们的示例代码进行标记：</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(new_tokenizer_larger(python_code).tokens()) 
 
-['def', 'Ġsay', '_', 'hello', '():', 'ĊĠĠĠ', 'Ġprint', '("', 'Hello', ',', 'ĠWorld', '!")', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 'say', '_', 'hello', '()', 'Ċ']
-</code></pre><p>在这里，缩进也被方便地保留在词汇中，而且我们看到像Hello、World和say这样的常见英语单词也被作为单个标记包括在内。这似乎更符合我们对模型在下游任务中可能看到的数据的期望。让我们研究一下常见的Python关键词，就像我们之前做的那样：</p>
-<pre><code>for keyw in keyword.kwlist: 
-    if keyw not in new_tokenizer_larger.vocab:
-        print(f'No, keyword `{keyw}` is not in the vocabulary')
+[<span class="hljs-string">'def'</span>, <span class="hljs-string">'Ġsay'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'():'</span>, <span class="hljs-string">'ĊĠĠĠ'</span>, <span class="hljs-string">'Ġprint'</span>, <span class="hljs-string">'("'</span>, <span class="hljs-string">'Hello'</span>, <span class="hljs-string">','</span>, <span class="hljs-string">'ĠWorld'</span>, <span class="hljs-string">'!")'</span>, <span class="hljs-string">'Ġ#'</span>, <span class="hljs-string">'ĠPrint'</span>, <span class="hljs-string">'Ġit'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'say'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'()'</span>, <span class="hljs-string">'Ċ'</span>]
+</code></pre>
+<p>在这里，缩进也被方便地保留在词汇中，而且我们看到像Hello、World和say这样的常见英语单词也被作为单个标记包括在内。这似乎更符合我们对模型在下游任务中可能看到的数据的期望。让我们研究一下常见的Python关键词，就像我们之前做的那样：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> keyw <span class="hljs-keyword">in</span> keyword.kwlist: 
+    <span class="hljs-keyword">if</span> keyw <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> new_tokenizer_larger.vocab:
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">f'No, keyword `<span class="hljs-subst">{keyw}</span>` is not in the vocabulary'</span>)
 
- No, keyword `nonlocal` is not in the vocabulary
-</code></pre><p>我们仍然缺少非本地关键字，但它在实践中也很少使用，因为它使语法更加复杂。把它保留在词汇表之外似乎是合理的。经过这次人工检查，我们较大的标记器似乎很适合我们的任务--但正如我们前面提到的，如果不测量模型的性能，客观地评估标记器的性能是一项具有挑战性的任务。我们将继续进行这项工作，并训练一个模型，看看它在实践中的效果如何。</p>
+ No, keyword `<span class="hljs-keyword">nonlocal</span>` <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the vocabulary
+</code></pre>
+<p>我们仍然缺少非本地关键字，但它在实践中也很少使用，因为它使语法更加复杂。把它保留在词汇表之外似乎是合理的。经过这次人工检查，我们较大的标记器似乎很适合我们的任务--但正如我们前面提到的，如果不测量模型的性能，客观地评估标记器的性能是一项具有挑战性的任务。我们将继续进行这项工作，并训练一个模型，看看它在实践中的效果如何。</p>
 <p><strong>注意事项</strong></p>
 <p>通过比较标记化代码实例的序列长度，你可以很容易地验证新的标记化器比标准GPT-2标记化器的效率高一倍左右。我们的标记器使用的标记数量大约是现有标记器的一半，这给我们提供了两倍的有效模型上下文，可以免费使用。当我们用新的标记器在大小为1,024的上下文窗口上训练一个新的模型时，它相当于用旧的标记器在大小为2,048的上下文窗口上训练同一个模型，其优点是速度更快，内存效率更高。</p>
 <h3 id="在hub上保存自定义标记器">在Hub上保存自定义标记器</h3>
 <p>现在我们的标记器已经训练完毕，我们应该保存它。最简单的方法是将其推送到Hugging Face Hub，以便保存它并在以后能够从任何地方访问它。这在以后我们使用单独的训练服务器时将会特别有用。</p>
 <p>为了创建一个私有模型库，并将我们的标记器作为第一个文件保存在其中，我们可以直接使用标记器的push_to_hub()方法。由于我们已经用huggingface-cli登录认证了我们的账户，我们可以简单地推送tokenizer，如下所示：</p>
-<pre><code>model_ckpt = "codeparrot"
-org = "transformersbook" new_tokenizer_larger.push_to_hub(model_ckpt, organization=org)
-</code></pre><p>如果你不想推送给某个组织，你可以直接省略组织这个参数。这将在你的命名空间中创建一个名为codeparrot的资源库，然后任何人都可以通过运行该资源库来加载：</p>
-<pre><code>reloaded_tokenizer = AutoTokenizer.from_pretrained(org + "/" + model_ckpt) 
+<pre><code class="lang-python">model_ckpt = <span class="hljs-string">"codeparrot"</span>
+org = <span class="hljs-string">"transformersbook"</span> new_tokenizer_larger.push_to_hub(model_ckpt, organization=org)
+</code></pre>
+<p>如果你不想推送给某个组织，你可以直接省略组织这个参数。这将在你的命名空间中创建一个名为codeparrot的资源库，然后任何人都可以通过运行该资源库来加载：</p>
+<pre><code class="lang-python">reloaded_tokenizer = AutoTokenizer.from_pretrained(org + <span class="hljs-string">"/"</span> + model_ckpt) 
 
-print(reloaded_tokenizer(python_code).tokens())
+<span class="hljs-built_in">print</span>(reloaded_tokenizer(python_code).tokens())
 
-['def', 'Ġsay', '_', 'hello', '():', 'ĊĠĠĠ', 'Ġprint', '("', 'Hello', ',', 'ĠWorld', '!")', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 'say', '_', 'hello', '()', 'Ċ']
-</code></pre><p>从Hub加载的标记器的行为与我们刚才看到的完全一样。我们也可以在Hub上调查其文件和保存的词汇。为了重现，让我们也保存我们较小的标记器：</p>
-<pre><code>new_tokenizer.push_to_hub(model_ckpt+ "-small-vocabulary", organization=org)
-</code></pre><p>这是对为一个特定的用例建立一个标记器的一次深入研究。接下来，我们将最终创建一个新的模型，并从头开始训练它。</p>
+[<span class="hljs-string">'def'</span>, <span class="hljs-string">'Ġsay'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'():'</span>, <span class="hljs-string">'ĊĠĠĠ'</span>, <span class="hljs-string">'Ġprint'</span>, <span class="hljs-string">'("'</span>, <span class="hljs-string">'Hello'</span>, <span class="hljs-string">','</span>, <span class="hljs-string">'ĠWorld'</span>, <span class="hljs-string">'!")'</span>, <span class="hljs-string">'Ġ#'</span>, <span class="hljs-string">'ĠPrint'</span>, <span class="hljs-string">'Ġit'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'Ċ'</span>, <span class="hljs-string">'say'</span>, <span class="hljs-string">'_'</span>, <span class="hljs-string">'hello'</span>, <span class="hljs-string">'()'</span>, <span class="hljs-string">'Ċ'</span>]
+</code></pre>
+<p>从Hub加载的标记器的行为与我们刚才看到的完全一样。我们也可以在Hub上调查其文件和保存的词汇。为了重现，让我们也保存我们较小的标记器：</p>
+<pre><code class="lang-python">new_tokenizer.push_to_hub(model_ckpt+ <span class="hljs-string">"-small-vocabulary"</span>, organization=org)
+</code></pre>
+<p>这是对为一个特定的用例建立一个标记器的一次深入研究。接下来，我们将最终创建一个新的模型，并从头开始训练它。</p>
 <h2 id="从头开始训练一个模型">从头开始训练一个模型</h2>
 <p>这里是你可能一直在等待的部分：模型训练。在这一部分，我们将决定哪种架构最适合这项任务，初始化一个没有预训练权重的新模型，设置一个自定义数据加载类，并创建一个可扩展的训练循环。在压轴戏中，我们将分别用1.11亿和15亿个参数来训练小型和大型的GPT-2模型! 但我们不要自己先入为主。首先，我们需要决定哪种架构最适合于代码自动补全。</p>
 <p><strong>小技巧</strong></p>
@@ -751,31 +791,37 @@ print(reloaded_tokenizer(python_code).tokens())
 <p>由于我们想建立一个代码自动完成模型，我们将选择第一个目标并选择一个GPT架构来完成任务。因此，让我们初始化一个新的GPT-2模型吧!</p>
 <h4 id="初始化模型">初始化模型</h4>
 <p>这是本书中第一次我们不使用from_pretrained()方法来加载模型，而是初始化新模型。然而，我们将加载gpt2-xl的配置，因此我们使用相同的超参数，只为新的标记器调整词汇量大小。然后我们通过from_config()方法用这个配置初始化一个新的模型：</p>
-<pre><code>rom transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer 
+<pre><code class="lang-python">rom transformers <span class="hljs-keyword">import</span> AutoConfig, AutoModelForCausalLM, AutoTokenizer 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
-config = AutoConfig.from_pretrained("gpt2-xl", vocab_size=len(tokenizer))
+config = AutoConfig.from_pretrained(<span class="hljs-string">"gpt2-xl"</span>, vocab_size=<span class="hljs-built_in">len</span>(tokenizer))
 model = AutoModelForCausalLM.from_config(config)
-</code></pre><p>让我们看看这个模型到底有多大：</p>
-<pre><code>print(f'GPT-2 (xl) size: {model_size(model)/1000**2:.1f}M parameters')
-GPT-2 (xl) size: 1529.6M parameters
-</code></pre><p>这是一个1.5B的参数模型! 这是一个很大的容量，但我们也有一个大的数据集。一般来说，只要数据集合理地大，大型语言模型的训练就更有效率。让我们把新初始化的模型保存在models/文件夹中，并把它推送到Hub上：</p>
-<pre><code>model.save_pretrained("models/" + model_ckpt, push_to_hub=True, organization=org)
-</code></pre><p>鉴于检查点的大小（大于5GB），将模型推送到Hub可能需要几分钟。由于这个模型相当大，我们还将创建一个较小的版本，在扩大规模之前，我们可以训练以确保一切正常。我们将以标准的GPT-2尺寸为基础：</p>
-<pre><code>tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
-config_small = AutoConfig.from_pretrained("gpt2", vocab_size=len(tokenizer)) 
+</code></pre>
+<p>让我们看看这个模型到底有多大：</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(<span class="hljs-string">f'GPT-2 (xl) size: <span class="hljs-subst">{model_size(model)/<span class="hljs-number">1000</span>**<span class="hljs-number">2</span>:<span class="hljs-number">.1</span>f}</span>M parameters'</span>)
+GPT-<span class="hljs-number">2</span> (xl) size: <span class="hljs-number">1529.6</span>M parameters
+</code></pre>
+<p>这是一个1.5B的参数模型! 这是一个很大的容量，但我们也有一个大的数据集。一般来说，只要数据集合理地大，大型语言模型的训练就更有效率。让我们把新初始化的模型保存在models/文件夹中，并把它推送到Hub上：</p>
+<pre><code class="lang-python">model.save_pretrained(<span class="hljs-string">"models/"</span> + model_ckpt, push_to_hub=<span class="hljs-literal">True</span>, organization=org)
+</code></pre>
+<p>鉴于检查点的大小（大于5GB），将模型推送到Hub可能需要几分钟。由于这个模型相当大，我们还将创建一个较小的版本，在扩大规模之前，我们可以训练以确保一切正常。我们将以标准的GPT-2尺寸为基础：</p>
+<pre><code class="lang-python">tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
+config_small = AutoConfig.from_pretrained(<span class="hljs-string">"gpt2"</span>, vocab_size=<span class="hljs-built_in">len</span>(tokenizer)) 
 model_small = AutoModelForCausalLM.from_config(config_small) 
-print(f'GPT-2 size: {model_size(model_small)/1000**2:.1f}M parameters')
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'GPT-2 size: <span class="hljs-subst">{model_size(model_small)/<span class="hljs-number">1000</span>**<span class="hljs-number">2</span>:<span class="hljs-number">.1</span>f}</span>M parameters'</span>)
 
-GPT-2 size: 111.0M parameters
-</code></pre><p>让我们也把它保存到中心，以便于分享和重复使用：</p>
-<pre><code>model_small.save_pretrained("models/" + model_ckpt + "-small", push_to_hub=True, organization=org)
-</code></pre><p>现在我们有了两个可以训练的模型，我们需要确保在训练期间可以有效地给它们提供输入数据。</p>
+GPT-<span class="hljs-number">2</span> size: <span class="hljs-number">111.0</span>M parameters
+</code></pre>
+<p>让我们也把它保存到中心，以便于分享和重复使用：</p>
+<pre><code class="lang-python">model_small.save_pretrained(<span class="hljs-string">"models/"</span> + model_ckpt + <span class="hljs-string">"-small"</span>, push_to_hub=<span class="hljs-literal">True</span>, organization=org)
+</code></pre>
+<p>现在我们有了两个可以训练的模型，我们需要确保在训练期间可以有效地给它们提供输入数据。</p>
 <h4 id="实现dataloader">实现Dataloader</h4>
 <p>为了能够以最大的效率进行训练，我们将希望为我们的模型提供填充其上下文的序列。例如，如果我们的模型的上下文长度是1,024个标记，我们总是希望在训练中提供1,024个标记的序列。但是我们的一些代码实例可能比1,024个标记短或长。为了给我们的模型提供完整的sequence_length序列，我们应该放弃最后一个不完整的序列，或者将其填充。然而，这将使我们的训练效率略微降低，并迫使我们注意填充和掩盖填充的标记标签。我们在计算方面比在数据方面更受限制，所以我们将采取简单有效的方法。我们可以使用一个小技巧来确保我们不会丢失太多的尾部片段：我们可以对几个例子进行标记，然后将它们连接起来，用特殊的序列结束标记分开，得到一个很长的序列。最后，我们将这个序列分割成同样大小的小块，如图10-5所示。采用这种方法，我们最多只损失了最后一小部分的数据。</p>
 <p><img src="images/chapter10/image-20220215192558382.png" alt="image-20220215192558382"></img></p>
 <p>例如，我们可以通过将输入字符串的字符长度定义为，确保我们的标记化实例中有大约一百个完整的序列：</p>
-<pre><code>input_characters = number_of_sequences * sequence_length * characters_per_token
-</code></pre><p>这里：</p>
+<pre><code class="lang-python">input_characters = number_of_sequences * sequence_length * characters_per_token
+</code></pre>
+<p>这里：</p>
 <ul>
 <li><p>input_characters是输入到我们标记器的字符串中的字符数。</p>
 </li>
@@ -786,30 +832,32 @@ GPT-2 size: 111.0M parameters
 </ul>
 <p>如果我们输入一个带有input_characters字符的字符串，我们将因此得到平均数_of_sequences的输出序列，我们可以很容易地计算出丢掉最后一个序列会损失多少输入数据。如果number_of_sequences=100，这意味着我们大约堆叠了100个序列，最多失去最后一个元素，这可能太短或太长。这相当于最多失去我们数据集的1%。同时，这种方法确保我们不会因为切断大多数文件的结尾而引入偏见。</p>
 <p>让我们首先估计一下我们的数据集中每个符号的平均字符长度：</p>
-<pre><code>examples, total_characters, total_tokens = 500, 0, 0 
-dataset = load_dataset('transformersbook/codeparrot-train', split='train', streaming=True) 
-for _, example in tqdm(zip(range(examples), iter(dataset)), total=examples): 
-    total_characters += len(example['content']) 
-    total_tokens += len(tokenizer(example['content']).tokens())
-characters_per_token = total_characters / total_tokens print(characters_per_token) 3.6233025034779565
-</code></pre><p>有了这些，我们就拥有了创建我们自己的IterableDataset（这是PyTorch提供的一个辅助类）所需的一切，以便为模型准备恒定长度的输入。我们只需要继承IterableDataset，并设置<strong>iter</strong>()函数，用我们刚才的逻辑产生下一个元素：</p>
+<pre><code class="lang-python">examples, total_characters, total_tokens = <span class="hljs-number">500</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span> 
+dataset = load_dataset(<span class="hljs-string">'transformersbook/codeparrot-train'</span>, split=<span class="hljs-string">'train'</span>, streaming=<span class="hljs-literal">True</span>) 
+<span class="hljs-keyword">for</span> _, example <span class="hljs-keyword">in</span> tqdm(<span class="hljs-built_in">zip</span>(<span class="hljs-built_in">range</span>(examples), <span class="hljs-built_in">iter</span>(dataset)), total=examples): 
+    total_characters += <span class="hljs-built_in">len</span>(example[<span class="hljs-string">'content'</span>]) 
+    total_tokens += <span class="hljs-built_in">len</span>(tokenizer(example[<span class="hljs-string">'content'</span>]).tokens())
+characters_per_token = total_characters / total_tokens <span class="hljs-built_in">print</span>(characters_per_token) <span class="hljs-number">3.6233025034779565</span>
+</code></pre>
+<p>有了这些，我们就拥有了创建我们自己的IterableDataset（这是PyTorch提供的一个辅助类）所需的一切，以便为模型准备恒定长度的输入。我们只需要继承IterableDataset，并设置<strong>iter</strong>()函数，用我们刚才的逻辑产生下一个元素：</p>
 <p><img src="images/chapter10/image-20220215192823436.png" alt="image-20220215192823436"></img></p>
 <p><strong>iter</strong>()函数建立了一个字符串的缓冲区，直到它包含足够的字符。缓冲区中的所有元素被标记化，并与EOS标记相连接，然后all_token_ids中的长序列被分块为seq_length大小的片断。通常情况下，我们需要注意掩码来堆叠不同长度的填充序列，并确保在训练期间忽略填充。我们通过只提供相同（最大）长度的序列来解决这个问题，所以我们在这里不需要掩码，只返回input_ids。让我们测试一下我们的可迭代数据集：</p>
-<pre><code>shuffled_dataset = dataset.shuffle(buffer_size=100)
-constant_length_dataset = ConstantLengthDataset(tokenizer, shuffled_dataset, num_of_sequences=10) 
-dataset_iterator = iter(constant_length_dataset) 
-lengths = [len(b) for _, b in zip(range(5), dataset_iterator)]
-print(f"Lengths of the sequences: {lengths}") 
-Fill buffer: 0&lt;36864 
-Fill buffer: 3311&lt;36864 
-Fill buffer: 9590&lt;36864 
-Fill buffer: 22177&lt;36864
-Fill buffer: 25530&lt;36864
-Fill buffer: 31098&lt;36864 
-Fill buffer: 32232&lt;36864 
-Fill buffer: 33867&lt;36864 
-Buffer full: 41172&gt;=36864 Lengths of the sequences: [1024, 1024, 1024, 1024, 1024]
-</code></pre><p>很好，这和预期的一样，我们为模型得到了恒定长度的输入。现在，我们有了一个可靠的模型数据源，是时候建立实际的训练循环了。</p>
+<pre><code class="lang-python">shuffled_dataset = dataset.shuffle(buffer_size=<span class="hljs-number">100</span>)
+constant_length_dataset = ConstantLengthDataset(tokenizer, shuffled_dataset, num_of_sequences=<span class="hljs-number">10</span>) 
+dataset_iterator = <span class="hljs-built_in">iter</span>(constant_length_dataset) 
+lengths = [<span class="hljs-built_in">len</span>(b) <span class="hljs-keyword">for</span> _, b <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(<span class="hljs-built_in">range</span>(<span class="hljs-number">5</span>), dataset_iterator)]
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Lengths of the sequences: <span class="hljs-subst">{lengths}</span>"</span>) 
+Fill buffer: <span class="hljs-number">0</span>&lt;<span class="hljs-number">36864</span> 
+Fill buffer: <span class="hljs-number">3311</span>&lt;<span class="hljs-number">36864</span> 
+Fill buffer: <span class="hljs-number">9590</span>&lt;<span class="hljs-number">36864</span> 
+Fill buffer: <span class="hljs-number">22177</span>&lt;<span class="hljs-number">36864</span>
+Fill buffer: <span class="hljs-number">25530</span>&lt;<span class="hljs-number">36864</span>
+Fill buffer: <span class="hljs-number">31098</span>&lt;<span class="hljs-number">36864</span> 
+Fill buffer: <span class="hljs-number">32232</span>&lt;<span class="hljs-number">36864</span> 
+Fill buffer: <span class="hljs-number">33867</span>&lt;<span class="hljs-number">36864</span> 
+Buffer full: <span class="hljs-number">41172</span>&gt;=<span class="hljs-number">36864</span> Lengths of the sequences: [<span class="hljs-number">1024</span>, <span class="hljs-number">1024</span>, <span class="hljs-number">1024</span>, <span class="hljs-number">1024</span>, <span class="hljs-number">1024</span>]
+</code></pre>
+<p>很好，这和预期的一样，我们为模型得到了恒定长度的输入。现在，我们有了一个可靠的模型数据源，是时候建立实际的训练循环了。</p>
 <p><strong>小技巧</strong></p>
 <p>注意，在创建ConstantLengthDataset之前，我们洗了原始数据集。因为这是一个可迭代的数据集，我们不能一开始就乱序整个数据集。相反，我们设置了一个大小为buffer_size的缓冲区，在我们从数据集中获取元素之前，对这个缓冲区中的元素进行乱序。</p>
 <h3 id="定义训练循环">定义训练循环</h3>
@@ -818,24 +866,26 @@ Buffer full: 41172&gt;=36864 Lengths of the sequences: [1024, 1024, 1024, 1024, 
 <p>Hugging Face 加速器提供了一个简单的API，使训练脚本以混合精度和任何类型的分布式设置（单GPU、多GPU和TPU）运行。然后，相同的代码可以在你的本地机器上无缝运行，用于调试目的，或者在你的强大的训练集群上进行最终的训练运行。你只需要对你的本地PyTorch训练循环做少量的修改。</p>
 <p><img src="images/chapter10/image-20220215193123349.png" alt="image-20220215193123349"></img></p>
 <p>这些变化的核心部分是对prepare()的调用，它可以确保模型、优化器和数据加载器都已准备好并分布在基础设施上。对PyTorch训练循环的这些细微变化使你能够轻松地在不同的基础设施上扩展训练。考虑到这一点，让我们开始建立我们的训练脚本并定义一些辅助函数。首先，我们设置训练用的超参数，并将它们封装在一个命名空间中，以便于访问:</p>
-<pre><code>from argparse import Namespace 
-# Commented parameters correspond to the small model 
-config = {"train_batch_size": 2, # 12 
-        "valid_batch_size": 2, # 12 
-        "weight_decay": 0.1, "shuffle_buffer": 1000, "learning_rate": 2e-4, # 5e-4
-        "lr_scheduler_type": "cosine", "num_warmup_steps": 750, # 2000 
-        "gradient_accumulation_steps": 16, # 1 "max_train_steps": 50000, # 150000 
-        "max_eval_steps": -1, "seq_length": 1024, "seed": 1, "save_checkpoint_steps": 50000} # 15000 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> argparse <span class="hljs-keyword">import</span> Namespace 
+<span class="hljs-comment"># Commented parameters correspond to the small model </span>
+config = {<span class="hljs-string">"train_batch_size"</span>: <span class="hljs-number">2</span>, <span class="hljs-comment"># 12 </span>
+        <span class="hljs-string">"valid_batch_size"</span>: <span class="hljs-number">2</span>, <span class="hljs-comment"># 12 </span>
+        <span class="hljs-string">"weight_decay"</span>: <span class="hljs-number">0.1</span>, <span class="hljs-string">"shuffle_buffer"</span>: <span class="hljs-number">1000</span>, <span class="hljs-string">"learning_rate"</span>: <span class="hljs-number">2e-4</span>, <span class="hljs-comment"># 5e-4</span>
+        <span class="hljs-string">"lr_scheduler_type"</span>: <span class="hljs-string">"cosine"</span>, <span class="hljs-string">"num_warmup_steps"</span>: <span class="hljs-number">750</span>, <span class="hljs-comment"># 2000 </span>
+        <span class="hljs-string">"gradient_accumulation_steps"</span>: <span class="hljs-number">16</span>, <span class="hljs-comment"># 1 "max_train_steps": 50000, # 150000 </span>
+        <span class="hljs-string">"max_eval_steps"</span>: -<span class="hljs-number">1</span>, <span class="hljs-string">"seq_length"</span>: <span class="hljs-number">1024</span>, <span class="hljs-string">"seed"</span>: <span class="hljs-number">1</span>, <span class="hljs-string">"save_checkpoint_steps"</span>: <span class="hljs-number">50000</span>} <span class="hljs-comment"># 15000 </span>
 args = Namespace(**config)
-</code></pre><p>接下来，我们设置了训练的日志。由于我们要从头开始训练一个模型，训练运行将需要一段时间，并需要昂贵的基础设施。因此，我们要确保所有的相关信息都被储存起来，并且容易访问。setup_logging()方法设置了三个级别的日志：使用标准的Python Logger，TensorBoard，以及Weights &amp; Biases。根据你的喜好和使用情况，你可以在这里添加或删除日志框架:</p>
+</code></pre>
+<p>接下来，我们设置了训练的日志。由于我们要从头开始训练一个模型，训练运行将需要一段时间，并需要昂贵的基础设施。因此，我们要确保所有的相关信息都被储存起来，并且容易访问。setup_logging()方法设置了三个级别的日志：使用标准的Python Logger，TensorBoard，以及Weights &amp; Biases。根据你的喜好和使用情况，你可以在这里添加或删除日志框架:</p>
 <p><img src="images/chapter10/image-20220215193310093.png" alt="image-20220215193310093"></img></p>
 <p>每个 Worker 都有一个唯一的 accelerator.process_index，我们将其与 FileHandler 一起使用，将每个 Worker 的日志写入一个单独的文件中。我们还使用了 accelerator.is_main_process 属性，该属性仅对主工作器为真。我们确保不多次初始化TensorBoard和Weights &amp; Biases日志，并降低其他工作器的日志级别。我们返回自动生成的、唯一的wandb.run.name，以后我们用它来命名我们在Hub上的实验分支。</p>
 <p>我们还将定义一个函数，用TensorBoard和Weights &amp; Biases记录指标。我们在这里再次使用加速器.is_main_process，以确保我们只记录一次指标，而不是为每个工作者记录:</p>
-<pre><code>def log_metrics(step, metrics): 
-    logger.info(f"Step {step}: {metrics}"
-    if accelerator.is_main_process: 
-        wandb.log(metrics) [tb_writer.add_scalar(k, v, step) for k, v in metrics.items()]
-</code></pre><p>接下来，让我们写一个函数，用我们全新的ConstantLengthDataset类为训练集和验证集创建数据转换器:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">log_metrics</span>(<span class="hljs-params">step, metrics</span>): 
+    logger.info(<span class="hljs-string">f"Step <span class="hljs-subst">{step}</span>: <span class="hljs-subst">{metrics}</span>"</span>
+    <span class="hljs-keyword">if</span> accelerator.is_main_process: 
+        wandb.log(metrics) [tb_writer.add_scalar(k, v, step) <span class="hljs-keyword">for</span> k, v <span class="hljs-keyword">in</span> metrics.items()]
+</code></pre>
+<p>接下来，让我们写一个函数，用我们全新的ConstantLengthDataset类为训练集和验证集创建数据转换器:</p>
 <p><img src="images/chapter10/image-20220215193412141.png" alt="image-20220215193412141"></img></p>
 <p>在最后，我们将数据集包裹在一个DataLoader中，它也处理批处理。加速器将负责将批处理分配给每个工作者。</p>
 <p>我们需要实现的另一个方面是优化。我们将在主循环中设置优化器和学习率计划，但是我们在这里定义了一个辅助函数来区分应该接受权重衰减的参数。一般来说，偏差和LayerNorm权重不受权重衰减的影响:</p>
@@ -874,82 +924,91 @@ args = Namespace(**config)
 <p>这种简单的模式使我们能够通过扩展到可用的GPU数量来极快地训练大型模型，而无需太多的额外逻辑。然而，有时候，这还不够。例如，如果模型不适合在单个GPU上使用，你可能需要更复杂的并行化策略。现在我们已经有了训练所需的所有部件，是时候启动一个作业了！你将在接下来的章节中看到。正如你在下一节所看到的，这是很简单的事情。</p>
 <h3 id="训练">训练</h3>
 <p>我们将训练脚本保存在一个名为 codeparrot_training.py 的文件中，这样我们就可以在训练服务器上执行它。为了让生活更加简单，我们将它和一个包含所有必要的 Python 依赖关系的 requirements.txt 文件一起添加到 Hub 上的模型仓库。记住，Hub上的模型本质上是Git仓库，所以我们可以直接克隆仓库，添加我们想要的任何文件，然后将它们推送回Hub。在训练服务器上，我们可以通过以下几个命令来启动训练：</p>
-<pre><code>$ git clone https://huggingface.co/transformersbook/codeparrot 
+<pre><code class="lang-python">$ git clone https://huggingface.co/transformersbook/codeparrot 
 $ cd codeparrot 
 $ pip install -r requirements.txt 
 $ wandb login
 $ accelerate config
 $ accelerate launch codeparrot_training.py
-</code></pre><p>就这样--我们的模型现在开始训练了! 请注意，wandb登录后会提示你用Weights &amp; Biases进行认证，以便记录。加速配置命令将指导你完成基础设施的设置；你可以在表102中看到这个实验中使用的设置。我们使用一个a2-megagpu-16g实例来进行所有的实验，这是一个有16个A100 GPU的工作站，每个有40GB的内存。</p>
+</code></pre>
+<p>就这样--我们的模型现在开始训练了! 请注意，wandb登录后会提示你用Weights &amp; Biases进行认证，以便记录。加速配置命令将指导你完成基础设施的设置；你可以在表102中看到这个实验中使用的设置。我们使用一个a2-megagpu-16g实例来进行所有的实验，这是一个有16个A100 GPU的工作站，每个有40GB的内存。</p>
 <p><img src="images/chapter10/image-20220215194028655.png" alt="image-20220215194028655"></img></p>
 <p>在该基础设施上用这些设置运行训练脚本，小型和大型模型分别需要24小时和7天左右。如果你训练自己的自定义模型，确保你的代码在较小的基础设施上顺利运行，以确保昂贵的长期运行也能顺利进行。在完整的训练运行成功完成后，你可以用以下命令将Hub上的实验分支合并回主分支：</p>
-<pre><code>$ git checkout main 
+<pre><code class="lang-python">$ git checkout main 
 $ git merge &lt;RUN_NAME&gt; 
 $ git push
-</code></pre><p>当然，RUN_NAME应该是你想合并的Hub上的实验分支的名字。现在我们有了一个训练有素的模型，让我们来看看如何调查它的性能。</p>
+</code></pre>
+<p>当然，RUN_NAME应该是你想合并的Hub上的实验分支的名字。现在我们有了一个训练有素的模型，让我们来看看如何调查它的性能。</p>
 <h2 id="结果和分析">结果和分析</h2>
 <p>在焦急地监控了一周的日志之后，你可能会看到损失和困惑曲线看起来像图10-7所示的那样。训练损失和验证困惑持续下降，而损失曲线在对数尺度上看起来几乎是线性的。我们还看到，大模型在处理标记方面收敛得更快，尽管整个训练需要更长时间。</p>
 <p><img src="images/chapter10/image-20220215194202892.png" alt="image-20220215194202892"></img></p>
 <p>那么，我们可以用我们刚出炉的语言模型做什么呢，直接从GPU烤箱里出来？嗯，我们可以用它来为我们写一些代码。我们可以进行两种类型的分析：定性和定量的分析。在前一种情况下，我们看具体的例子，并试图更好地了解模型在哪些情况下是成功的，在哪些情况下是失败的。在后一种情况下，我们在一大批测试案例上统计评估模型的性能。在本节中，我们将探讨如何使用我们的模型。首先我们看一下几个例子，然后我们简单讨论一下我们如何能够系统地、更稳健地评估这个模型。首先，让我们把小模型包在一个流水线里，用它来继续一些代码输入：</p>
-<pre><code>rom transformers import pipeline, set_seed 
-model_ckpt = 'transformersbook/codeparrot-small' 
-generation = pipeline('text-generation', model=model_ckpt, device=0)
-</code></pre><p>现在我们可以使用生成流水线从一个给定的提示中生成候选的完成度。默认情况下，该流水线将生成代码，直到预定义的最大长度，而且输出可能包含多个函数或类。因此，为了保持输出的简洁，我们将实现一个first_block()函数，使用正则表达式来提取一个函数或类的第一次出现。下面的complete_code()函数应用这个逻辑来打印出由CodeParrot生成的补全内容：</p>
+<pre><code class="lang-python">rom transformers <span class="hljs-keyword">import</span> pipeline, set_seed 
+model_ckpt = <span class="hljs-string">'transformersbook/codeparrot-small'</span> 
+generation = pipeline(<span class="hljs-string">'text-generation'</span>, model=model_ckpt, device=<span class="hljs-number">0</span>)
+</code></pre>
+<p>现在我们可以使用生成流水线从一个给定的提示中生成候选的完成度。默认情况下，该流水线将生成代码，直到预定义的最大长度，而且输出可能包含多个函数或类。因此，为了保持输出的简洁，我们将实现一个first_block()函数，使用正则表达式来提取一个函数或类的第一次出现。下面的complete_code()函数应用这个逻辑来打印出由CodeParrot生成的补全内容：</p>
 <p><img src="images/chapter10/image-20220215194254076.png" alt="image-20220215194254076"></img></p>
 <p>让我们从一个简单的例子开始，让模型为我们写一个计算矩形面积的函数：</p>
-<pre><code>prompt = '''def area_of_rectangle(a: float, b: float): """Return the area of the rectangle."""''' 
+<pre><code class="lang-python">prompt = <span class="hljs-string">'''def area_of_rectangle(a: float, b: float): """Return the area of the rectangle."""'''</span> 
 complete_code(generation, prompt) 
-return math.sqrt(a * b) ============================================================================== 
-== return a * b / 2.0 ============================================================================== 
-== return a * b ============================================================================== 
-== return a * b / a
-</code></pre><p>这看起来很不错! 虽然不是所有的代数都是正确的，但正确的解决方案就在其中。现在，这个模型还能解决从HTML字符串中提取URL这一更复杂的任务吗？让我们来看看：</p>
-<pre><code>prompt = '''def get_urls_from_html(html): """Get all embedded URLs in a HTML string."""''' 
+<span class="hljs-keyword">return</span> math.sqrt(a * b) ============================================================================== 
+== <span class="hljs-keyword">return</span> a * b / <span class="hljs-number">2.0</span> ============================================================================== 
+== <span class="hljs-keyword">return</span> a * b ============================================================================== 
+== <span class="hljs-keyword">return</span> a * b / a
+</code></pre>
+<p>这看起来很不错! 虽然不是所有的代数都是正确的，但正确的解决方案就在其中。现在，这个模型还能解决从HTML字符串中提取URL这一更复杂的任务吗？让我们来看看：</p>
+<pre><code class="lang-python">prompt = <span class="hljs-string">'''def get_urls_from_html(html): """Get all embedded URLs in a HTML string."""'''</span> 
 complete_code(generation, prompt) 
-if not html: 
-    return [] 
-return [url for url in re.findall(r'&lt;a href="(/[^/]+/[^"]+?)"&gt;', html)] ============================================================================== 
-== return [url for url in re.findall(r'&lt;a href="(.*?)"', html) if url] ============================================================================== 
+<span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> html: 
+    <span class="hljs-keyword">return</span> [] 
+<span class="hljs-keyword">return</span> [url <span class="hljs-keyword">for</span> url <span class="hljs-keyword">in</span> re.findall(<span class="hljs-string">r'&lt;a href="(/[^/]+/[^"]+?)"&gt;'</span>, html)] ============================================================================== 
+== <span class="hljs-keyword">return</span> [url <span class="hljs-keyword">for</span> url <span class="hljs-keyword">in</span> re.findall(<span class="hljs-string">r'&lt;a href="(.*?)"'</span>, html) <span class="hljs-keyword">if</span> url] ============================================================================== 
 =
-return [url for url in re.findall(r'&lt;a href="(/.*)",', html)] ============================================================================== 
-== return re.findall(r'&lt;a href="(.*?)" class="url"[^&gt;]*&gt;', html)
-</code></pre><p>虽然它在第二次尝试中没有完全正确，但其他三代都是正确的。我们可以在 "拥抱的脸 "主页上测试这个功能：</p>
-<pre><code>import requests 
-def get_urls_from_html(html): 
-    return [url for url in re.findall(r'&lt;a href="(.*?)"', html) if url] 
-print(" | ".join(get_urls_from_html(requests.get('https://hf.co/').text))) 
+<span class="hljs-keyword">return</span> [url <span class="hljs-keyword">for</span> url <span class="hljs-keyword">in</span> re.findall(<span class="hljs-string">r'&lt;a href="(/.*)",'</span>, html)] ============================================================================== 
+== <span class="hljs-keyword">return</span> re.findall(<span class="hljs-string">r'&lt;a href="(.*?)" class="url"[^&gt;]*&gt;'</span>, html)
+</code></pre>
+<p>虽然它在第二次尝试中没有完全正确，但其他三代都是正确的。我们可以在 "拥抱的脸 "主页上测试这个功能：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> requests 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">get_urls_from_html</span>(<span class="hljs-params">html</span>): 
+    <span class="hljs-keyword">return</span> [url <span class="hljs-keyword">for</span> url <span class="hljs-keyword">in</span> re.findall(<span class="hljs-string">r'&lt;a href="(.*?)"'</span>, html) <span class="hljs-keyword">if</span> url] 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">" | "</span>.join(get_urls_from_html(requests.get(<span class="hljs-string">'https://hf.co/'</span>).text))) 
 
-https://github.com/huggingface/transformers | /allenai | /facebook | /asteroid-team | /google | /amazon | /speechbrain | /microsoft | /grammarly | /models | /inference-api | /distilbert-base-uncased | /dbmdz/bert-large-cased-finetuned-conll03-english | https://huggingface.co/transformers | https://arxiv.org/abs/1811.06031 | https://arxiv.org/abs/1803.10631 | https://transformer.huggingface.co/ | /coref | https://medium.com/huggingface/distilbert-8cf3380435b5
-</code></pre><p>我们可以看到，所有以https开头的URL都是外部网页，而其他的是主网站的子页面。这正是我们想要的。最后，让我们加载这个大模型，看看我们是否可以用它来把一个函数从纯Python翻译成NumPy：</p>
-<pre><code>model_ckpt = 'transformersbook/codeparrot' 
-generation = pipeline('text-generation', model=model_ckpt, device=0)
-prompt = '''
+https://github.com/huggingface/transformers | /allenai | /facebook | /asteroid-team | /google | /amazon | /speechbrain | /microsoft | /grammarly | /models | /inference-api | /distilbert-base-uncased | /dbmdz/bert-large-cased-finetuned-conll03-english | https://huggingface.co/transformers | https://arxiv.org/<span class="hljs-built_in">abs</span>/<span class="hljs-number">1811.06031</span> | https://arxiv.org/<span class="hljs-built_in">abs</span>/<span class="hljs-number">1803.10631</span> | https://transformer.huggingface.co/ | /coref | https://medium.com/huggingface/distilbert-8cf3380435b5
+</code></pre>
+<p>我们可以看到，所有以https开头的URL都是外部网页，而其他的是主网站的子页面。这正是我们想要的。最后，让我们加载这个大模型，看看我们是否可以用它来把一个函数从纯Python翻译成NumPy：</p>
+<pre><code class="lang-python">model_ckpt = <span class="hljs-string">'transformersbook/codeparrot'</span> 
+generation = pipeline(<span class="hljs-string">'text-generation'</span>, model=model_ckpt, device=<span class="hljs-number">0</span>)
+prompt = <span class="hljs-string">'''
 # a function in native python: 
 def mean(a): 
     return sum(a)/len(a) 
-# the same function using numpy: import numpy as np def mean(a):''' 
+# the same function using numpy: import numpy as np def mean(a):'''</span> 
 
-complete_code(generation, prompt, max_length=64)
-</code></pre><pre><code>Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
-return np.mean(a) ============================================================================== == 
-return np.mean(a) ============================================================================== ==
-return np.mean(a) ============================================================================== == 
-return np.mean(a)
-</code></pre><p>这就成功了! 让我们看看我们是否也能使用CodeParrot模型来帮助我们建立一个Scikit-learn模型：</p>
-<pre><code>prompt = '''X = np.random.randn(100, 100) 
+complete_code(generation, prompt, max_length=<span class="hljs-number">64</span>)
+</code></pre>
+<pre><code class="lang-python">Setting `pad_token_id` to `eos_token_id`:<span class="hljs-number">0</span> <span class="hljs-keyword">for</span> <span class="hljs-built_in">open</span>-end generation.
+<span class="hljs-keyword">return</span> np.mean(a) ============================================================================== == 
+<span class="hljs-keyword">return</span> np.mean(a) ============================================================================== ==
+<span class="hljs-keyword">return</span> np.mean(a) ============================================================================== == 
+<span class="hljs-keyword">return</span> np.mean(a)
+</code></pre>
+<p>这就成功了! 让我们看看我们是否也能使用CodeParrot模型来帮助我们建立一个Scikit-learn模型：</p>
+<pre><code class="lang-python">prompt = <span class="hljs-string">'''X = np.random.randn(100, 100) 
 y = np.random.randint(0, 1, 100) 
-# fit random forest classifier with 20 estimators''' 
-complete_code(generation, prompt, max_length=96) 
+# fit random forest classifier with 20 estimators'''</span> 
+complete_code(generation, prompt, max_length=<span class="hljs-number">96</span>) 
 
-Setting `pad_token_id` to `eos_token_id`:0 for open-end generation. reg = DummyRegressor() forest = RandomForestClassifier(n_estimators=20) 
+Setting `pad_token_id` to `eos_token_id`:<span class="hljs-number">0</span> <span class="hljs-keyword">for</span> <span class="hljs-built_in">open</span>-end generation. reg = DummyRegressor() forest = RandomForestClassifier(n_estimators=<span class="hljs-number">20</span>) 
 forest.fit(X, y) ============================================================================== == 
-clf = ExtraTreesClassifier(n_estimators=100, max_features='sqrt')
+clf = ExtraTreesClassifier(n_estimators=<span class="hljs-number">100</span>, max_features=<span class="hljs-string">'sqrt'</span>)
 clf.fit(X, y) ============================================================================== == 
-clf = RandomForestClassifier(n_estimators=20, n_jobs=n_jobs, random_state=1) 
+clf = RandomForestClassifier(n_estimators=<span class="hljs-number">20</span>, n_jobs=n_jobs, random_state=<span class="hljs-number">1</span>) 
 clf.fit(X, y) ============================================================================== =
-clf = RandomForestClassifier(n_estimators=20) 
+clf = RandomForestClassifier(n_estimators=<span class="hljs-number">20</span>) 
 clf.fit(X, y)
-</code></pre><p>尽管在第二次尝试中，它试图训练一个extra-trees 分类器，但它产生了我们在其他情况下要求的东西。</p>
+</code></pre>
+<p>尽管在第二次尝试中，它试图训练一个extra-trees 分类器，但它产生了我们在其他情况下要求的东西。</p>
 <p>在第5章中，我们探讨了一些衡量生成文本质量的指标。其中，BLEU分数是经常被用于该目的的。虽然这个指标在总体上有局限性，但它特别不适合我们的用例。BLEU分数衡量参考文本和生成文本之间n-grams的重叠程度。在编写代码时，我们在变量和类方面有很大的自由度，只要命名方案是一致的，程序的成功就不取决于它。然而，BLEU分数会惩罚偏离参考命名的生成，事实上，这可能几乎是不可能预测的（即使对人类编码员来说）。</p>
 <p>在软件开发中，有更好、更可靠的方法来衡量代码的质量，例如单元测试。这就是所有OpenAI Codex模型的评估方式：通过一组单元测试来运行几代编码任务的代码，并计算出通过测试的几率。对于一个适当的性能测量，我们应该对我们的模型应用同样的评估方案，但这超出了本章的范围。你可以在该模型的配套博文中找到关于CodeParrot在HumanEval基准上的表现的细节。</p>
 <h2 id="小结">小结</h2>
@@ -998,7 +1057,7 @@ clf.fit(X, y)
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"从零开始训练Transformers","level":"1.12","depth":1,"next":{"title":"未来发展方向","level":"1.13","depth":1,"path":"chapter11.md","ref":"chapter11.md","articles":[]},"previous":{"title":"处理少标签或无标签任务","level":"1.11","depth":1,"path":"chapter9.md","ref":"chapter9.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter10.md","mtime":"2024-08-23T19:12:41.443Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"从零开始训练Transformers","level":"1.12","depth":1,"next":{"title":"未来发展方向","level":"1.13","depth":1,"path":"chapter11.md","ref":"chapter11.md","articles":[]},"previous":{"title":"处理少标签或无标签任务","level":"1.11","depth":1,"path":"chapter9.md","ref":"chapter9.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter10.md","mtime":"2025-01-05T17:59:00.391Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -1052,10 +1111,6 @@ clf.fit(X, y)
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -1072,7 +1127,7 @@ clf.fit(X, y)
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

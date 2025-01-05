@@ -52,7 +52,7 @@
 
 让我们通过比较GPT和GPT-2的文本生成，来说明模型被数据所歪曲的概念。GPT主要是在BookCorpus上训练的，而GPT-2是在网页、博客和从Reddit链接的新闻文章上训练的。我们将在同一提示上比较两个模型的相似大小的版本，因此主要的区别是预训练数据集，我们将使用文本生成流水线来研究模型的输出:
 
-```
+```python
 from transformers import pipeline, set_seed 
 generation_gpt = pipeline("text-generation", model="openai-gpt") 
 generation_gpt2 = pipeline("text-generation", model="gpt2")
@@ -61,7 +61,7 @@ generation_gpt2 = pipeline("text-generation", model="gpt2")
 
 接下来，让我们创建一个简单的函数来计算每个模型中的参数数量:
 
-```
+```python
 def model_size(model): 
 	return sum(t.numel() for t in model.parameters()) 
 	
@@ -76,7 +76,7 @@ GPT2 size: 124.4M parameters
 
 原始的GPT模型与最小的GPT-2模型大小差不多。现在我们可以从每个模型中生成三种不同的续写结果，每个模型都有相同的输入提示:
 
-```
+```python
 def enum_pipeline_ouputs(pipe, prompt, num_return_sequences): 
 	out = pipe(prompt, num_return_sequences=num_return_sequences, clean_up_tokenization_spaces=True) 
 	return "\n".join(f"{i+1}." + s["generated_text"] for i, s in enumerate(out)) 
@@ -140,7 +140,7 @@ Google BigQuery数据集不包含星级或下游使用信息。对于这些属�
 
 
 
-```
+```python
 SELECT 
 f.repo_name, f.path, c.copies, c.size, c.content, l.license 
 FROM `bigquery-public-data.github_repos.files` AS f 
@@ -165,7 +165,7 @@ a. 用 pip install gsutil 来安装 gsutil。
 b. 用你的谷歌账户配置gsutil：gsutil config。
 c. 在你的机器上复制你的水桶。
 
-```
+```python
 $ gsutil -m -o "GSUtil:parallel_process_count=1" 
 cp -r gs://<name_of_bucket>
 
@@ -173,7 +173,7 @@ cp -r gs://<name_of_bucket>
 
 或者，你可以用以下命令直接从Hugging Face中心下载数据集:
 
-```
+```python
 $ git clone https://huggingface.co/datasets/transformersbook/codeparrot
 
 ```
@@ -202,7 +202,7 @@ $ git clone https://huggingface.co/datasets/transformersbook/codeparrot
 
 到目前为止，我们大多使用数据集来访问Hugging Face Hub上的远程数据集。在这里，我们将直接加载我们在本地存储在codeparrot资源库中的50GB压缩JSON文件。由于JSON文件是压缩的，我们首先需要对其进行解压，Datasets为我们解决了这个问题。请注意，这需要大约180GB的可用磁盘空间。不过，它几乎不会使用RAM。通过在数据集的下载配置中设置delete_extracted=True，我们可以确保尽快删除所有我们不再需要的文件：
 
-```
+```python
 from datasets import load_dataset, DownloadConfig 
 download_config = DownloadConfig(delete_extracted=True)
 
@@ -212,7 +212,7 @@ dataset = load_dataset("./codeparrot", split="train", download_config=download_c
 
 在引擎盖下，Hugging face Datasets通过在一个优化的缓存文件中加载所有压缩的JSON文件，提取并读取这些文件。让我们看看这个数据集加载之后有多大:
 
-```
+```python
 import psutil
 print(f"Number of python files code in dataset : {len(dataset)}") 
 ds_size = sum(os.stat(f["filename"]).st_size for f in dataset.cache_files)
@@ -235,7 +235,7 @@ RAM memory used: 4924 MB
 
 一些数据集（达到1TB或更多）即使在一个标准的硬盘上也很难装下。在这种情况下，除了扩大你所使用的服务器的规模之外，还有一个办法就是将数据集流化。对于一些可以逐行读取的压缩或未压缩的文件格式，如JSON行、CSV或文本（原始或zip、gzip或zstandard压缩），也可以使用数据集。让我们直接从压缩的JSON文件加载我们的数据集，而不是从它们创建一个缓存文件：
 
-```
+```python
 streamed_dataset = load_dataset('./codeparrot', split="train", streaming=True)
 
 ```
@@ -244,7 +244,7 @@ streamed_dataset = load_dataset('./codeparrot', split="train", streaming=True)
 
 我们可以看到，流式数据集的样本与非流式数据集的样本是相同的：
 
-```
+```python
 iterator = iter(streamed_dataset) 
 print(dataset[0] == next(iterator)) 
 print(dataset[1] == next(iterator)) 
@@ -255,7 +255,7 @@ True
 
 使用流式数据集的主要兴趣在于，加载这个数据集不会在硬盘上创建一个缓存文件，也不需要任何（大量）RAM内存。当新的一批例子被请求时，原始的原始文件被提取出来并在运行中被读取，并且只有那一批被加载到内存中。这就把我们的数据集的内存占用从180GB减少到50GB。但我们可以更进一步--我们可以不指向本地数据集，而是引用Hub上的数据集，然后直接下载样本，而不在本地下载原始文件：
 
-```
+```python
 remote_dataset = load_dataset('transformersbook/codeparrot', split="train", streaming=True)
 
 ```
@@ -272,14 +272,14 @@ remote_dataset = load_dataset('transformersbook/codeparrot', split="train", stre
 
 为了上传数据集，我们首先需要登录我们的Hugging Face账户，在终端运行以下命令并提供相关凭证:
 
-```
+```python
 $ huggingface-cli login
 
 ```
 
 这相当于我们在以前章节中使用的notebook_login()辅助函数。一旦完成这些，我们就可以直接在Hub上创建一个新的数据集，并上传压缩的JSON文件。为了简化事情，我们将创建两个存储库：一个用于训练分割，一个用于验证分割。我们可以通过运行CLI的repo create命令来完成这一工作，如下所示：
 
-```
+```python
 $ huggingface-cli repo create --type dataset --organization transformersbook \ codeparrot-train 
 $ huggingface-cli repo create --type dataset --organization transformersbook \ codeparrot-valid
 
@@ -287,7 +287,7 @@ $ huggingface-cli repo create --type dataset --organization transformersbook \ c
 
 这里我们指定存储库应该是一个数据集（与用于存储权重的模型存储库不同），以及我们想在哪个组织下存储存储库。如果你是在个人账户下运行这段代码，你可以省略--组织标志。接下来，我们需要克隆这些空的存储库到我们的本地机器上，把JSON文件复制到这些存储库中，然后把这些变化推送到Hub上。我们将从我们拥有的184个压缩的JSON文件中取出最后一个作为验证文件（即大约是我们数据集的0.5%）。执行这些命令，将版本库从Hub上克隆到你的本地机器上：
 
-```
+```python
 $ git clone https://huggingface.co/datasets/transformersbook/codeparrot-train 
 $ git clone https://huggingface.co/datasets/transformersbook/codeparrot-valid
 
@@ -295,7 +295,7 @@ $ git clone https://huggingface.co/datasets/transformersbook/codeparrot-valid
 
 接下来，除了最后一个GitHub文件外，复制所有文件作为训练集：
 
-```
+```python
 $ cd codeparrot-train 
 $ cp ../codeparrot/*.json.gz . 
 $ rm ./file-000000000183.json.gz
@@ -304,7 +304,7 @@ $ rm ./file-000000000183.json.gz
 
 然后提交文件并将其推送到Hub：
 
-```
+```python
 $ git add . 
 $ git commit -m "Adding dataset files" 
 $ git push
@@ -313,7 +313,7 @@ $ git push
 
 现在，对验证集重复这一过程：
 
-```
+```python
 $ cd ../codeparrot-valid 
 $ cp ../codeparrot/file-000000000183.json.gz . 
 $ mv ./file-000000000183.json.gz ./file-000000000183_validation.json.gz 
@@ -351,7 +351,7 @@ $ git push
 
 我们可以很容易地在实践中测试每个标记器的这些特征：
 
-```
+```python
 from transformers import AutoTokenizer 
 def tok_list(tokenizer, string):
 	input_ids = tokenizer(string, add_special_tokens=False)["input_ids"] 
@@ -406,7 +406,7 @@ Unigram从另一端开始，用语料库中的所有词和潜在的子词初始�
 
 让我们看看在Hub上提供的集合中是否有对我们有用的标记器。我们想要一个保留空间的标记器，所以一个好的候选者可能是一个字节级的标记器，比如GPT-2的那个。让我们加载这个标记器并探索其标记属性:
 
-```
+```python
 from transformers import AutoTokenizer 
 python_code = r"""
 def say_hello(): 
@@ -427,7 +427,7 @@ Python有一个内置的tokenize模块，可以将Python代码字符串分割成
 
 这是一个相当奇怪的输出，所以让我们试着通过运行标记器流水线的各个子模块来了解这里发生了什么。首先，让我们看看在这个标记器中应用了什么规范化：
 
-```
+```python
 print(tokenizer.backend_tokenizer.normalizer)
 None
 
@@ -435,7 +435,7 @@ None
 
 正如我们所看到的，GPT-2标记器没有使用规范化。它直接在原始Unicode输入上工作，没有任何规范化步骤。现在让我们来看看预编码的情况：
 
-```
+```python
 print(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code)) 
 
 [('def', (0, 3)), ('Ġsay', (3, 7)), ('_', (7, 8)), ('hello', (8, 13)), ('():', (13, 16)), ('ĊĠĠĠ', (16, 20)), ('Ġprint', (20, 26)), ('("', (26, 28)), ('Hello', (28, 33)), (',', (33, 34)), ('ĠWorld', (34, 40)), ('!")', (40, 43)), ('Ġ#', (43, 45)), ('ĠPrint', (45, 51)), ('Ġit', (51, 54)), ('Ċ', (54, 55)), ('Ċ', (55, 56)), ('say', (56, 59)), ('_', (59, 60)), ('hello', (60, 65)), ('()', (65, 67)), ('Ċ', (67, 68))]
@@ -448,7 +448,7 @@ print(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code))
 
 标记化文本的另一个奇怪的特征是看起来很奇怪的字符，如Ċ和Ġ。字节级的意思是这个标记器是在字节而不是Unicode字符上工作。每个Unicode字符由1到4个字节组成，这取决于该字符。字节的好处是，虽然Unicode字母表中有143,859个Unicode字符，但字节字母表中只有256个元素，你可以将每个Unicode字符表示为这些字节的序列。如果我们在字节上工作，我们就可以将所有从UTF-8世界中组成的字符串表达为这个256值的字母表中的较长字符串。也就是说，我们可以有一个使用只有256个字的字母表的模型，并且能够处理任何Unicode字符串。让我们来看看一些字符的字节表示是什么样子的：
 
-```
+```python
 a, e = u"a", u"€"
 byte = ord(a.encode("utf-8"))
 print(f'`{a}` is encoded as `{a.encode("utf-8")}` with a single byte: {byte}')
@@ -476,7 +476,7 @@ print(f'`{e}` is encoded as `{e.encode("utf-8")}` with three bytes: {byte}')
 
 这些Unicode字符每个都用1个或更多的字节编码并不是很重要；重要的是我们在最后有256个单值，形成我们的基础词汇，并且这256个值被我们的BPE算法正确处理。让我们看看这个映射与GPT-2标记器的一些例子。我们可以按以下方式访问整个映射：
 
-```
+```python
 from transformers.models.gpt2.tokenization_gpt2 
 import bytes_to_unicode 
 byte_to_unicode_map = bytes_to_unicode() 
@@ -496,7 +496,7 @@ First element: `!`, last element: `Ń`
 
 我们可以使用更明确的转换方式，比如将换行符映射到NEWLINE字符串，但BPE算法通常是为字符设计的。出于这个原因，为每个字节字符保留一个Unicode字符，用开箱即用的BPE算法更容易处理。现在我们已经了解了Unicode编码的黑暗魔法，我们可以更好地理解我们的标记化转换：
 
-```
+```python
 print(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code))
 
 [('def', (0, 3)), ('Ġsay', (3, 7)), ('_', (7, 8)), ('hello', (8, 13)), ('():', (13, 16)), ('ĊĠĠĠ', (16, 20)), ('Ġprint', (20, 26)), ('("', (26, 28)), ('Hello', (28, 33)), (',', (33, 34)), ('ĠWorld', (34, 40)), ('!")', (40, 43)), ('Ġ#', (43, 45)), ('ĠPrint', (45, 51)), ('Ġit', (51, 54)), ('Ċ', (54, 55)), ('Ċ', (55, 56)), ('say', (56, 59)), ('_', (59, 60)), ('hello', (60, 65)), ('()', (65, 67)), ('Ċ', (67, 68))]
@@ -523,7 +523,7 @@ print(tokenizer.backend_tokenizer.pre_tokenizer.pre_tokenize_str(python_code))
 
 我们可以通过查看标记器的长度属性来轻松检查：
 
-```
+```python
 print(f"Size of the vocabulary: {len(tokenizer)}") 
 Size of the vocabulary: 50257
 
@@ -531,7 +531,7 @@ Size of the vocabulary: 50257
 
 在我们的输入代码上运行完整的流水线，我们得到了以下输出：
 
-```
+```python
 print(tokenizer(python_code).tokens()) 
 ['def', 'Ġsay', '_', 'hello', '():', 'Ċ', 'Ġ', 'Ġ', 'Ġ', 'Ġprint', '("', 'Hello', ',', 'ĠWorld', '!"', ')', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 'say', '_', 'hello', '()', 'Ċ']
 
@@ -551,7 +551,7 @@ print(tokenizer(python_code).tokens())
 
 因此，你不一定需要在一个非常大的语料库上训练你的标记器；语料库只需要对你的领域有代表性，并且大到足以让标记器提取具有统计学意义的措施。但是，根据语料库中的词汇量和确切的文本，标记器最终可能会存储意想不到的词。例如，在查看GPT-2标记器的词汇中最长的词时，我们可以看到这一点：
 
-```
+```python
 tokens = sorted(tokenizer.vocab.items(), key=lambda x: len(x[0]), reverse=True)
 print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[:8]]); ['ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ',
 ' =================================================================', 
@@ -562,7 +562,7 @@ print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[:8]]); ['Ã
 
 这些标记看起来像论坛上可能使用的分隔线。这很合理，因为GPT-2是在以Reddit为中心的语料库上训练的。现在让我们来看看最后被添加到词汇中的词，也就是最不频繁的词：
 
-```
+```python
 tokens = sorted(tokenizer.vocab.items(), key=lambda x: x[1], reverse=True) 
 print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[:12]]); 
 
@@ -574,7 +574,7 @@ print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[:12]]);
 
 让我们在我们的语料库上训练一个新的标记器，并检查它学到的词汇。由于我们只需要一个合理地代表我们的数据集统计的语料库，让我们从我们的语料库中选择大约1-2GB的数据，或者大约10万个文档：
 
-```
+```python
 from tqdm.auto import tqdm 
 length = 10000
 dataset_name = 'transformersbook/codeparrot-train' 
@@ -590,7 +590,7 @@ new_tokenizer = tokenizer.train_new_from_iterator(batch_iterator(), vocab_size=1
 
 让我们调查一下我们的BPE算法所创造的第一个和最后一个词，看看我们的词汇量有多大的关联。我们跳过256字节的标记，看看此后添加的第一个标记：
 
-```
+```python
 tokens = sorted(new_tokenizer.vocab.items(), key=lambda x: x[1], reverse=False) 
 
 print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[257:280]]); 
@@ -601,7 +601,7 @@ print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[257:280]]);
 
 在这里我们可以看到各种标准级别的缩进和空白标记，以及简短的Python常用关键字，如self、or和in。这是一个很好的迹象，表明我们的BPE算法正在按计划工作。现在我们来看看最后一个词：
 
-```
+```python
 print([f'{new_tokenizer.convert_tokens_to_string(t)}' for t,_ in tokens[-12:]]); 
 [' capt', ' embedded', ' regarding', 'Bundle', '355', ' recv', ' dmp', ' vault', ' Mongo', ' possibly', 'implementation', 'Matches']
 
@@ -611,7 +611,7 @@ print([f'{new_tokenizer.convert_tokens_to_string(t)}' for t,_ in tokens[-12:]]);
 
 我们也可以对我们的Python代码的简单例子进行标记，看看我们的标记器在一个简单的例子上是如何表现的：
 
-```
+```python
 print(new_tokenizer(python_code).tokens()) 
 ['def', 'Ġs', 'ay', '_', 'hello', '():', 'ĊĠĠĠ', 'Ġprint', '("', 'Hello', ',', 'ĠWor', 'ld', '!")', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 's', 'ay', '_', 'hello', '()', 'Ċ']
 
@@ -619,7 +619,7 @@ print(new_tokenizer(python_code).tokens())
 
 尽管它们不是代码关键词，但看到像World或say这样的普通英语单词被我们的标记器分割开来还是有点恼火，因为我们希望它们在语料库中出现得相当频繁。让我们检查一下所有的Python保留关键词是否都在词汇表中：
 
-```
+```python
 import keyword print(f'There are in total {len(keyword.kwlist)} Python keywords.') 
 for keyw in keyword.kwlist: 
 	if keyw not in new_tokenizer.vocab: 
@@ -634,7 +634,7 @@ No, keyword `nonlocal` is not in the vocabulary
 
 似乎有几个相当频繁的关键词，比如最后，也不在词汇表中。让我们尝试使用更大的数据集样本来建立一个更大的词汇表。例如，我们可以建立一个32,768个词的词汇表（8的倍数对一些高效的GPU/TPU计算来说更好），并在两倍于此的语料片上训练标记器：
 
-```
+```python
 length = 200000 
 new_tokenizer_larger = tokenizer.train_new_from_iterator(batch_iterator(), vocab_size=32768, initial_alphabet=base_vocab)
 
@@ -642,7 +642,7 @@ new_tokenizer_larger = tokenizer.train_new_from_iterator(batch_iterator(), vocab
 
 我们不期望在添加更多的文件时，最频繁的标记会有很大的变化，但我们看看最后的标记：
 
-```
+```python
 tokens = sorted(new_tokenizer_larger.vocab.items(), key=lambda x: x[1], reverse=False) 
 print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[-12:]]); 
 
@@ -652,7 +652,7 @@ print([f'{tokenizer.convert_tokens_to_string(t)}' for t, _ in tokens[-12:]]);
 
 简单检查一下，这里没有显示任何常规的编程关键词，这很有希望。让我们试试用新的大型标记器对我们的示例代码进行标记：
 
-```
+```python
 print(new_tokenizer_larger(python_code).tokens()) 
 
 ['def', 'Ġsay', '_', 'hello', '():', 'ĊĠĠĠ', 'Ġprint', '("', 'Hello', ',', 'ĠWorld', '!")', 'Ġ#', 'ĠPrint', 'Ġit', 'Ċ', 'Ċ', 'say', '_', 'hello', '()', 'Ċ']
@@ -661,7 +661,7 @@ print(new_tokenizer_larger(python_code).tokens())
 
 在这里，缩进也被方便地保留在词汇中，而且我们看到像Hello、World和say这样的常见英语单词也被作为单个标记包括在内。这似乎更符合我们对模型在下游任务中可能看到的数据的期望。让我们研究一下常见的Python关键词，就像我们之前做的那样：
 
-```
+```python
 for keyw in keyword.kwlist: 
 	if keyw not in new_tokenizer_larger.vocab:
     	print(f'No, keyword `{keyw}` is not in the vocabulary')
@@ -686,7 +686,7 @@ for keyw in keyword.kwlist:
 
 为了创建一个私有模型库，并将我们的标记器作为第一个文件保存在其中，我们可以直接使用标记器的push_to_hub()方法。由于我们已经用huggingface-cli登录认证了我们的账户，我们可以简单地推送tokenizer，如下所示：
 
-```
+```python
 model_ckpt = "codeparrot"
 org = "transformersbook" new_tokenizer_larger.push_to_hub(model_ckpt, organization=org)
 
@@ -694,7 +694,7 @@ org = "transformersbook" new_tokenizer_larger.push_to_hub(model_ckpt, organizati
 
 如果你不想推送给某个组织，你可以直接省略组织这个参数。这将在你的命名空间中创建一个名为codeparrot的资源库，然后任何人都可以通过运行该资源库来加载：
 
-```
+```python
 reloaded_tokenizer = AutoTokenizer.from_pretrained(org + "/" + model_ckpt) 
 
 print(reloaded_tokenizer(python_code).tokens())
@@ -705,7 +705,7 @@ print(reloaded_tokenizer(python_code).tokens())
 
 从Hub加载的标记器的行为与我们刚才看到的完全一样。我们也可以在Hub上调查其文件和保存的词汇。为了重现，让我们也保存我们较小的标记器：
 
-```
+```python
 new_tokenizer.push_to_hub(model_ckpt+ "-small-vocabulary", organization=org)
 
 ```
@@ -752,7 +752,7 @@ new_tokenizer.push_to_hub(model_ckpt+ "-small-vocabulary", organization=org)
 
 这是本书中第一次我们不使用from_pretrained()方法来加载模型，而是初始化新模型。然而，我们将加载gpt2-xl的配置，因此我们使用相同的超参数，只为新的标记器调整词汇量大小。然后我们通过from_config()方法用这个配置初始化一个新的模型：
 
-```
+```python
 rom transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
 config = AutoConfig.from_pretrained("gpt2-xl", vocab_size=len(tokenizer))
@@ -762,7 +762,7 @@ model = AutoModelForCausalLM.from_config(config)
 
 让我们看看这个模型到底有多大：
 
-```
+```python
 print(f'GPT-2 (xl) size: {model_size(model)/1000**2:.1f}M parameters')
 GPT-2 (xl) size: 1529.6M parameters
 
@@ -770,14 +770,14 @@ GPT-2 (xl) size: 1529.6M parameters
 
 这是一个1.5B的参数模型! 这是一个很大的容量，但我们也有一个大的数据集。一般来说，只要数据集合理地大，大型语言模型的训练就更有效率。让我们把新初始化的模型保存在models/文件夹中，并把它推送到Hub上：
 
-```
+```python
 model.save_pretrained("models/" + model_ckpt, push_to_hub=True, organization=org)
 
 ```
 
 鉴于检查点的大小（大于5GB），将模型推送到Hub可能需要几分钟。由于这个模型相当大，我们还将创建一个较小的版本，在扩大规模之前，我们可以训练以确保一切正常。我们将以标准的GPT-2尺寸为基础：
 
-```
+```python
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
 config_small = AutoConfig.from_pretrained("gpt2", vocab_size=len(tokenizer)) 
 model_small = AutoModelForCausalLM.from_config(config_small) 
@@ -789,7 +789,7 @@ GPT-2 size: 111.0M parameters
 
 让我们也把它保存到中心，以便于分享和重复使用：
 
-```
+```python
 model_small.save_pretrained("models/" + model_ckpt + "-small", push_to_hub=True, organization=org)
 
 ```
@@ -804,7 +804,7 @@ model_small.save_pretrained("models/" + model_ckpt + "-small", push_to_hub=True,
 
 例如，我们可以通过将输入字符串的字符长度定义为，确保我们的标记化实例中有大约一百个完整的序列：
 
-```
+```python
 input_characters = number_of_sequences * sequence_length * characters_per_token
 
 ```
@@ -821,7 +821,7 @@ input_characters = number_of_sequences * sequence_length * characters_per_token
 
 让我们首先估计一下我们的数据集中每个符号的平均字符长度：
 
-```
+```python
 examples, total_characters, total_tokens = 500, 0, 0 
 dataset = load_dataset('transformersbook/codeparrot-train', split='train', streaming=True) 
 for _, example in tqdm(zip(range(examples), iter(dataset)), total=examples): 
@@ -837,7 +837,7 @@ characters_per_token = total_characters / total_tokens print(characters_per_toke
 
 __iter__()函数建立了一个字符串的缓冲区，直到它包含足够的字符。缓冲区中的所有元素被标记化，并与EOS标记相连接，然后all_token_ids中的长序列被分块为seq_length大小的片断。通常情况下，我们需要注意掩码来堆叠不同长度的填充序列，并确保在训练期间忽略填充。我们通过只提供相同（最大）长度的序列来解决这个问题，所以我们在这里不需要掩码，只返回input_ids。让我们测试一下我们的可迭代数据集：
 
-```
+```python
 shuffled_dataset = dataset.shuffle(buffer_size=100)
 constant_length_dataset = ConstantLengthDataset(tokenizer, shuffled_dataset, num_of_sequences=10) 
 dataset_iterator = iter(constant_length_dataset) 
@@ -873,7 +873,7 @@ Hugging Face 加速器提供了一个简单的API，使训练脚本以混合精�
 
 这些变化的核心部分是对prepare()的调用，它可以确保模型、优化器和数据加载器都已准备好并分布在基础设施上。对PyTorch训练循环的这些细微变化使你能够轻松地在不同的基础设施上扩展训练。考虑到这一点，让我们开始建立我们的训练脚本并定义一些辅助函数。首先，我们设置训练用的超参数，并将它们封装在一个命名空间中，以便于访问:
 
-```
+```python
 from argparse import Namespace 
 # Commented parameters correspond to the small model 
 config = {"train_batch_size": 2, # 12 
@@ -894,7 +894,7 @@ args = Namespace(**config)
 
 我们还将定义一个函数，用TensorBoard和Weights & Biases记录指标。我们在这里再次使用加速器.is_main_process，以确保我们只记录一次指标，而不是为每个工作者记录:
 
-```
+```python
 def log_metrics(step, metrics): 
 	logger.info(f"Step {step}: {metrics}"
 	if accelerator.is_main_process: 
@@ -966,7 +966,7 @@ def log_metrics(step, metrics):
 
 我们将训练脚本保存在一个名为 codeparrot_training.py 的文件中，这样我们就可以在训练服务器上执行它。为了让生活更加简单，我们将它和一个包含所有必要的 Python 依赖关系的 requirements.txt 文件一起添加到 Hub 上的模型仓库。记住，Hub上的模型本质上是Git仓库，所以我们可以直接克隆仓库，添加我们想要的任何文件，然后将它们推送回Hub。在训练服务器上，我们可以通过以下几个命令来启动训练：
 
-```
+```python
 $ git clone https://huggingface.co/transformersbook/codeparrot 
 $ cd codeparrot 
 $ pip install -r requirements.txt 
@@ -982,7 +982,7 @@ $ accelerate launch codeparrot_training.py
 
 在该基础设施上用这些设置运行训练脚本，小型和大型模型分别需要24小时和7天左右。如果你训练自己的自定义模型，确保你的代码在较小的基础设施上顺利运行，以确保昂贵的长期运行也能顺利进行。在完整的训练运行成功完成后，你可以用以下命令将Hub上的实验分支合并回主分支：
 
-```
+```python
 $ git checkout main 
 $ git merge <RUN_NAME> 
 $ git push
@@ -999,7 +999,7 @@ $ git push
 
 那么，我们可以用我们刚出炉的语言模型做什么呢，直接从GPU烤箱里出来？嗯，我们可以用它来为我们写一些代码。我们可以进行两种类型的分析：定性和定量的分析。在前一种情况下，我们看具体的例子，并试图更好地了解模型在哪些情况下是成功的，在哪些情况下是失败的。在后一种情况下，我们在一大批测试案例上统计评估模型的性能。在本节中，我们将探讨如何使用我们的模型。首先我们看一下几个例子，然后我们简单讨论一下我们如何能够系统地、更稳健地评估这个模型。首先，让我们把小模型包在一个流水线里，用它来继续一些代码输入：
 
-```
+```python
 rom transformers import pipeline, set_seed 
 model_ckpt = 'transformersbook/codeparrot-small' 
 generation = pipeline('text-generation', model=model_ckpt, device=0)
@@ -1012,7 +1012,7 @@ generation = pipeline('text-generation', model=model_ckpt, device=0)
 
 让我们从一个简单的例子开始，让模型为我们写一个计算矩形面积的函数：
 
-```
+```python
 prompt = '''def area_of_rectangle(a: float, b: float): """Return the area of the rectangle."""''' 
 complete_code(generation, prompt) 
 return math.sqrt(a * b) ============================================================================== 
@@ -1024,7 +1024,7 @@ return math.sqrt(a * b) ========================================================
 
 这看起来很不错! 虽然不是所有的代数都是正确的，但正确的解决方案就在其中。现在，这个模型还能解决从HTML字符串中提取URL这一更复杂的任务吗？让我们来看看：
 
-```
+```python
 prompt = '''def get_urls_from_html(html): """Get all embedded URLs in a HTML string."""''' 
 complete_code(generation, prompt) 
 if not html: 
@@ -1039,7 +1039,7 @@ return [url for url in re.findall(r'<a href="(/.*)",', html)] ==================
 
 虽然它在第二次尝试中没有完全正确，但其他三代都是正确的。我们可以在 "拥抱的脸 "主页上测试这个功能：
 
-```
+```python
 import requests 
 def get_urls_from_html(html): 
 	return [url for url in re.findall(r'<a href="(.*?)"', html) if url] 
@@ -1051,7 +1051,7 @@ https://github.com/huggingface/transformers | /allenai | /facebook | /asteroid-t
 
 我们可以看到，所有以https开头的URL都是外部网页，而其他的是主网站的子页面。这正是我们想要的。最后，让我们加载这个大模型，看看我们是否可以用它来把一个函数从纯Python翻译成NumPy：
 
-```
+```python
 model_ckpt = 'transformersbook/codeparrot' 
 generation = pipeline('text-generation', model=model_ckpt, device=0)
 prompt = '''
@@ -1064,7 +1064,7 @@ complete_code(generation, prompt, max_length=64)
 
 ```
 
-```
+```python
 Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
 return np.mean(a) ============================================================================== == 
 return np.mean(a) ============================================================================== ==
@@ -1075,7 +1075,7 @@ return np.mean(a)
 
 这就成功了! 让我们看看我们是否也能使用CodeParrot模型来帮助我们建立一个Scikit-learn模型：
 
-```
+```python
 prompt = '''X = np.random.randn(100, 100) 
 y = np.random.randint(0, 1, 100) 
 # fit random forest classifier with 20 estimators''' 

@@ -22,7 +22,7 @@ Hey, I’d like to rent a vehicle from Nov 1st to Nov 15th in Paris and I need a
 
 为了开始，让我们从Hugging Face Hub下载我们的微调模型，并将其包裹在一个用于文本分类的管道中:
 
-```
+```python
 from transformers import pipeline
 bert_ckpt = "transformersbook/bert-base-uncased-finetuned-clinc"
 pipe = pipeline("text-classification", model=bert_ckpt)
@@ -31,7 +31,7 @@ pipe = pipeline("text-classification", model=bert_ckpt)
 
 现在我们有了一个管道，我们可以通过一个查询来从模型中获得预测的意图和信心分数:
 
-```
+```python
 query = """Hey, I'd like to rent a vehicle from Nov 1st to Nov 15th in Paris and I need a 15 passenger van""" 
 
 pipe(query) 
@@ -68,7 +68,7 @@ pipe(query)
 
 现在，让我们通过计算测试集上的模型准确度，来给这个类的骨头加点肉。首先，我们需要一些数据来进行测试，所以让我们下载CLINC150数据集，该数据集被用来微调我们的基线模型。我们可以从数据集中心获得该数据集，具体如下：
 
-```
+```python
 from datasets import load_dataset 
 clinc = load_dataset("clinc_oos", "plus")
 
@@ -76,7 +76,7 @@ clinc = load_dataset("clinc_oos", "plus")
 
 这里，加号配置指的是包含范围外的训练实例的子集。CLINC150数据集中的每个例子都由文本栏中的查询和其相应的意图组成。我们将使用测试集来衡量我们的模型，所以我们来看看数据集的一个例子：
 
-```
+```python
 sample = clinc["test"][42] 
 sample 
 {'intent': 133, 'text': 'transfer $100 from my checking to saving account'}
@@ -85,7 +85,7 @@ sample
 
 意图是以ID的形式提供的，但我们可以通过访问数据集的特征属性，很容易地获得对字符串的映射（反之亦然）：
 
-```
+```python
 intents = clinc["test"].features["intent"] 
 intents.int2str(sample["intent"]) 
 'transfer'
@@ -94,7 +94,7 @@ intents.int2str(sample["intent"])
 
 现在我们已经对CLINC150数据集的内容有了基本的了解，让我们来实现PerformanceBenchmark的compute_accuracy()方法。由于该数据集在各意向类之间是平衡的，我们将使用准确性作为我们的度量标准。我们可以用Datasets来加载这个度量，如下所示：
 
-```
+```python
 from datasets import load_metric 
 accuracy_score = load_metric("accuracy")
 
@@ -102,7 +102,7 @@ accuracy_score = load_metric("accuracy")
 
 准确度指标希望预测和参考（即基础事实标签）都是整数。我们可以使用管道从文本字段中提取预测值，然后使用intents对象的str2int()方法将每个预测值映射到其对应的ID。下面的代码在返回数据集的准确性之前，将所有的预测和标签收集到列表中。让我们也把它添加到我们的PerformanceBenchmark类中：
 
-```
+```python
 def compute_accuracy(self): 
 	"""This overrides the PerformanceBenchmark.compute_accuracy() method""" 
 	preds, labels = [], [] 
@@ -119,7 +119,7 @@ def compute_accuracy(self):
 
 接下来，让我们通过使用PyTorch的torch.save()函数来计算我们模型的大小，将模型序列化到磁盘上。在引擎盖下，torch.save()使用Python的pickle模块，可以用来保存从模型到张量到普通Python对象的任何东西。在PyTorch中，推荐的保存模型的方法是使用它的state_dict，这是一个Python字典，它将模型中的每一层映射到它的可学习参数（即权重和偏差）。让我们看看我们的基线模型的state_dict中存储了什么：
 
-```
+```python
 list(pipe.model.state_dict().items())[42] 
 
 ('bert.encoder.layer.2.attention.self.value.weight', 
@@ -131,14 +131,14 @@ tensor([[-1.0526e-02, -3.2215e-02, 2.2097e-02, ..., -6.0953e-03, 4.6521e-03, 2.9
 
 我们可以清楚地看到，每个键/值对都对应于BERT中的一个特定层和张量。因此，如果我们将我们的模型保存为：
 
-```
+```python
 torch.save(pipe.model.state_dict(), "model.pt")
 
 ```
 
 然后我们可以使用 Python 的 pathlib 模块中的 Path.stat() 函数来获得底层文件的信息。特别是，Path("model.pt").stat().st_size将给我们提供模型的字节数。让我们把这些都放在 compute_size() 函数中，并把它添加到 PerformanceBenchmark 中：
 
-```
+```python
 import torch 
 from pathlib import Path 
 def compute_size(self): 
@@ -161,7 +161,7 @@ def compute_size(self):
 
 我们可以使用perf_counter()对我们的管道进行计时，通过传递我们的测试查询并计算开始和结束之间的时间差（以毫秒计）：
 
-```
+```python
 from time import perf_counter 
 for _ in range(3): 
 	start_time = perf_counter() 
@@ -183,7 +183,7 @@ Latency (ms) - 87.275
 
 现在，我们的PerformanceBenchmark类已经完成了，让我们给它一个机会吧 让我们从BERT基线的基准测试开始。对于基线模型，我们只需要传递管道和我们希望执行基准测试的数据集。我们将在perf_metrics字典中收集结果，以跟踪每个模型的性能：
 
-```
+```python
 pb = PerformanceBenchmark(pipe, clinc["test"]) 
 perf_metrics = pb.run_benchmark() 
 
@@ -259,7 +259,7 @@ Accuracy on test set - 0.867
 
 添加新的超参数是非常简单的，因为我们只需要将TrainingArguments子类化，并将其作为新的属性:
 
-```
+```python
 from transformers import TrainingArguments 
 class DistillationTrainingArguments(TrainingArguments): 
 	def __init__(self, *args, alpha=0.5, temperature=2.0, **kwargs): 
@@ -293,7 +293,7 @@ class DistillationTrainingArguments(TrainingArguments):
 
 现在我们已经处理了我们的文本，我们需要做的下一件事是为我们的DistillationTrainer定义超参数和compute_metrics()函数。我们还将把我们所有的模型推送到Hugging Face Hub，所以让我们开始登录我们的账户：
 
-```
+```python
 from huggingface_hub import 
 notebook_login notebook_login()
 
@@ -301,7 +301,7 @@ notebook_login notebook_login()
 
 接下来，我们将定义训练期间要跟踪的指标。正如我们在性能基准中所做的那样，我们将使用准确性作为主要指标。这意味着我们可以在DistillationTrainer中包含的compute_metrics()函数中重复使用我们的准确度_score()函数：
 
-```
+```python
 def compute_metrics(pred): 
 	predictions, labels = pred 
 	predictions = np.argmax(predictions, axis=1) 
@@ -313,7 +313,7 @@ def compute_metrics(pred):
 
 接下来我们需要定义训练参数。为了热身，我们将设置α=1，看看DistilBERT在没有来自教师模型的任何信号的情况下的表现如何。然后我们将把我们的微调模型推送到一个名为distilbertbase-uncased-finetuned-clinc的新存储库，所以我们只需要在DistillationTrainingArguments的output_dir参数中指定：
 
-```
+```python
 batch_size = 48 
 finetuned_ckpt = "distilbert-base-uncased-finetuned-clinc" 
 student_training_args = DistillationTrainingArguments( output_dir=finetuned_ckpt, evaluation_strategy = "epoch", num_train_epochs=5, learning_rate=2e-5, per_device_train_batch_size=batch_size, per_device_eval_batch_size=batch_size, alpha=1, weight_decay=0.01, push_to_hub=True)
@@ -324,7 +324,7 @@ student_training_args = DistillationTrainingArguments( output_dir=finetuned_ckpt
 
 我们还需要做的一件事是向学生模型提供每个意图和标签ID之间的映射。这些映射可以从我们在管道中下载的BERT-base模型中获得：
 
-```
+```python
 id2label = pipe.model.config.id2label 
 label2id = pipe.model.config.label2id
 
@@ -332,7 +332,7 @@ label2id = pipe.model.config.label2id
 
 有了这些映射，我们现在可以用我们在第三章和第四章中遇到的AutoConfig类帽子来创建一个自定义的模型配置。让我们用它来为我们的学生模型创建一个配置，其中包括标签映射的信息：
 
-```
+```python
 from transformers import AutoConfig 
 num_labels = intents.num_classes 
 student_config = (AutoConfig .from_pretrained(student_ckpt, num_labels=num_labels, id2label=id2label, label2id=label2id))
@@ -341,7 +341,7 @@ student_config = (AutoConfig .from_pretrained(student_ckpt, num_labels=num_label
 
 这里我们还指定了我们的模型应该期望的类的数量。然后我们可以把这个配置提供给AutoModelForSequenceClassification类的from_pretrained()函数，如下所示：
 
-```
+```python
 import torch 
 from transformers import AutoModelForSequenceClassification 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
@@ -352,7 +352,7 @@ def student_init():
 
 我们现在有了蒸馏训练器所需的所有成分，所以让我们加载上教师模型，进行微调：
 
-```
+```python
 teacher_ckpt = "transformersbook/bert-base-uncased-finetuned-clinc" 
 teacher_model = (AutoModelForSequenceClassification .from_pretrained(teacher_ckpt, num_labels=num_labels) .to(device)) 
 distilbert_trainer = DistillationTrainer(model_init=student_init, teacher_model=teacher_model, args=student_training_args, train_dataset=clinc_enc['train'], eval_dataset=clinc_enc['validation'], compute_metrics=compute_metrics, tokenizer=student_tokenizer) 
@@ -365,14 +365,14 @@ distilbert_trainer.train()
 
 与BERT-base教师模型取得的94%的准确率相比，验证集上的92%的准确率看起来相当不错。现在我们已经对DistilBERT进行了微调，让我们把模型推送到Hub，这样我们以后就可以重复使用它了：
 
-```
+```python
 distilbert_trainer.push_to_hub("Training completed!")
 
 ```
 
 随着我们的模型现在安全地存储在Hub上，我们可以立即在管道中使用它来进行性能基准测试：
 
-```
+```python
 finetuned_ckpt = "transformersbook/distilbert-base-uncased-finetuned-clinc" 
 pipe = pipeline("text-classification", model=finetuned_ckpt)
 
@@ -380,7 +380,7 @@ pipe = pipeline("text-classification", model=finetuned_ckpt)
 
 然后我们可以将这个管道传递给我们的PerformanceBenchmark类，以计算与这个模型相关的指标：
 
-```
+```python
 optim_type = "DistilBERT" 
 pb = PerformanceBenchmark(pipe, clinc["test"], optim_type=optim_type) 
 perf_metrics.update(pb.run_benchmark()) 
@@ -411,7 +411,7 @@ Accuracy on test set - 0.858
 
 在Optuna中，我们可以通过定义一个返回f(x, y)值的objective()函数来寻找f(x, y)的最小值：
 
-```
+```python
 def objective(trial):
 	x = trial.suggest_float("x", -2, 2) 
 	y = trial.suggest_float("y", -2, 2) 
@@ -421,7 +421,7 @@ def objective(trial):
 
 trial.suggest_float对象指定了要统一取样的参数范围；Optuna还为整数和分类参数分别提供了 suggest_int和 suggest_categorical。Optuna将多个试验作为一项研究来收集，因此要创建一个试验，我们只需将objective()函数传递给study.optimize()，如下所示:
 
-```
+```python
 import optuna 
 study = optuna.create_study() 
 study.optimize(objective, n_trials=1000)
@@ -430,7 +430,7 @@ study.optimize(objective, n_trials=1000)
 
 一旦研究完成，我们就可以找到如下的最佳参数:
 
-```
+```python
 study.best_params 
 
 {'x': 1.003024865971437, 'y': 1.00315167589307}
@@ -439,7 +439,7 @@ study.best_params
 
 我们看到，通过一千次试验，Optuna已经成功地找到了相当接近全局最小值的x和y的值。为了在Transformers中使用Optuna，我们使用类似的逻辑，首先定义我们希望优化的超参数空间。除了α和T之外，我们还将包括如下的训练历时数:
 
-```
+```python
 def hp_space(trial): 
 	return {"num_train_epochs": trial.suggest_int("num_train_epochs", 5, 10), "alpha": trial.suggest_float("alpha", 0, 1), "temperature": trial.suggest_int("temperature", 2, 20)}
 
@@ -447,14 +447,14 @@ def hp_space(trial):
 
 用训练器运行超参数搜索是非常简单的；我们只需要指定要运行的试验数量和优化的方向。因为我们想获得最好的精度，所以我们在训练器的hyperparameter_search()方法中指定方向="最大化"，并传递超参数搜索空间如下:
 
-```
+```python
 best_run = distilbert_trainer.hyperparameter_search( n_trials=20, direction="maximize", hp_space=hp_space)
 
 ```
 
 hyperparameter_search()方法返回一个BestRun对象，其中包含被最大化的目标值（默认为所有指标的总和）和它用于该运行的超参数:
 
-```
+```python
 print(best_run)
 
 BestRun(run_id='1', objective=0.927741935483871, hyperparameters={'num_train_epochs': 10, 'alpha': 0.12468168730193585, 'temperature': 7})
@@ -469,7 +469,7 @@ BestRun(run_id='1', objective=0.927741935483871, hyperparameters={'num_train_epo
 
 值得注意的是，尽管学生模型的参数数量几乎只有教师模型的一半，但我们已经能够训练出与教师模型相匹配的准确度！我们将模型推送到Hub上，以便将来使用。让我们把这个模型推送到Hub，以便将来使用:
 
-```
+```python
 distil_trainer.push_to_hub("Training complete")
 
 ```
@@ -478,7 +478,7 @@ distil_trainer.push_to_hub("Training complete")
 
 现在我们有了一个准确的学生模型，让我们创建一个管道，重新做我们的基准测试，看看我们在测试集上的表现如何:
 
-```
+```python
 distilled_ckpt = "transformersbook/distilbert-base-uncased-distilled-clinc" 
 pipe = pipeline("text-classification", model=distilled_ckpt) 
 optim_type = "Distillation" 
@@ -493,7 +493,7 @@ Accuracy on test set - 0.868
 
 为了把这些结果放在背景中，让我们也用plot_metrics()函数把它们可视化:
 
-```
+```python
 plot_metrics(perf_metrics, optim_type)
 
 ```
@@ -528,7 +528,7 @@ plot_metrics(perf_metrics, optim_type)
 
 现在，Transformers（以及更普遍的深度神经网络）成为量化的主要候选者的主要原因之一是，权重和激活往往在相对较小的范围内取值。这意味着我们不必将整个可能的FP32数字的范围挤压到，例如，INT8所代表的28=256的数字。为了看到这一点，让我们从我们提炼的模型中挑选出一个注意力权重矩阵，并绘制出数值的频率分布：
 
-```
+```python
 import matplotlib.pyplot as plt 
 state_dict = pipe.model.state_dict() 
 weights = state_dict["distilbert.transformer.layer.0.attention.out_lin.weight"]
@@ -543,7 +543,7 @@ plt.show()
 
 我们可以看到，权重值分布在零附近的小范围内[ -0. 1, 0. 1]。现在，假设我们想把这个张量量化为一个有符号的8位整数。在这种情况下，我们的整数的可能值范围是[qmax, qmin] = [-128, 127]。零点与FP32的零点相吻合，比例因子根据前面的公式计算：
 
-```
+```python
 zero_point = 0 
 scale = (weights.max() - weights.min()) / (127 - (-128))
 
@@ -551,7 +551,7 @@ scale = (weights.max() - weights.min()) / (127 - (-128))
 
 为了得到量化的张量，我们只需要反转映射q = f/S + Z，夹紧这个数值，四舍五入到最接近的整数，并使用Tensor.char()函数在torch.int8数据类型中表示结果：
 
-```
+```python
 (weights / scale + zero_point).clamp(-128, 127).round().char() 
 
 tensor([
@@ -566,7 +566,7 @@ tensor([
 
 很好，我们刚刚量化了我们的第一个张量! 在PyTorch中，我们可以通过使用quantize_per_tensor()函数和一个量化的数据类型torch.qint来简化转换，该类型为整数算术运算而优化：
 
-```
+```python
 from torch import quantize_per_tensor 
 dtype = torch.qint8 
 quantized_weights = quantize_per_tensor(weights, scale, zero_point, dtype) 
@@ -582,7 +582,7 @@ tensor([[ -5, -8, 0, ..., -6, -4, 8], [ 8, 3, 1, ..., -4, 7, 0], [ -9, -6, 5, ..
 
 为了完善我们的小分析，让我们比较一下计算两个具有FP32和INT8值的权重张量的乘法需要多长时间。对于FP32的张量，我们可以使用PyTorch的漂亮的@操作符将其相乘：
 
-```
+```python
 %%timeit 
 weights @ weights 
 393 μs ± 3.84 μs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
@@ -591,7 +591,7 @@ weights @ weights
 
 对于量化的张量，我们需要QFunctional包装类，这样我们就可以用特殊的Torch.qint8数据类型进行操作：
 
-```
+```python
 from torch.nn.quantized import QFunctional 
 
 q_fn = QFunctional()
@@ -599,7 +599,7 @@ q_fn = QFunctional()
 
 这个类支持各种基本操作，如加法，在我们的例子中，我们可以对我们的量化张量进行如下的乘法运算：
 
-```
+```python
 %%timeit 
 q_fn.mul(quantized_weights, quantized_weights)
 23.3 μs ± 298 ns per loop (mean ± std. dev. of 7 runs, 10000 loops each)
@@ -614,7 +614,7 @@ q_fn.mul(quantized_weights, quantized_weights)
 
 由于INT8数字的位数比FP32数字少四倍，量化也将内存的存储需求减少了四倍之多。在我们的简单例子中，我们可以通过使用Tensor.storage()函数和Python'sys模块的getsizeof()函数，比较我们的权重张量和其量化的表弟的基础存储大小来验证这一点：
 
-```
+```python
 import sys 
 sys.getsizeof(weights.storage()) / sys.getsizeof(quantized_weights.storage()) 
 
@@ -643,7 +643,7 @@ sys.getsizeof(weights.storage()) / sys.getsizeof(quantized_weights.storage())
 
 在PyTorch中实现动态量化非常简单，只需一行代码就可以完成：
 
-```
+```python
 from torch.quantization import quantize_dynamic
 model_ckpt = "transformersbook/distilbert-base-uncased-distilled-clinc" 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
@@ -658,7 +658,7 @@ model_quantized = quantize_dynamic(model, {nn.Linear}, dtype=torch.qint8)
 
 现在我们的模型已经量化了，让我们把它通过基准测试，并把结果可视化：
 
-```
+```python
 pipe = pipeline("text-classification", model=model_quantized, tokenizer=tokenizer) 
 optim_type = "Distillation + quantization"
 pb = PerformanceBenchmark(pipe, clinc["test"], optim_type=optim_type) 
@@ -700,7 +700,7 @@ ONNX是一个开放的标准，它定义了一套通用的运算符和通用的�
 
 为了使用这个函数，我们首先需要为ONNX设置一些OpenMP环境变量:
 
-```
+```python
 import os 
 from psutil import cpu_count 
 os.environ["OMP_NUM_THREADS"] = f"{cpu_count()}" 
@@ -712,7 +712,7 @@ OpenMP 是一种为开发高度并行化应用程序而设计的应用程序接�
 
 接下来，让我们把我们的蒸馏模型转换成ONNX格式。这里我们需要指定参数pipeline_name="text-classification"，因为convert()在转换时将模型包裹在Transformers pipeline()函数中。除了model_ckpt之外，我们还传递标记器以初始化管道:
 
-```
+```python
 from transformers.convert_graph_to_onnx 
 import convert 
 model_ckpt = "transformersbook/distilbert-base-uncased-distilled-clinc" 
@@ -725,7 +725,7 @@ ONNX使用运算符集将不可变的运算符规格组合在一起，因此OPSE
 
 现在我们已经保存了我们的模型，我们需要创建一个InferenceSession实例来向模型输入信息:
 
-```
+```python
 from onnxruntime import (GraphOptimizationLevel, InferenceSession, SessionOptions) 
 def create_model_for_provider(model_path, provider="CPUExecutionProvider"): 
 	options = SessionOptions() 
@@ -741,7 +741,7 @@ onnx_model = create_model_for_provider(onnx_model_path)
 
 现在，当我们调用onnx_model.run()时，我们可以从ONNX模型中获得类Logits。[...]  由于convert()的输出告诉我们ONNX只期望输入input_ids和attention_mask，所以我们需要从我们的样本中删除标签列:
 
-```
+```python
 inputs = clinc_enc["test"][:1] 
 del inputs["labels"] l
 ogits_onnx = onnx_model.run(None, inputs)[0] 
@@ -753,7 +753,7 @@ logits_onnx.shape
 
 一旦我们有了对数，我们就可以通过获取argmax轻松得到预测的标签:
 
-```
+```python
 np.argmax(logits_onnx)
 61
 
@@ -761,7 +761,7 @@ np.argmax(logits_onnx)
 
 这确实与地面真实标签一致:
 
-```
+```python
 clinc_enc["test"][0]["labels"]
 61
 
@@ -769,7 +769,7 @@ clinc_enc["test"][0]["labels"]
 
 ONNX模型与文本分类管道不兼容，所以我们将创建我们自己的类来模仿核心行为:
 
-```
+```python
 from scipy.special import softmax
 class OnnxPipeline: 
 	def __init__(self, model, tokenizer): 
@@ -787,7 +787,7 @@ class OnnxPipeline:
 
 然后我们可以在我们的简单查询中测试这个，看看我们是否恢复了汽车租赁的意图:
 
-```
+```python
 pipe = OnnxPipeline(onnx_model, tokenizer) pipe(query)
 
 [{'label': 'car_rental', 'score': 0.7848334}]
@@ -796,7 +796,7 @@ pipe = OnnxPipeline(onnx_model, tokenizer) pipe(query)
 
 很好，我们的管道按照预期工作。下一步是为ONNX模型创建一个性能基准。在这里，我们可以通过简单地覆盖compute_size()方法，并保留compute_accuracy()和time_pipeline()方法，在我们对PerformanceBenchmark类所做工作的基础上继续前进。我们需要覆盖compute_size()方法的原因是，我们不能依靠state_dict和torch.save()来测量模型的大小，因为onnx_model在技术上是一个ONNX的InferenceSession对象，不能访问PyTorch的nn.Module的属性。在任何情况下，所产生的逻辑都很简单，可以按以下方式实现:
 
-```
+```python
 class OnnxPerformanceBenchmark(PerformanceBenchmark): 
 	def __init__(self, *args, model_path, **kwargs): 
 		super().__init__(*args, **kwargs) 
@@ -810,7 +810,7 @@ class OnnxPerformanceBenchmark(PerformanceBenchmark):
 
 有了我们的新基准，让我们看看我们的蒸馏模型在转换为ONNX格式时的表现如何:
 
-```
+```python
 optim_type = "Distillation + ORT" 
 pb = OnnxPerformanceBenchmark(pipe, clinc["test"], optim_type, model_path="onnx/model.onnx") 
 perf_metrics.update(pb.run_benchmark())
@@ -828,7 +828,7 @@ plot_metrics(perf_metrics, optim_type)
 
 与PyTorch类似，ORT提供了三种量化模型的方式：动态、静态和量化感知训练。正如我们在PyTorch中所做的那样，我们将把动态量化应用到我们提炼的模型中。在ORT中，量化是通过quantize_dynamic()函数应用的，它需要一个通往ONNX模型的路径来进行量化，一个目标路径来保存量化后的模型，以及数据类型来减少权重：
 
-```
+```python
 from onnxruntime.quantization import quantize_dynamic, QuantType 
 model_input = "onnx/model.onnx" 
 model_output = "onnx/model.quant.onnx" 
@@ -838,7 +838,7 @@ quantize_dynamic(model_input, model_output, weight_type=QuantType.QInt8)
 
 现在，该模型已经量化，让我们通过我们的基准来运行它：
 
-```
+```python
 nnx_quantized_model = create_model_for_provider(model_output)
 pipe = OnnxPipeline(onnx_quantized_model, tokenizer) 
 optim_type = "Distillation + ORT (quantized)" 

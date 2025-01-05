@@ -6,7 +6,7 @@
         <title>处理少标签或无标签任务 · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -346,148 +346,167 @@
 <p>现在我们知道了如何抓取数据，让我们来看看如何清理它。</p>
 <h3 id="准备数据">准备数据</h3>
 <p>一旦我们下载了所有的问题，我们就可以用Pandas加载它们:</p>
-<pre><code>import pandas as pd 
-dataset_url = "https://git.io/nlp-with-transformers" 
-df_issues = pd.read_json(dataset_url, lines=True) 
-print(f"DataFrame shape: {df_issues.shape}") 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd 
+dataset_url = <span class="hljs-string">"https://git.io/nlp-with-transformers"</span> 
+df_issues = pd.read_json(dataset_url, lines=<span class="hljs-literal">True</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"DataFrame shape: <span class="hljs-subst">{df_issues.shape}</span>"</span>) 
 
-DataFrame shape: (9930, 26)
-</code></pre><p>我们的数据集中有近一万个问题，通过查看单行，我们可以看到从GitHub API中检索的信息包含许多字段，如URL、ID、日期、用户、标题、正文以及标签:</p>
-<pre><code>cols = ["url", "id", "title", "user", "labels", "state", "created_at", "body"] 
+DataFrame shape: (<span class="hljs-number">9930</span>, <span class="hljs-number">26</span>)
+</code></pre>
+<p>我们的数据集中有近一万个问题，通过查看单行，我们可以看到从GitHub API中检索的信息包含许多字段，如URL、ID、日期、用户、标题、正文以及标签:</p>
+<pre><code class="lang-python">cols = [<span class="hljs-string">"url"</span>, <span class="hljs-string">"id"</span>, <span class="hljs-string">"title"</span>, <span class="hljs-string">"user"</span>, <span class="hljs-string">"labels"</span>, <span class="hljs-string">"state"</span>, <span class="hljs-string">"created_at"</span>, <span class="hljs-string">"body"</span>] 
 
-df_issues.loc[2, cols].to_frame()
-</code></pre><p><img src="images/chapter9/image-20220215073115724.png" alt="image-20220215073115724"></img></p>
+df_issues.loc[<span class="hljs-number">2</span>, cols].to_frame()
+</code></pre>
+<p><img src="images/chapter9/image-20220215073115724.png" alt="image-20220215073115724"></img></p>
 <p>标签列是我们感兴趣的东西，每一行都包含一个JSON对象的列表，其中有关于每个标签的元数据:</p>
-<pre><code>[ 
+<pre><code class="lang-python">[ 
     { 
-        "id":2659267025, "node_id":"MDU6TGFiZWwyNjU5MjY3MDI1", 
-        "url":"https://api.github.com/repos/huggingface...", 
-        "name":"DeepSpeed", 
-        "color":"4D34F7", 
-        "default":false, 
-        "description":"" 
+        <span class="hljs-string">"id"</span>:<span class="hljs-number">2659267025</span>, <span class="hljs-string">"node_id"</span>:<span class="hljs-string">"MDU6TGFiZWwyNjU5MjY3MDI1"</span>, 
+        <span class="hljs-string">"url"</span>:<span class="hljs-string">"https://api.github.com/repos/huggingface..."</span>, 
+        <span class="hljs-string">"name"</span>:<span class="hljs-string">"DeepSpeed"</span>, 
+        <span class="hljs-string">"color"</span>:<span class="hljs-string">"4D34F7"</span>, 
+        <span class="hljs-string">"default"</span>:false, 
+        <span class="hljs-string">"description"</span>:<span class="hljs-string">""</span> 
     } 
 ]
-</code></pre><p>为了我们的目的，我们只对每个标签对象的名称字段感兴趣，所以让我们用标签名称覆盖标签列:</p>
-<pre><code>df_issues["labels"] = (df_issues["labels"] .apply(lambda x: [meta["name"] for meta in x])) 
-df_issues[["labels"]].head()
-</code></pre><p><img src="images/chapter9/image-20220215073235513.png" alt="image-20220215073235513"></img></p>
+</code></pre>
+<p>为了我们的目的，我们只对每个标签对象的名称字段感兴趣，所以让我们用标签名称覆盖标签列:</p>
+<pre><code class="lang-python">df_issues[<span class="hljs-string">"labels"</span>] = (df_issues[<span class="hljs-string">"labels"</span>] .apply(<span class="hljs-keyword">lambda</span> x: [meta[<span class="hljs-string">"name"</span>] <span class="hljs-keyword">for</span> meta <span class="hljs-keyword">in</span> x])) 
+df_issues[[<span class="hljs-string">"labels"</span>]].head()
+</code></pre>
+<p><img src="images/chapter9/image-20220215073235513.png" alt="image-20220215073235513"></img></p>
 <p>现在，标签栏中的每一行都是GitHub的标签列表，所以我们可以计算每一行的长度，以找出每个问题的标签数量:</p>
-<pre><code>df_issues["labels"].apply(lambda x : len(x)).value_counts().to_frame().T
-</code></pre><p><img src="images/chapter9/image-20220215073257537.png" alt="image-20220215073257537"></img></p>
+<pre><code class="lang-python">df_issues[<span class="hljs-string">"labels"</span>].apply(<span class="hljs-keyword">lambda</span> x : <span class="hljs-built_in">len</span>(x)).value_counts().to_frame().T
+</code></pre>
+<p><img src="images/chapter9/image-20220215073257537.png" alt="image-20220215073257537"></img></p>
 <p>这表明，大多数问题都有零个或一个标签，而有一个以上标签的则少得多。接下来，让我们看看数据集中最频繁出现的前10个标签。在Pandas中，我们可以通过 "explode  (展开)"标签列来实现，这样列表中的每个标签都会成为一行，然后简单地计算每个标签的出现次数:</p>
-<pre><code>df_counts = df_issues["labels"].explode().value_counts() 
-print(f"Number of labels: {len(df_counts)}") 
-# Display the top-8 label categories df_counts.to_frame().head(8).T
+<pre><code class="lang-python">df_counts = df_issues[<span class="hljs-string">"labels"</span>].explode().value_counts() 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Number of labels: <span class="hljs-subst">{<span class="hljs-built_in">len</span>(df_counts)}</span>"</span>) 
+<span class="hljs-comment"># Display the top-8 label categories df_counts.to_frame().head(8).T</span>
 
-Number of labels: 65
-</code></pre><p><img src="images/chapter9/image-20220215073332797.png" alt="image-20220215073332797"></img></p>
+Number of labels: <span class="hljs-number">65</span>
+</code></pre>
+<p><img src="images/chapter9/image-20220215073332797.png" alt="image-20220215073332797"></img></p>
 <p>我们可以看到，数据集中有65个独特的标签，这些类别非常不平衡，其中wontfix和model card是最常见的标签。为了使分类问题更容易解决，我们将专注于为标签的一个子集建立一个标签器。例如，一些标签，如Good First Issue或Help Wanted，有可能很难从问题的描述中预测出来，而另一些标签，如model card，可以用一个简单的规则来分类，即检测Hugging Face Hub上何时添加了model card。</p>
 <p>下面的代码对数据集进行过滤，以获得我们要处理的标签子集，同时对名称进行标准化处理，使其更容易阅读：</p>
-<pre><code>label_map = {"Core: Tokenization": "tokenization", "New model": "new model", "Core: Modeling": "model training", "Usage": "usage", "Core: Pipeline": "pipeline", "TensorFlow": "tensorflow or tf", "PyTorch": "pytorch", "Examples": "examples", "Documentation": "documentation"} 
+<pre><code class="lang-python">label_map = {<span class="hljs-string">"Core: Tokenization"</span>: <span class="hljs-string">"tokenization"</span>, <span class="hljs-string">"New model"</span>: <span class="hljs-string">"new model"</span>, <span class="hljs-string">"Core: Modeling"</span>: <span class="hljs-string">"model training"</span>, <span class="hljs-string">"Usage"</span>: <span class="hljs-string">"usage"</span>, <span class="hljs-string">"Core: Pipeline"</span>: <span class="hljs-string">"pipeline"</span>, <span class="hljs-string">"TensorFlow"</span>: <span class="hljs-string">"tensorflow or tf"</span>, <span class="hljs-string">"PyTorch"</span>: <span class="hljs-string">"pytorch"</span>, <span class="hljs-string">"Examples"</span>: <span class="hljs-string">"examples"</span>, <span class="hljs-string">"Documentation"</span>: <span class="hljs-string">"documentation"</span>} 
 
-def filter_labels(x): 
-    return [label_map[label] for label in x if label in label_map] 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">filter_labels</span>(<span class="hljs-params">x</span>): 
+    <span class="hljs-keyword">return</span> [label_map[label] <span class="hljs-keyword">for</span> label <span class="hljs-keyword">in</span> x <span class="hljs-keyword">if</span> label <span class="hljs-keyword">in</span> label_map] 
 
-df_issues["labels"] = df_issues["labels"].apply(filter_labels) 
-all_labels = list(label_map.values())
-</code></pre><p>现在我们来看看新标签的分布情况：</p>
-<pre><code>df_counts = df_issues["labels"].explode().value_counts() 
+df_issues[<span class="hljs-string">"labels"</span>] = df_issues[<span class="hljs-string">"labels"</span>].apply(filter_labels) 
+all_labels = <span class="hljs-built_in">list</span>(label_map.values())
+</code></pre>
+<p>现在我们来看看新标签的分布情况：</p>
+<pre><code class="lang-python">df_counts = df_issues[<span class="hljs-string">"labels"</span>].explode().value_counts() 
 df_counts.to_frame().T
-</code></pre><p><img src="images/chapter9/image-20220215073556232.png" alt="image-20220215073556232"></img></p>
+</code></pre>
+<p><img src="images/chapter9/image-20220215073556232.png" alt="image-20220215073556232"></img></p>
 <p>在本章的后面，我们会发现将未标记的问题作为一个单独的训练分割来处理是很有用的，所以我们创建一个新的列，表示该问题是否是未标记的:</p>
-<pre><code>df_issues["split"] = "unlabeled" 
-mask = df_issues["labels"].apply(lambda x: len(x)) &gt; 0 
-df_issues.loc[mask, "split"] = "labeled"
-df_issues["split"].value_counts().to_frame()
-</code></pre><p><img src="images/chapter9/image-20220215073654838.png" alt="image-20220215073654838"></img></p>
+<pre><code class="lang-python">df_issues[<span class="hljs-string">"split"</span>] = <span class="hljs-string">"unlabeled"</span> 
+mask = df_issues[<span class="hljs-string">"labels"</span>].apply(<span class="hljs-keyword">lambda</span> x: <span class="hljs-built_in">len</span>(x)) &gt; <span class="hljs-number">0</span> 
+df_issues.loc[mask, <span class="hljs-string">"split"</span>] = <span class="hljs-string">"labeled"</span>
+df_issues[<span class="hljs-string">"split"</span>].value_counts().to_frame()
+</code></pre>
+<p><img src="images/chapter9/image-20220215073654838.png" alt="image-20220215073654838"></img></p>
 <p>现在让我们来看一个例子:</p>
-<pre><code>for column in ["title", "body", "labels"]: 
-    print(f"{column}: {df_issues[column].iloc[26][:500]}\n") 
+<pre><code class="lang-python"><span class="hljs-keyword">for</span> column <span class="hljs-keyword">in</span> [<span class="hljs-string">"title"</span>, <span class="hljs-string">"body"</span>, <span class="hljs-string">"labels"</span>]: 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"<span class="hljs-subst">{column}</span>: <span class="hljs-subst">{df_issues[column].iloc[<span class="hljs-number">26</span>][:<span class="hljs-number">500</span>]}</span>\n"</span>) 
 
 title: Add new CANINE model 
-body: # New model addition 
-## Model description 
-Google recently proposed a new **C**haracter **A**rchitecture with **N**o tokenization **I**n **N**eural **E**ncoders architecture (CANINE). Not only the title is exciting: 
+body: <span class="hljs-comment"># New model addition </span>
+<span class="hljs-comment">## Model description </span>
+Google recently proposed a new **C**haracter **A**rchitecture <span class="hljs-keyword">with</span> **N**o tokenization **I**n **N**eural **E**ncoders architecture (CANINE). Not only the title <span class="hljs-keyword">is</span> exciting: 
 
-Pipelined NLP systems have largely been superseded by end-to-end neural modeling, yet nearly all commonly-used models still require an explicit tokenization step. While recent tokenization approaches based on data-derived subword lexicons are less brittle than manually en 
+Pipelined NLP systems have largely been superseded by end-to-end neural modeling, yet nearly <span class="hljs-built_in">all</span> commonly-used models still require an explicit tokenization step. While recent tokenization approaches based on data-derived subword lexicons are less brittle than manually en 
 
-labels: ['new model']
-</code></pre><p>在这个例子中，我们提出了一个新的模型架构，所以新模型标签是有意义的。我们还可以看到，标题包含了对我们的分类器有用的信息，所以让我们把它与正文字段中的问题描述连接起来:</p>
-<pre><code>df_issues["text"] = (df_issues .apply(lambda x: x["title"] + "\n\n" + x["body"], axis=1))
-</code></pre><p>在我们看其余的数据之前，让我们检查一下数据中是否有重复的部分，并通过drop_duplicates()方法将它们删除:</p>
-<pre><code>len_before = len(df_issues) 
-df_issues = df_issues.drop_duplicates(subset="text") 
-print(f"Removed {(len_before-len(df_issues))/len_before:.2%} duplicates.")
+labels: [<span class="hljs-string">'new model'</span>]
+</code></pre>
+<p>在这个例子中，我们提出了一个新的模型架构，所以新模型标签是有意义的。我们还可以看到，标题包含了对我们的分类器有用的信息，所以让我们把它与正文字段中的问题描述连接起来:</p>
+<pre><code class="lang-python">df_issues[<span class="hljs-string">"text"</span>] = (df_issues .apply(<span class="hljs-keyword">lambda</span> x: x[<span class="hljs-string">"title"</span>] + <span class="hljs-string">"\n\n"</span> + x[<span class="hljs-string">"body"</span>], axis=<span class="hljs-number">1</span>))
+</code></pre>
+<p>在我们看其余的数据之前，让我们检查一下数据中是否有重复的部分，并通过drop_duplicates()方法将它们删除:</p>
+<pre><code class="lang-python">len_before = <span class="hljs-built_in">len</span>(df_issues) 
+df_issues = df_issues.drop_duplicates(subset=<span class="hljs-string">"text"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Removed <span class="hljs-subst">{(len_before-<span class="hljs-built_in">len</span>(df_issues))/len_before:<span class="hljs-number">.2</span>%}</span> duplicates."</span>)
 
-Removed 1.88% duplicates.
-</code></pre><p>我们可以看到，在我们的数据集中有一些重复的问题，但它们只占很小的比例。正如我们在其他章节中所做的那样，快速看一下我们文本中的字数也是一个好主意，看看当我们截断到每个模型的上下文大小时，我们是否会失去很多信息:</p>
-<pre><code>import numpy as np import matplotlib.pyplot as plt 
+Removed <span class="hljs-number">1.88</span>% duplicates.
+</code></pre>
+<p>我们可以看到，在我们的数据集中有一些重复的问题，但它们只占很小的比例。正如我们在其他章节中所做的那样，快速看一下我们文本中的字数也是一个好主意，看看当我们截断到每个模型的上下文大小时，我们是否会失去很多信息:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np <span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt 
 
-(df_issues["text"].str.split().apply(len) .hist(bins=np.linspace(0, 500, 50), grid=False, edgecolor="C0")) 
-plt.title("Words per issue") 
-plt.xlabel("Number of words") 
-plt.ylabel("Number of issues") 
+(df_issues[<span class="hljs-string">"text"</span>].<span class="hljs-built_in">str</span>.split().apply(<span class="hljs-built_in">len</span>) .hist(bins=np.linspace(<span class="hljs-number">0</span>, <span class="hljs-number">500</span>, <span class="hljs-number">50</span>), grid=<span class="hljs-literal">False</span>, edgecolor=<span class="hljs-string">"C0"</span>)) 
+plt.title(<span class="hljs-string">"Words per issue"</span>) 
+plt.xlabel(<span class="hljs-string">"Number of words"</span>) 
+plt.ylabel(<span class="hljs-string">"Number of issues"</span>) 
 plt.show()
-</code></pre><p><img src="images/chapter9/image-20220215073927742.png" alt="image-20220215073927742"></img></p>
+</code></pre>
+<p><img src="images/chapter9/image-20220215073927742.png" alt="image-20220215073927742"></img></p>
 <p>该分布具有许多文本数据集的长尾特征。大多数文本都相当短，但也有超过500字的问题。有一些很长的问题是很常见的，特别是当错误信息和代码片段一起发布时。鉴于大多数转化器模型的上下文大小为512个标记或更大，截断少数长问题不可能影响整体性能。现在我们已经探索并清理了我们的数据集，最后要做的是定义我们的训练集和验证集，以便为我们的分类器设定基准。让我们来看看如何做到这一点。</p>
 <h3 id="创建训练集">创建训练集</h3>
 <p>对于多标签问题来说，创建训练集和验证集是比较麻烦的，因为没有保证所有标签的平衡。然而，它可以被近似，我们可以使用Scikit-multilearn库，它是专门为此目的而设置的。我们需要做的第一件事是将我们的标签集，如pytorch和标记化，转换成模型可以处理的格式。在这里，我们可以使用Scikit-learn的MultiLabel Binarizer类，它接收一个标签名称的列表，并创建一个矢量，其中零代表没有的标签，一代表现在的标签。我们可以通过在all_labels上拟合MultiLabelBinarizer来测试，学习标签名称到ID的映射，如下所示:</p>
-<pre><code>from sklearn.preprocessing import MultiLabelBinarizer 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> sklearn.preprocessing <span class="hljs-keyword">import</span> MultiLabelBinarizer 
 mlb = MultiLabelBinarizer() 
 mlb.fit([all_labels]) 
-mlb.transform([["tokenization", "new model"], ["pytorch"]])
+mlb.transform([[<span class="hljs-string">"tokenization"</span>, <span class="hljs-string">"new model"</span>], [<span class="hljs-string">"pytorch"</span>]])
 
-array([[0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0]])
-</code></pre><p>在这个简单的例子中，我们可以看到第一行有两个对应于标记化和新模型标签的，而第二行只有一个pytorch的命中。</p>
+array([[<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>], [<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>]])
+</code></pre>
+<p>在这个简单的例子中，我们可以看到第一行有两个对应于标记化和新模型标签的，而第二行只有一个pytorch的命中。</p>
 <p>为了创建分割，我们可以使用Scikit-multilearn的iterative_train_test_split()函数，它可以迭代地创建训练/测试分割以实现平衡标签。我们把它包装成一个可以应用于DataFrames的函数。由于该函数期望有一个二维特征矩阵，我们需要在进行分割之前给可能的索引增加一个维度。</p>
-<pre><code>from skmultilearn.model_selection import iterative_train_test_split 
-def balanced_split(df, test_size=0.5): 
-    ind = np.expand_dims(np.arange(len(df)), axis=1) 
-    labels = mlb.transform(df["labels"]) 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> skmultilearn.model_selection <span class="hljs-keyword">import</span> iterative_train_test_split 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">balanced_split</span>(<span class="hljs-params">df, test_size=<span class="hljs-number">0.5</span></span>): 
+    ind = np.expand_dims(np.arange(<span class="hljs-built_in">len</span>(df)), axis=<span class="hljs-number">1</span>) 
+    labels = mlb.transform(df[<span class="hljs-string">"labels"</span>]) 
     ind_train, _, ind_test, _ = iterative_train_test_split(ind, labels, test_size)
-    return df.iloc[ind_train[:, 0]], df.iloc[ind_test[:,0]]
-</code></pre><p>有了balanced_split()函数，我们可以把数据分成有监督和无监督的数据集，然后为有监督的部分创建平衡的训练、验证和测试集:</p>
-<pre><code>from sklearn.model_selection import train_test_split 
-df_clean = df_issues[["text", "labels", "split"]].reset_index(drop=True).copy() 
-df_unsup = df_clean.loc[df_clean["split"] == "unlabeled", ["text", "labels"]] 
-df_sup = df_clean.loc[df_clean["split"] == "labeled", ["text", "labels"]] 
+    <span class="hljs-keyword">return</span> df.iloc[ind_train[:, <span class="hljs-number">0</span>]], df.iloc[ind_test[:,<span class="hljs-number">0</span>]]
+</code></pre>
+<p>有了balanced_split()函数，我们可以把数据分成有监督和无监督的数据集，然后为有监督的部分创建平衡的训练、验证和测试集:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> sklearn.model_selection <span class="hljs-keyword">import</span> train_test_split 
+df_clean = df_issues[[<span class="hljs-string">"text"</span>, <span class="hljs-string">"labels"</span>, <span class="hljs-string">"split"</span>]].reset_index(drop=<span class="hljs-literal">True</span>).copy() 
+df_unsup = df_clean.loc[df_clean[<span class="hljs-string">"split"</span>] == <span class="hljs-string">"unlabeled"</span>, [<span class="hljs-string">"text"</span>, <span class="hljs-string">"labels"</span>]] 
+df_sup = df_clean.loc[df_clean[<span class="hljs-string">"split"</span>] == <span class="hljs-string">"labeled"</span>, [<span class="hljs-string">"text"</span>, <span class="hljs-string">"labels"</span>]] 
 
-np.random.seed(0) 
-df_train, df_tmp = balanced_split(df_sup, test_size=0.5) 
-df_valid, df_test = balanced_split(df_tmp, test_size=0.5)
-</code></pre><p>最后，让我们创建一个包含所有分片的DatasetDict，这样我们就可以轻松地对数据集进行标记，并与Trainer整合。在这里，我们将使用漂亮的from_pandas()方法，直接从相应的Pandas DataFrame中加载每个分片:</p>
-<pre><code>from datasets import Dataset, DatasetDict 
+np.random.seed(<span class="hljs-number">0</span>) 
+df_train, df_tmp = balanced_split(df_sup, test_size=<span class="hljs-number">0.5</span>) 
+df_valid, df_test = balanced_split(df_tmp, test_size=<span class="hljs-number">0.5</span>)
+</code></pre>
+<p>最后，让我们创建一个包含所有分片的DatasetDict，这样我们就可以轻松地对数据集进行标记，并与Trainer整合。在这里，我们将使用漂亮的from_pandas()方法，直接从相应的Pandas DataFrame中加载每个分片:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> datasets <span class="hljs-keyword">import</span> Dataset, DatasetDict 
 
-ds = DatasetDict({ "train": Dataset.from_pandas(df_train.reset_index(drop=True)), "valid": Dataset.from_pandas(df_valid.reset_index(drop=True)), "test": Dataset.from_pandas(df_test.reset_index(drop=True)), "unsup": Dataset.from_pandas(df_unsup.reset_index(drop=True))})
-</code></pre><p>这看起来不错，所以最后要做的是创建一些训练片，以便我们可以评估每个分类器的性能与训练集大小的关系。</p>
+ds = DatasetDict({ <span class="hljs-string">"train"</span>: Dataset.from_pandas(df_train.reset_index(drop=<span class="hljs-literal">True</span>)), <span class="hljs-string">"valid"</span>: Dataset.from_pandas(df_valid.reset_index(drop=<span class="hljs-literal">True</span>)), <span class="hljs-string">"test"</span>: Dataset.from_pandas(df_test.reset_index(drop=<span class="hljs-literal">True</span>)), <span class="hljs-string">"unsup"</span>: Dataset.from_pandas(df_unsup.reset_index(drop=<span class="hljs-literal">True</span>))})
+</code></pre>
+<p>这看起来不错，所以最后要做的是创建一些训练片，以便我们可以评估每个分类器的性能与训练集大小的关系。</p>
 <h3 id="创建训练切片">创建训练切片</h3>
 <p>该数据集具有我们在本章要研究的两个特点：稀疏的标记数据和多标签分类。训练集只有220个例子可供训练，即使是迁移学习，这也是一个挑战。为了深入研究本章中每种方法在很少的标签数据下的表现，我们还将创建样本更少的训练数据片。然后，我们可以将样本的数量与性能作对比，研究各种制度。我们将从每个标签只有8个样本开始，然后使用iterative_train_test_split()函数建立切片，直到覆盖全部的训练集:</p>
-<pre><code>np.random.seed(0) 
-all_indices = np.expand_dims(list(range(len(ds["train"]))), axis=1) 
+<pre><code class="lang-python">np.random.seed(<span class="hljs-number">0</span>) 
+all_indices = np.expand_dims(<span class="hljs-built_in">list</span>(<span class="hljs-built_in">range</span>(<span class="hljs-built_in">len</span>(ds[<span class="hljs-string">"train"</span>]))), axis=<span class="hljs-number">1</span>) 
 indices_pool = all_indices 
-labels = mlb.transform(ds["train"]["labels"]) 
-train_samples = [8, 16, 32, 64, 128] 
-train_slices, last_k = [], 0 
-for i, k in enumerate(train_samples):
-    # Split off samples necessary to fill the gap to the next split size 
-    indices_pool, labels, new_slice, _ = iterative_train_test_split( indices_pool, labels, (k-last_k)/len(labels)) 
+labels = mlb.transform(ds[<span class="hljs-string">"train"</span>][<span class="hljs-string">"labels"</span>]) 
+train_samples = [<span class="hljs-number">8</span>, <span class="hljs-number">16</span>, <span class="hljs-number">32</span>, <span class="hljs-number">64</span>, <span class="hljs-number">128</span>] 
+train_slices, last_k = [], <span class="hljs-number">0</span> 
+<span class="hljs-keyword">for</span> i, k <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(train_samples):
+    <span class="hljs-comment"># Split off samples necessary to fill the gap to the next split size </span>
+    indices_pool, labels, new_slice, _ = iterative_train_test_split( indices_pool, labels, (k-last_k)/<span class="hljs-built_in">len</span>(labels)) 
     last_k = k 
-    if i==0: 
+    <span class="hljs-keyword">if</span> i==<span class="hljs-number">0</span>: 
         train_slices.append(new_slice) 
-    else: 
-        train_slices.append(np.concatenate((train_slices[-1], new_slice))) 
-# Add full dataset as last slice 
-train_slices.append(all_indices), train_samples.append(len(ds["train"])) 
-train_slices = [np.squeeze(train_slice) for train_slice in train_slices]
-</code></pre><p>请注意，这种迭代方法只是将样本近似地分割成所需的大小，因为在给定的分割大小下并不总是能够找到平衡的分割:</p>
-<pre><code>print("Target split sizes:") 
-print(train_samples) 
-print("Actual split sizes:") 
-print([len(x) for x in train_slices]) 
+    <span class="hljs-keyword">else</span>: 
+        train_slices.append(np.concatenate((train_slices[-<span class="hljs-number">1</span>], new_slice))) 
+<span class="hljs-comment"># Add full dataset as last slice </span>
+train_slices.append(all_indices), train_samples.append(<span class="hljs-built_in">len</span>(ds[<span class="hljs-string">"train"</span>])) 
+train_slices = [np.squeeze(train_slice) <span class="hljs-keyword">for</span> train_slice <span class="hljs-keyword">in</span> train_slices]
+</code></pre>
+<p>请注意，这种迭代方法只是将样本近似地分割成所需的大小，因为在给定的分割大小下并不总是能够找到平衡的分割:</p>
+<pre><code class="lang-python"><span class="hljs-built_in">print</span>(<span class="hljs-string">"Target split sizes:"</span>) 
+<span class="hljs-built_in">print</span>(train_samples) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"Actual split sizes:"</span>) 
+<span class="hljs-built_in">print</span>([<span class="hljs-built_in">len</span>(x) <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> train_slices]) 
 
-Target split sizes: [8, 16, 32, 64, 128, 223] Actual split sizes: [10, 19, 36, 68, 134, 223]
-</code></pre><p>我们将使用指定的分割大小作为以下图表的标签。很好，我们终于准备好了我们的数据集的训练分片--接下来让我们看看如何训练一个强大的基线模型!</p>
+Target split sizes: [<span class="hljs-number">8</span>, <span class="hljs-number">16</span>, <span class="hljs-number">32</span>, <span class="hljs-number">64</span>, <span class="hljs-number">128</span>, <span class="hljs-number">223</span>] Actual split sizes: [<span class="hljs-number">10</span>, <span class="hljs-number">19</span>, <span class="hljs-number">36</span>, <span class="hljs-number">68</span>, <span class="hljs-number">134</span>, <span class="hljs-number">223</span>]
+</code></pre>
+<p>我们将使用指定的分割大小作为以下图表的标签。很好，我们终于准备好了我们的数据集的训练分片--接下来让我们看看如何训练一个强大的基线模型!</p>
 <h2 id="实现朴素贝叶斯基线">实现朴素贝叶斯基线</h2>
 <p>每当你开始一个新的NLP项目时，实施一套强有力的基线总是一个好主意。这有两个主要原因:</p>
 <ol>
@@ -495,62 +514,66 @@ Target split sizes: [8, 16, 32, 64, 128, 223] Actual split sizes: [10, 19, 36, 6
 <li>当你探索更复杂的模型时，基线提供快速检查。例如，假设你训练BERT-large，并在验证集上获得80%的准确率。你可能会把它作为一个硬数据集来处理，然后就此打住。但是，如果你知道像逻辑回归这样的简单分类器可以得到95%的准确率呢？这就会引起你的怀疑，并促使你去调试你的模型。</li>
 </ol>
 <p>因此，让我们通过训练一个基线模型来开始我们的分析。对于文本分类来说，一个很好的基线是Naive Bayes分类器，因为它非常简单，可以快速训练，并且对输入的扰动相当稳健。Naive Bayes的Scikit-learn实现并不支持开箱即用的多标签分类，但幸运的是，我们可以再次使用Scikitmultilearn库，将这个问题作为一个单对单的分类任务，我们为L标签训练L个二进制分类器。首先，让我们使用一个多标签二值化器，在我们的训练集中创建一个新的标签_ids列。我们可以使用map()函数来一次性搞定所有的处理:</p>
-<pre><code>ef prepare_labels(batch): 
-    batch["label_ids"] = mlb.transform(batch["labels"]) 
-    return batch 
-ds = ds.map(prepare_labels, batched=True)
-</code></pre><p>为了衡量我们的分类器的性能，我们将使用微观和宏观的F-scores，其中前者跟踪频繁标签的性能，后者跟踪不考虑频率的所有标签。由于我们将在不同大小的训练片段中评估每个模型，让我们创建一个defaultdict，用一个列表来存储每个片段的得分:</p>
-<pre><code>from collections import defaultdict
+<pre><code class="lang-python">ef prepare_labels(batch): 
+    batch[<span class="hljs-string">"label_ids"</span>] = mlb.transform(batch[<span class="hljs-string">"labels"</span>]) 
+    <span class="hljs-keyword">return</span> batch 
+ds = ds.<span class="hljs-built_in">map</span>(prepare_labels, batched=<span class="hljs-literal">True</span>)
+</code></pre>
+<p>为了衡量我们的分类器的性能，我们将使用微观和宏观的F-scores，其中前者跟踪频繁标签的性能，后者跟踪不考虑频率的所有标签。由于我们将在不同大小的训练片段中评估每个模型，让我们创建一个defaultdict，用一个列表来存储每个片段的得分:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> collections <span class="hljs-keyword">import</span> defaultdict
 
-macro_scores, micro_scores = defaultdict(list), defaultdict(list)
-</code></pre><p>现在我们终于准备好训练我们的基线了! 下面是训练模型的代码，并在不断增加的训练集规模中评估我们的分类器:</p>
-<pre><code>from sklearn.naive_bayes import MultinomialNB 
-from sklearn.metrics import classification_report 
-from skmultilearn.problem_transform import BinaryRelevance 
-from sklearn.feature_extraction.text import CountVectorizer 
-for train_slice in train_slices: 
-    # Get training slice and test data 
-    ds_train_sample = ds["train"].select(train_slice) 
-    y_train = np.array(ds_train_sample["label_ids"]) 
-    y_test = np.array(ds["test"]["label_ids"]) 
-    # Use a simple count vectorizer to encode our texts as token counts 
+macro_scores, micro_scores = defaultdict(<span class="hljs-built_in">list</span>), defaultdict(<span class="hljs-built_in">list</span>)
+</code></pre>
+<p>现在我们终于准备好训练我们的基线了! 下面是训练模型的代码，并在不断增加的训练集规模中评估我们的分类器:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> sklearn.naive_bayes <span class="hljs-keyword">import</span> MultinomialNB 
+<span class="hljs-keyword">from</span> sklearn.metrics <span class="hljs-keyword">import</span> classification_report 
+<span class="hljs-keyword">from</span> skmultilearn.problem_transform <span class="hljs-keyword">import</span> BinaryRelevance 
+<span class="hljs-keyword">from</span> sklearn.feature_extraction.text <span class="hljs-keyword">import</span> CountVectorizer 
+<span class="hljs-keyword">for</span> train_slice <span class="hljs-keyword">in</span> train_slices: 
+    <span class="hljs-comment"># Get training slice and test data </span>
+    ds_train_sample = ds[<span class="hljs-string">"train"</span>].select(train_slice) 
+    y_train = np.array(ds_train_sample[<span class="hljs-string">"label_ids"</span>]) 
+    y_test = np.array(ds[<span class="hljs-string">"test"</span>][<span class="hljs-string">"label_ids"</span>]) 
+    <span class="hljs-comment"># Use a simple count vectorizer to encode our texts as token counts </span>
     count_vect = CountVectorizer() 
-    X_train_counts = count_vect.fit_transform(ds_train_sample["text"]) 
-    X_test_counts = count_vect.transform(ds["test"]["text"]) 
-    # Create and train our model! 
+    X_train_counts = count_vect.fit_transform(ds_train_sample[<span class="hljs-string">"text"</span>]) 
+    X_test_counts = count_vect.transform(ds[<span class="hljs-string">"test"</span>][<span class="hljs-string">"text"</span>]) 
+    <span class="hljs-comment"># Create and train our model! </span>
     classifier = BinaryRelevance(classifier=MultinomialNB()) classifier.fit(X_train_counts, y_train) 
-    # Generate predictions and evaluate 
+    <span class="hljs-comment"># Generate predictions and evaluate </span>
     y_pred_test = classifier.predict(X_test_counts) 
-    clf_report = classification_report( y_test, y_pred_test, target_names=mlb.classes_, zero_division=0, output_dict=True) 
-    # Store metrics 
-    macro_scores["Naive Bayes"].append(clf_report["macro avg"]["f1-score"]) 
-    micro_scores["Naive Bayes"].append(clf_report["micro avg"]["f1-score"])
-</code></pre><p>在这段代码中，有很多事情要做，所以让我们来解开它。首先，我们得到训练片并对标签进行编码。然后，我们使用计数向量器对文本进行编码，简单地创建一个词汇量大小的向量，其中每个条目对应于文本中某一标记出现的频率。这被称为 "词包 "方法，因为所有关于词的顺序的信息都会丢失。然后，我们训练分类器，并在测试集上使用预测结果，通过分类报告获得微观和宏观的F-scores。</p>
+    clf_report = classification_report( y_test, y_pred_test, target_names=mlb.classes_, zero_division=<span class="hljs-number">0</span>, output_dict=<span class="hljs-literal">True</span>) 
+    <span class="hljs-comment"># Store metrics </span>
+    macro_scores[<span class="hljs-string">"Naive Bayes"</span>].append(clf_report[<span class="hljs-string">"macro avg"</span>][<span class="hljs-string">"f1-score"</span>]) 
+    micro_scores[<span class="hljs-string">"Naive Bayes"</span>].append(clf_report[<span class="hljs-string">"micro avg"</span>][<span class="hljs-string">"f1-score"</span>])
+</code></pre>
+<p>在这段代码中，有很多事情要做，所以让我们来解开它。首先，我们得到训练片并对标签进行编码。然后，我们使用计数向量器对文本进行编码，简单地创建一个词汇量大小的向量，其中每个条目对应于文本中某一标记出现的频率。这被称为 "词包 "方法，因为所有关于词的顺序的信息都会丢失。然后，我们训练分类器，并在测试集上使用预测结果，通过分类报告获得微观和宏观的F-scores。</p>
 <p>通过下面的辅助函数，我们可以绘制这个实验的结果:</p>
-<pre><code>import matplotlib.pyplot as plt 
-def plot_metrics(micro_scores, macro_scores, sample_sizes, current_model): 
-    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 4), sharey=True) 
-    for run in micro_scores.keys(): 
-        if run == current_model: 
-            ax0.plot(sample_sizes, micro_scores[run], label=run, linewidth=2) 
-            ax1.plot(sample_sizes, macro_scores[run], label=run, linewidth=2) 
-        else: 
-            ax0.plot(sample_sizes, micro_scores[run], label=run, linestyle="dashed") 
-            ax1.plot(sample_sizes, macro_scores[run], label=run, linestyle="dashed") 
-    ax0.set_title("Micro F1 scores") 
-    ax1.set_title("Macro F1 scores") 
-    ax0.set_ylabel("Test set F1 score") 
-    ax0.legend(loc="lower right") 
-    for ax in [ax0, ax1]: 
-        ax.set_xlabel("Number of training samples") 
-        ax.set_xscale("log") 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> matplotlib.pyplot <span class="hljs-keyword">as</span> plt 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">plot_metrics</span>(<span class="hljs-params">micro_scores, macro_scores, sample_sizes, current_model</span>): 
+    fig, (ax0, ax1) = plt.subplots(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, figsize=(<span class="hljs-number">10</span>, <span class="hljs-number">4</span>), sharey=<span class="hljs-literal">True</span>) 
+    <span class="hljs-keyword">for</span> run <span class="hljs-keyword">in</span> micro_scores.keys(): 
+        <span class="hljs-keyword">if</span> run == current_model: 
+            ax0.plot(sample_sizes, micro_scores[run], label=run, linewidth=<span class="hljs-number">2</span>) 
+            ax1.plot(sample_sizes, macro_scores[run], label=run, linewidth=<span class="hljs-number">2</span>) 
+        <span class="hljs-keyword">else</span>: 
+            ax0.plot(sample_sizes, micro_scores[run], label=run, linestyle=<span class="hljs-string">"dashed"</span>) 
+            ax1.plot(sample_sizes, macro_scores[run], label=run, linestyle=<span class="hljs-string">"dashed"</span>) 
+    ax0.set_title(<span class="hljs-string">"Micro F1 scores"</span>) 
+    ax1.set_title(<span class="hljs-string">"Macro F1 scores"</span>) 
+    ax0.set_ylabel(<span class="hljs-string">"Test set F1 score"</span>) 
+    ax0.legend(loc=<span class="hljs-string">"lower right"</span>) 
+    <span class="hljs-keyword">for</span> ax <span class="hljs-keyword">in</span> [ax0, ax1]: 
+        ax.set_xlabel(<span class="hljs-string">"Number of training samples"</span>) 
+        ax.set_xscale(<span class="hljs-string">"log"</span>) 
         ax.set_xticks(sample_sizes) 
         ax.set_xticklabels(sample_sizes) 
         ax.minorticks_off() 
     plt.tight_layout() 
     plt.show() 
-plot_metrics(micro_scores, macro_scores, train_samples, "Naive Bayes")
-</code></pre><p><img src="images/chapter9/image-20220215075403491.png" alt="image-20220215075403491"></img></p>
+plot_metrics(micro_scores, macro_scores, train_samples, <span class="hljs-string">"Naive Bayes"</span>)
+</code></pre>
+<p><img src="images/chapter9/image-20220215075403491.png" alt="image-20220215075403491"></img></p>
 <p>请注意，我们将样本的数量绘制在对数刻度上。从图中我们可以看到，随着训练样本数量的增加，微观和宏观的F-scores都有所提高。由于可以训练的样本太少，结果也略显嘈杂，因为每个片断都可能有不同的类别分布。尽管如此，这里最重要的是趋势，所以现在让我们看看这些结果与基于Transformers的方法相比如何吧!</p>
 <h2 id="零样本学习">零样本学习</h2>
 <p>我们要考虑的第一个技术是零样本分类，它适用于你完全没有标签数据的环境。这种情况在工业界出奇地普遍，可能是因为没有带标签的历史数据，或者因为获取数据的标签很困难。在这一节中，我们会有一点欺骗，因为我们仍然会使用测试数据来衡量性能，但我们不会使用任何数据来训练模型（否则与以下方法的比较会很困难）。</p>
@@ -558,36 +581,40 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Naive Bayes")
 <p>“This section was about the topic [MASK].”</p>
 <p>然后，该模型应该对该文件的主题给出一个合理的建议，因为这是一个在数据集中自然出现的文本。</p>
 <p>让我们用下面这个玩具问题来进一步说明：假设你有两个孩子，其中一个喜欢有汽车的电影，而另一个更喜欢有动物的电影。不幸的是，他们已经看过所有你知道的电影，所以你想建立一个函数，告诉你新电影是关于什么主题的。自然而然地，你转向Transformers来完成这项任务。首先要尝试的是将BERT-base加载到fill-mask流水线中，该流水线使用掩码语言模型来预测掩码标记的内容：</p>
-<pre><code>from transformers import pipeline 
-pipe = pipeline("fill-mask", model="bert-base-uncased")
-</code></pre><p>接下来，让我们构建一个小的电影描述，并在其中添加一个带有遮蔽词的提示。提示的目的是引导模型，帮助我们进行分类。填充-屏蔽流水线会返回最可能的标记来填充被屏蔽的地方：</p>
-<pre><code>movie_desc = "The main characters of the movie madacascar \ are a lion, a zebra, a giraffe, and a hippo. " 
-prompt = "The movie is about [MASK]." 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> pipeline 
+pipe = pipeline(<span class="hljs-string">"fill-mask"</span>, model=<span class="hljs-string">"bert-base-uncased"</span>)
+</code></pre>
+<p>接下来，让我们构建一个小的电影描述，并在其中添加一个带有遮蔽词的提示。提示的目的是引导模型，帮助我们进行分类。填充-屏蔽流水线会返回最可能的标记来填充被屏蔽的地方：</p>
+<pre><code class="lang-python">movie_desc = <span class="hljs-string">"The main characters of the movie madacascar \ are a lion, a zebra, a giraffe, and a hippo. "</span> 
+prompt = <span class="hljs-string">"The movie is about [MASK]."</span> 
 output = pipe(movie_desc + prompt) 
-for element in output: 
-    print(f"Token {element['token_str']}:\t{element['score']:.3f}%") 
+<span class="hljs-keyword">for</span> element <span class="hljs-keyword">in</span> output: 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"Token <span class="hljs-subst">{element[<span class="hljs-string">'token_str'</span>]}</span>:\t<span class="hljs-subst">{element[<span class="hljs-string">'score'</span>]:<span class="hljs-number">.3</span>f}</span>%"</span>) 
 
-Token animals: 0.103% 
-Token lions: 0.066% 
-Token birds: 0.025% 
-Token love: 0.015% 
-Token hunting: 0.013%
-</code></pre><p>显然，该模型只预测了与动物有关的标记。我们也可以把这个问题转过来，我们可以向流水线查询几个给定标记的概率，而不是获得最可能的标记。对于这个任务，我们可能会选择汽车和动物，所以我们可以把它们作为目标传递给流水线：</p>
-<pre><code>output = pipe(movie_desc + prompt, targets=["animals", "cars"]) 
-for element in output: 
-    print(f"Token {element['token_str']}:\t{element['score']:.3f}%") 
+Token animals: <span class="hljs-number">0.103</span>% 
+Token lions: <span class="hljs-number">0.066</span>% 
+Token birds: <span class="hljs-number">0.025</span>% 
+Token love: <span class="hljs-number">0.015</span>% 
+Token hunting: <span class="hljs-number">0.013</span>%
+</code></pre>
+<p>显然，该模型只预测了与动物有关的标记。我们也可以把这个问题转过来，我们可以向流水线查询几个给定标记的概率，而不是获得最可能的标记。对于这个任务，我们可能会选择汽车和动物，所以我们可以把它们作为目标传递给流水线：</p>
+<pre><code class="lang-python">output = pipe(movie_desc + prompt, targets=[<span class="hljs-string">"animals"</span>, <span class="hljs-string">"cars"</span>]) 
+<span class="hljs-keyword">for</span> element <span class="hljs-keyword">in</span> output: 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"Token <span class="hljs-subst">{element[<span class="hljs-string">'token_str'</span>]}</span>:\t<span class="hljs-subst">{element[<span class="hljs-string">'score'</span>]:<span class="hljs-number">.3</span>f}</span>%"</span>) 
 
-Token animals: 0.103% 
-Token cars: 0.001%
-</code></pre><p>不出所料，对象征性的汽车的预测概率要比对动物的预测概率小得多。让我们看看这是否也适用于更接近于汽车的描述：</p>
-<pre><code>movie_desc = "In the movie transformers aliens \ can morph into a wide range of vehicles." 
-output = pipe(movie_desc + prompt, targets=["animals", "cars"]) 
-for element in output: 
-    print(f"Token {element['token_str']}:\t{element['score']:.3f}%") 
+Token animals: <span class="hljs-number">0.103</span>% 
+Token cars: <span class="hljs-number">0.001</span>%
+</code></pre>
+<p>不出所料，对象征性的汽车的预测概率要比对动物的预测概率小得多。让我们看看这是否也适用于更接近于汽车的描述：</p>
+<pre><code class="lang-python">movie_desc = <span class="hljs-string">"In the movie transformers aliens \ can morph into a wide range of vehicles."</span> 
+output = pipe(movie_desc + prompt, targets=[<span class="hljs-string">"animals"</span>, <span class="hljs-string">"cars"</span>]) 
+<span class="hljs-keyword">for</span> element <span class="hljs-keyword">in</span> output: 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"Token <span class="hljs-subst">{element[<span class="hljs-string">'token_str'</span>]}</span>:\t<span class="hljs-subst">{element[<span class="hljs-string">'score'</span>]:<span class="hljs-number">.3</span>f}</span>%"</span>) 
 
-Token cars: 0.139% 
-Token animals: 0.006%
-</code></pre><p>它是这样的! 这只是一个简单的例子，如果我们想确保它运行良好，我们应该对它进行彻底的测试，但它说明了本章所讨论的许多方法的关键思想：找到一种方法，使一个预训练的模型适应另一个任务，而不需要训练它。在这种情况下，我们设置了一个带有掩码的提示，这样我们就可以直接使用掩码的语言模型进行分类。让我们来看看我们是否可以通过调整一个已经在一个更接近文本分类的任务上进行微调的模型来做得更好：自然语言推理（NLI）。</p>
+Token cars: <span class="hljs-number">0.139</span>% 
+Token animals: <span class="hljs-number">0.006</span>%
+</code></pre>
+<p>它是这样的! 这只是一个简单的例子，如果我们想确保它运行良好，我们应该对它进行彻底的测试，但它说明了本章所讨论的许多方法的关键思想：找到一种方法，使一个预训练的模型适应另一个任务，而不需要训练它。在这种情况下，我们设置了一个带有掩码的提示，这样我们就可以直接使用掩码的语言模型进行分类。让我们来看看我们是否可以通过调整一个已经在一个更接近文本分类的任务上进行微调的模型来做得更好：自然语言推理（NLI）。</p>
 <p>使用屏蔽语言模型进行分类是一个很好的技巧，但我们还可以通过使用一个在更接近分类的任务上训练出来的模型来做得更好。有一个整洁的代理任务，叫做文本连带关系，符合这个条件。在文本连带关系中，模型需要确定两个文本段落是否有可能相互跟随或相互矛盾。模型通常被训练来检测多流派NLI语料库（MNLI）或跨语言NLI语料库（XNLI）等数据集的衔接和矛盾。</p>
 <p>这些数据集中的每个样本都由三部分组成：一个前提、一个假设和一个标签，标签可以是连带、中性或矛盾的。当假设文本在前提下必然为真时，就会被分配到entailment标签。当假设在前提下必然是假的或不合适时，就会使用矛盾标签。</p>
 <p>如果这两种情况都不适用，那么就会分配中性标签。每种情况的例子见表9-1。</p>
@@ -596,114 +623,123 @@ Token animals: 0.006%
 <p>“This example is about {label}.”</p>
 <p>其中我们插入了标签的类别名称。然后，连带分数告诉我们，该前提与该主题有关的可能性有多大，我们可以对任何数量的类依次运行这个方法。这种方法的缺点是，我们需要对每个类别执行一个前向传递，这使得它的效率低于标准分类器。另一个稍显棘手的方面是，标签名称的选择会对准确性产生很大的影响，选择具有语义的标签通常是最好的方法。例如，如果标签只是简单的第1类，那么模型就没有提示这可能意味着什么，以及这是否构成了矛盾或包含关系。</p>
 <p>Transformers有一个内置的MNLI模型用于零样本分类。我们可以通过一个流水线来初始化它，如下所示：</p>
-<pre><code>from transformers import pipeline 
-pipe = pipeline("zero-shot-classification", device=0)
-</code></pre><p>device=0的设置可以确保模型在GPU上运行，而不是默认的CPU，以加快推理速度。要对一个文本进行分类，我们只需要把它和标签名称一起传递给流水线。此外，我们可以设置multi_label=True，以确保返回所有的分数，而不是只返回单标签分类的最大分数：</p>
-<pre><code>sample = ds["train"][0] 
-print(f"Labels: {sample['labels']}") 
-output = pipe(sample["text"], all_labels, multi_label=True) 
-print(output["sequence"][:400]) 
-print("\nPredictions:") 
-for label, score in zip(output["labels"], output["scores"]): 
-    print(f"{label}, {score:.2f}") 
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> pipeline 
+pipe = pipeline(<span class="hljs-string">"zero-shot-classification"</span>, device=<span class="hljs-number">0</span>)
+</code></pre>
+<p>device=0的设置可以确保模型在GPU上运行，而不是默认的CPU，以加快推理速度。要对一个文本进行分类，我们只需要把它和标签名称一起传递给流水线。此外，我们可以设置multi_label=True，以确保返回所有的分数，而不是只返回单标签分类的最大分数：</p>
+<pre><code class="lang-python">sample = ds[<span class="hljs-string">"train"</span>][<span class="hljs-number">0</span>] 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Labels: <span class="hljs-subst">{sample[<span class="hljs-string">'labels'</span>]}</span>"</span>) 
+output = pipe(sample[<span class="hljs-string">"text"</span>], all_labels, multi_label=<span class="hljs-literal">True</span>) 
+<span class="hljs-built_in">print</span>(output[<span class="hljs-string">"sequence"</span>][:<span class="hljs-number">400</span>]) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"\nPredictions:"</span>) 
+<span class="hljs-keyword">for</span> label, score <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(output[<span class="hljs-string">"labels"</span>], output[<span class="hljs-string">"scores"</span>]): 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"<span class="hljs-subst">{label}</span>, <span class="hljs-subst">{score:<span class="hljs-number">.2</span>f}</span>"</span>) 
 
-Labels: ['new model'] 
+Labels: [<span class="hljs-string">'new model'</span>] 
 Add new CANINE model 
-# New model addition 
-## Model description 
+<span class="hljs-comment"># New model addition </span>
+<span class="hljs-comment">## Model description </span>
 
-Google recently proposed a new **C**haracter **A**rchitecture with **N**o tokenization **I**n **N**eural **E**ncoders architecture (CANINE). Not only the title is exciting: 
+Google recently proposed a new **C**haracter **A**rchitecture <span class="hljs-keyword">with</span> **N**o tokenization **I**n **N**eural **E**ncoders architecture (CANINE). Not only the title <span class="hljs-keyword">is</span> exciting: 
 
-&gt; Pipelined NLP systems have largely been superseded by end-to-end neural modeling, yet nearly all commonly-used models still require an explicit tokeni 
+&gt; Pipelined NLP systems have largely been superseded by end-to-end neural modeling, yet nearly <span class="hljs-built_in">all</span> commonly-used models still require an explicit tokeni 
 Predictions: 
-new model, 0.98 
-tensorflow or tf, 0.37 
-examples, 0.34 
-usage, 0.30 
-pytorch, 0.25 
-documentation, 0.25 
-model training, 0.24 
-tokenization, 0.17 
-pipeline, 0.16
-</code></pre><p><strong>注意事项</strong></p>
+new model, <span class="hljs-number">0.98</span> 
+tensorflow <span class="hljs-keyword">or</span> tf, <span class="hljs-number">0.37</span> 
+examples, <span class="hljs-number">0.34</span> 
+usage, <span class="hljs-number">0.30</span> 
+pytorch, <span class="hljs-number">0.25</span> 
+documentation, <span class="hljs-number">0.25</span> 
+model training, <span class="hljs-number">0.24</span> 
+tokenization, <span class="hljs-number">0.17</span> 
+pipeline, <span class="hljs-number">0.16</span>
+</code></pre>
+<p><strong>注意事项</strong></p>
 <p>由于我们使用的是子词标记器，我们甚至可以将代码传递给模型 标记化可能不是很有效，因为只有一小部分零样本流水线的预训练数据集是由代码片段组成的，但由于代码也是由很多自然词组成的，这不是一个大问题。另外，代码块可能包含重要的信息，如框架（PyTorch或TensorFlow）。</p>
 <p>我们可以看到，该模型对这个文本是关于一个新模型非常有信心，但它对其他标签也产生了相对较高的分数。零点分类的一个重要方面是我们所处的领域。我们在这里处理的文本是非常技术性的，大部分是关于编码的，这使得它们与MNLI数据集中的原始文本分布有很大不同。因此，这对模型来说是一项具有挑战性的任务也就不足为奇了；它对某些领域的效果可能比其他领域好得多，这取决于它们与训练数据的接近程度。</p>
 <p>让我们写一个函数，通过零拍流水线送入一个例子，然后通过运行map()将其扩展到整个验证集：</p>
-<pre><code>def zero_shot_pipeline(example): 
-    output = pipe(example["text"], all_labels, multi_label=True) 
-    example["predicted_labels"] = output["labels"] 
-    example["scores"] = output["scores"] 
-    return example 
-ds_zero_shot = ds["valid"].map(zero_shot_pipeline)
-</code></pre><p>现在我们有了我们的分数，下一步是确定应该给每个例子分配哪一组标签。有几个选项我们可以进行试验：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">zero_shot_pipeline</span>(<span class="hljs-params">example</span>): 
+    output = pipe(example[<span class="hljs-string">"text"</span>], all_labels, multi_label=<span class="hljs-literal">True</span>) 
+    example[<span class="hljs-string">"predicted_labels"</span>] = output[<span class="hljs-string">"labels"</span>] 
+    example[<span class="hljs-string">"scores"</span>] = output[<span class="hljs-string">"scores"</span>] 
+    <span class="hljs-keyword">return</span> example 
+ds_zero_shot = ds[<span class="hljs-string">"valid"</span>].<span class="hljs-built_in">map</span>(zero_shot_pipeline)
+</code></pre>
+<p>现在我们有了我们的分数，下一步是确定应该给每个例子分配哪一组标签。有几个选项我们可以进行试验：</p>
 <ul>
 <li>定义一个阈值并选择所有高于阈值的标签。</li>
 <li>挑选分数最高的k个标签。</li>
 </ul>
 <p>为了帮助我们确定哪种方法最好，让我们写一个get_preds()函数，应用其中一种方法来检索预测结果：</p>
-<pre><code>def get_preds(example, threshold=None, topk=None): 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_preds</span>(<span class="hljs-params">example, threshold=<span class="hljs-literal">None</span>, topk=<span class="hljs-literal">None</span></span>): 
     preds = [] 
-    if threshold: 
-        for label, score in zip(example["predicted_labels"], example["scores"]): 
-            if score &gt;= threshold: 
+    <span class="hljs-keyword">if</span> threshold: 
+        <span class="hljs-keyword">for</span> label, score <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(example[<span class="hljs-string">"predicted_labels"</span>], example[<span class="hljs-string">"scores"</span>]): 
+            <span class="hljs-keyword">if</span> score &gt;= threshold: 
                 preds.append(label) 
-    elif topk: 
-        for i in range(topk):
-            preds.append(example["predicted_labels"][i]) 
-    else: 
-         raise ValueError("Set either `threshold` or `topk`.") 
-    return {"pred_label_ids": list(np.squeeze(mlb.transform([preds])))}
-</code></pre><p>接下来，让我们写第二个函数，get_clf_report()，它从数据集中返回带有预测标签的Scikit-learn分类报告：</p>
-<pre><code>def get_clf_report(ds): 
-    y_true = np.array(ds["label_ids"]) 
-    y_pred = np.array(ds["pred_label_ids"]) 
-    return classification_report( y_true, y_pred, target_names=mlb.classes_, zero_division=0, output_dict=True)
-</code></pre><p>有了这两个函数，让我们从top-k方法开始，增加k的几个值，然后绘制整个验证集的微观和宏观F分数：</p>
-<pre><code>macros, micros = [], [] 
-topks = [1, 2, 3, 4] 
-for topk in topks: 
-    ds_zero_shot = ds_zero_shot.map(get_preds, batched=False, fn_kwargs={'topk': topk}) 
+    <span class="hljs-keyword">elif</span> topk: 
+        <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(topk):
+            preds.append(example[<span class="hljs-string">"predicted_labels"</span>][i]) 
+    <span class="hljs-keyword">else</span>: 
+         <span class="hljs-keyword">raise</span> ValueError(<span class="hljs-string">"Set either `threshold` or `topk`."</span>) 
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"pred_label_ids"</span>: <span class="hljs-built_in">list</span>(np.squeeze(mlb.transform([preds])))}
+</code></pre>
+<p>接下来，让我们写第二个函数，get_clf_report()，它从数据集中返回带有预测标签的Scikit-learn分类报告：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_clf_report</span>(<span class="hljs-params">ds</span>): 
+    y_true = np.array(ds[<span class="hljs-string">"label_ids"</span>]) 
+    y_pred = np.array(ds[<span class="hljs-string">"pred_label_ids"</span>]) 
+    <span class="hljs-keyword">return</span> classification_report( y_true, y_pred, target_names=mlb.classes_, zero_division=<span class="hljs-number">0</span>, output_dict=<span class="hljs-literal">True</span>)
+</code></pre>
+<p>有了这两个函数，让我们从top-k方法开始，增加k的几个值，然后绘制整个验证集的微观和宏观F分数：</p>
+<pre><code class="lang-python">macros, micros = [], [] 
+topks = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>] 
+<span class="hljs-keyword">for</span> topk <span class="hljs-keyword">in</span> topks: 
+    ds_zero_shot = ds_zero_shot.<span class="hljs-built_in">map</span>(get_preds, batched=<span class="hljs-literal">False</span>, fn_kwargs={<span class="hljs-string">'topk'</span>: topk}) 
     clf_report = get_clf_report(ds_zero_shot) 
-    micros.append(clf_report['micro avg']['f1-score']) 
-    macros.append(clf_report['macro avg']['f1-score']) 
-plt.plot(topks, micros, label='Micro F1') 
-plt.plot(topks, macros, label='Macro F1') 
-plt.xlabel("Top-k") 
-plt.ylabel("F1-score") 
-plt.legend(loc='best') 
+    micros.append(clf_report[<span class="hljs-string">'micro avg'</span>][<span class="hljs-string">'f1-score'</span>]) 
+    macros.append(clf_report[<span class="hljs-string">'macro avg'</span>][<span class="hljs-string">'f1-score'</span>]) 
+plt.plot(topks, micros, label=<span class="hljs-string">'Micro F1'</span>) 
+plt.plot(topks, macros, label=<span class="hljs-string">'Macro F1'</span>) 
+plt.xlabel(<span class="hljs-string">"Top-k"</span>) 
+plt.ylabel(<span class="hljs-string">"F1-score"</span>) 
+plt.legend(loc=<span class="hljs-string">'best'</span>) 
 plt.show()
-</code></pre><p><img src="images/chapter9/image-20220215081026792.png" alt="image-20220215081026792"></img></p>
+</code></pre>
+<p><img src="images/chapter9/image-20220215081026792.png" alt="image-20220215081026792"></img></p>
 <p>从图中我们可以看出，通过选择每个例子中得分最高的标签（顶部1），可以获得最佳结果。考虑到我们的数据集中的大多数例子只有一个标签，这也许并不令人惊讶。现在让我们来比较一下这与设置阈值的区别，这样我们就有可能预测每个例子有一个以上的标签：</p>
-<pre><code>macros, micros = [], [] 
-thresholds = np.linspace(0.01, 1, 100) 
-for threshold in thresholds: 
-    ds_zero_shot = ds_zero_shot.map(get_preds, fn_kwargs={"threshold": threshold}) 
+<pre><code class="lang-python">macros, micros = [], [] 
+thresholds = np.linspace(<span class="hljs-number">0.01</span>, <span class="hljs-number">1</span>, <span class="hljs-number">100</span>) 
+<span class="hljs-keyword">for</span> threshold <span class="hljs-keyword">in</span> thresholds: 
+    ds_zero_shot = ds_zero_shot.<span class="hljs-built_in">map</span>(get_preds, fn_kwargs={<span class="hljs-string">"threshold"</span>: threshold}) 
     clf_report = get_clf_report(ds_zero_shot)
-    micros.append(clf_report["micro avg"]["f1-score"]) 
-    macros.append(clf_report["macro avg"]["f1-score"]) 
-plt.plot(thresholds, micros, label="Micro F1") 
-plt.plot(thresholds, macros, label="Macro F1") 
-plt.xlabel("Threshold") 
-plt.ylabel("F1-score") 
-plt.legend(loc="best")
+    micros.append(clf_report[<span class="hljs-string">"micro avg"</span>][<span class="hljs-string">"f1-score"</span>]) 
+    macros.append(clf_report[<span class="hljs-string">"macro avg"</span>][<span class="hljs-string">"f1-score"</span>]) 
+plt.plot(thresholds, micros, label=<span class="hljs-string">"Micro F1"</span>) 
+plt.plot(thresholds, macros, label=<span class="hljs-string">"Macro F1"</span>) 
+plt.xlabel(<span class="hljs-string">"Threshold"</span>) 
+plt.ylabel(<span class="hljs-string">"F1-score"</span>) 
+plt.legend(loc=<span class="hljs-string">"best"</span>)
 plt.show()
-</code></pre><p><img src="images/chapter9/image-20220215081127519.png" alt="image-20220215081127519"></img></p>
-<pre><code>best_t, best_micro = thresholds[np.argmax(micros)], np.max(micros) 
-print(f'Best threshold (micro): {best_t} with F1-score {best_micro:.2f}.') best_t, best_macro = thresholds[np.argmax(macros)], np.max(macros) 
-print(f'Best threshold (micro): {best_t} with F1-score {best_macro:.2f}.')
+</code></pre>
+<p><img src="images/chapter9/image-20220215081127519.png" alt="image-20220215081127519"></img></p>
+<pre><code class="lang-python">best_t, best_micro = thresholds[np.argmax(micros)], np.<span class="hljs-built_in">max</span>(micros) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'Best threshold (micro): <span class="hljs-subst">{best_t}</span> with F1-score <span class="hljs-subst">{best_micro:<span class="hljs-number">.2</span>f}</span>.'</span>) best_t, best_macro = thresholds[np.argmax(macros)], np.<span class="hljs-built_in">max</span>(macros) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f'Best threshold (micro): <span class="hljs-subst">{best_t}</span> with F1-score <span class="hljs-subst">{best_macro:<span class="hljs-number">.2</span>f}</span>.'</span>)
 
-Best threshold (micro): 0.75 with F1-score 0.46. 
-Best threshold (micro): 0.72 with F1-score 0.42.
-</code></pre><p>这种方法的表现比top-1的结果要差一些，但是我们可以在这个图中清楚地看到精度/召回率的权衡。如果我们把阈值设置得太低，那么就会有太多的预测，这导致了低精度。如果我们把阈值设置得太高，那么我们几乎不会做出任何预测，这就产生了低召回率。从图中我们可以看出，0.8左右的阈值是这两者之间的甜蜜点。</p>
+Best threshold (micro): <span class="hljs-number">0.75</span> <span class="hljs-keyword">with</span> F1-score <span class="hljs-number">0.46</span>. 
+Best threshold (micro): <span class="hljs-number">0.72</span> <span class="hljs-keyword">with</span> F1-score <span class="hljs-number">0.42</span>.
+</code></pre>
+<p>这种方法的表现比top-1的结果要差一些，但是我们可以在这个图中清楚地看到精度/召回率的权衡。如果我们把阈值设置得太低，那么就会有太多的预测，这导致了低精度。如果我们把阈值设置得太高，那么我们几乎不会做出任何预测，这就产生了低召回率。从图中我们可以看出，0.8左右的阈值是这两者之间的甜蜜点。</p>
 <p>由于top-1方法表现最好，让我们用它来比较零样本分类与测试集上的Naive Bayes：</p>
-<pre><code>ds_zero_shot = ds['test'].map(zero_shot_pipeline) 
-ds_zero_shot = ds_zero_shot.map(get_preds, fn_kwargs={'topk': 1})
+<pre><code class="lang-python">ds_zero_shot = ds[<span class="hljs-string">'test'</span>].<span class="hljs-built_in">map</span>(zero_shot_pipeline) 
+ds_zero_shot = ds_zero_shot.<span class="hljs-built_in">map</span>(get_preds, fn_kwargs={<span class="hljs-string">'topk'</span>: <span class="hljs-number">1</span>})
 clf_report = get_clf_report(ds_zero_shot) 
-for train_slice in train_slices: 
-    macro_scores['Zero Shot'].append(clf_report['macro avg']['f1-score']) 
-    micro_scores['Zero Shot'].append(clf_report['micro avg']['f1-score']) 
-plot_metrics(micro_scores, macro_scores, train_samples, "Zero Shot")
-</code></pre><p><img src="images/chapter9/image-20220215081325505.png" alt="image-20220215081325505"></img></p>
+<span class="hljs-keyword">for</span> train_slice <span class="hljs-keyword">in</span> train_slices: 
+    macro_scores[<span class="hljs-string">'Zero Shot'</span>].append(clf_report[<span class="hljs-string">'macro avg'</span>][<span class="hljs-string">'f1-score'</span>]) 
+    micro_scores[<span class="hljs-string">'Zero Shot'</span>].append(clf_report[<span class="hljs-string">'micro avg'</span>][<span class="hljs-string">'f1-score'</span>]) 
+plot_metrics(micro_scores, macro_scores, train_samples, <span class="hljs-string">"Zero Shot"</span>)
+</code></pre>
+<p><img src="images/chapter9/image-20220215081325505.png" alt="image-20220215081325505"></img></p>
 <p>对比零次拍摄的流水线和基线，我们观察到两件事:</p>
 <ol>
 <li><p>如果我们有少于50个标记的样本，那么零点拍摄流水线的表现就会大大超过基线。</p>
@@ -733,32 +769,36 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Zero Shot")
 <p><img src="images/chapter9/image-20220215082024458.png" alt="image-20220215082024458"></img></p>
 <p>你可以使用M2M100这样的机器翻译模型来实现回译，而NlpAug和TextAttack这样的库提供了各种标记扰动的配方。在本节中，我们将重点讨论使用同义词替换，因为它实现起来很简单，并能体现出数据增强背后的主要理念。</p>
 <p>我们将使用NlpAug的ContextualWordEmbsAug增强器来利用DistilBERT的上下文词嵌入来替换同义词。让我们从一个简单的例子开始:</p>
-<pre><code>from transformers import set_seed 
-import nlpaug.augmenter.word as naw
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> set_seed 
+<span class="hljs-keyword">import</span> nlpaug.augmenter.word <span class="hljs-keyword">as</span> naw
 
-set_seed(3) 
-aug = naw.ContextualWordEmbsAug(model_path="distilbert-base-uncased", device="cpu", action="substitute") 
-text = "Transformers are the most popular toys" 
-print(f"Original text: {text}") 
-print(f"Augmented text: {aug.augment(text)}") 
+set_seed(<span class="hljs-number">3</span>) 
+aug = naw.ContextualWordEmbsAug(model_path=<span class="hljs-string">"distilbert-base-uncased"</span>, device=<span class="hljs-string">"cpu"</span>, action=<span class="hljs-string">"substitute"</span>) 
+text = <span class="hljs-string">"Transformers are the most popular toys"</span> 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Original text: <span class="hljs-subst">{text}</span>"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Augmented text: <span class="hljs-subst">{aug.augment(text)}</span>"</span>) 
 
 Original text: Transformers are the most popular toys 
-Augmented text: transformers'the most popular toys
-</code></pre><p>在这里，我们可以看到 "are "这个词是如何被替换成一撇的，以生成一个新的合成训练例子。我们可以用一个简单的函数来包装这个增量，如下所示:</p>
-<pre><code>def augment_text(batch, transformations_per_example=1): 
+Augmented text: transformers<span class="hljs-string">'the most popular toys
+</span></code></pre>
+<p>在这里，我们可以看到 "are "这个词是如何被替换成一撇的，以生成一个新的合成训练例子。我们可以用一个简单的函数来包装这个增量，如下所示:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">augment_text</span>(<span class="hljs-params">batch, transformations_per_example=<span class="hljs-number">1</span></span>): 
     text_aug, label_ids = [], [] 
-    for text, labels in zip(batch["text"], batch["label_ids"]): 
+    <span class="hljs-keyword">for</span> text, labels <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(batch[<span class="hljs-string">"text"</span>], batch[<span class="hljs-string">"label_ids"</span>]): 
         text_aug += [text] 
         label_ids += [labels] 
-        for _ in range(transformations_per_example): 
+        <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(transformations_per_example): 
             text_aug += [aug.augment(text)] 
             label_ids += [labels]
-    return {"text": text_aug, "label_ids": label_ids}
-</code></pre><p>现在，当我们把这个函数传递给map()方法时，我们可以用transformations_per_example这个参数生成任意数量的新例子。我们可以在我们的代码中使用这个函数来训练Naive Bayes分类器，只需在我们选择分片后添加一行:</p>
-<pre><code>ds_train_sample = ds_train_sample.map(augment_text, batched=True, remove_columns=ds_train_sample.column_names).shuffle(seed=42)
-</code></pre><p>包括这一点并重新运行分析，产生了这里所示的图表:</p>
-<pre><code>plot_metrics(micro_scores, macro_scores, train_samples, "Naive Bayes + Aug")
-</code></pre><p><img src="images/chapter9/image-20220215082322966.png" alt="image-20220215082322966"></img></p>
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"text"</span>: text_aug, <span class="hljs-string">"label_ids"</span>: label_ids}
+</code></pre>
+<p>现在，当我们把这个函数传递给map()方法时，我们可以用transformations_per_example这个参数生成任意数量的新例子。我们可以在我们的代码中使用这个函数来训练Naive Bayes分类器，只需在我们选择分片后添加一行:</p>
+<pre><code class="lang-python">ds_train_sample = ds_train_sample.<span class="hljs-built_in">map</span>(augment_text, batched=<span class="hljs-literal">True</span>, remove_columns=ds_train_sample.column_names).shuffle(seed=<span class="hljs-number">42</span>)
+</code></pre>
+<p>包括这一点并重新运行分析，产生了这里所示的图表:</p>
+<pre><code class="lang-python">plot_metrics(micro_scores, macro_scores, train_samples, <span class="hljs-string">"Naive Bayes + Aug"</span>)
+</code></pre>
+<p><img src="images/chapter9/image-20220215082322966.png" alt="image-20220215082322966"></img></p>
 <p>从图中我们可以看到，少量的数据扩充就能使Naive Bayes分类器的F-score提高5分左右，而且一旦我们有了170个左右的训练样本，它就会在宏观分数上超过零分流水线。现在让我们来看看基于使用大型语言模型的嵌入的方法。</p>
 <h3 id="使用嵌入向量作为查询表">使用嵌入向量作为查询表</h3>
 <p>像GPT-3这样的大型语言模型已经被证明在解决有限数据的任务方面表现出色。原因是这些模型学习了有用的文本表征，这些表征编码了许多维度的信息，如情感、主题、文本结构等等。为此，大型语言模型的嵌入可用于开发语义搜索引擎，寻找类似的文件或评论，甚至是对文本进行分类。</p>
@@ -774,136 +814,144 @@ Augmented text: transformers'the most popular toys
 <p>由于GPT-3只能通过OpenAI的API获得，我们将使用GPT-2来测试该技术。具体来说，我们将使用GPT-2的一个变体，该变体是在Python代码上训练的，这将有望捕捉到我们的GitHub问题中包含的一些背景。</p>
 <p>让我们写一个辅助函数，它接收一个文本列表，并使用模型为每个文本创建一个单向量表示。我们必须处理的一个问题是，像GPT-2这样的转化器模型实际上将返回每个标记的一个嵌入向量。例如，给定句子 "我带着我的狗去散步"，我们可以期待几个嵌入向量，每个标记一个。但我们真正想要的是整个句子（或我们应用中的GitHub问题）的单一嵌入向量。为了处理这个问题，我们可以使用一种叫做池化的技术。最简单的集合方法之一是对标记嵌入进行平均，这被称为平均集合。使用均值池，我们唯一需要注意的是，在平均值中不包括填充标记，所以我们可以使用注意力掩码来处理这个问题。</p>
 <p>为了看看这是如何工作的，让我们加载一个GPT-2标记器和模型，定义平均池操作，并将整个过程包裹在一个简单的embed_text()函数中:</p>
-<pre><code>import torch 
-from transformers import AutoTokenizer, AutoModel 
-model_ckpt = "miguelvictor/python-gpt2-large" 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch 
+<span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer, AutoModel 
+model_ckpt = <span class="hljs-string">"miguelvictor/python-gpt2-large"</span> 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
 model = AutoModel.from_pretrained(model_ckpt) 
-def mean_pooling(model_output, attention_mask): 
-    # Extract the token embeddings 
-    token_embeddings = model_output[0] 
-    # Compute the attention mask 
-    input_mask_expanded = (attention_mask .unsqueeze(-1) .expand(token_embeddings.size()) .float()) 
-    # Sum the embeddings, but ignore masked tokens 
-    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1) 
-    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9) 
-    # Return the average as a single vector 
-    return sum_embeddings / sum_mask 
-def embed_text(examples): 
-    inputs = tokenizer(examples["text"], padding=True, truncation=True, max_length=128, return_tensors="pt") 
-    with torch.no_grad():
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">mean_pooling</span>(<span class="hljs-params">model_output, attention_mask</span>): 
+    <span class="hljs-comment"># Extract the token embeddings </span>
+    token_embeddings = model_output[<span class="hljs-number">0</span>] 
+    <span class="hljs-comment"># Compute the attention mask </span>
+    input_mask_expanded = (attention_mask .unsqueeze(-<span class="hljs-number">1</span>) .expand(token_embeddings.size()) .<span class="hljs-built_in">float</span>()) 
+    <span class="hljs-comment"># Sum the embeddings, but ignore masked tokens </span>
+    sum_embeddings = torch.<span class="hljs-built_in">sum</span>(token_embeddings * input_mask_expanded, <span class="hljs-number">1</span>) 
+    sum_mask = torch.clamp(input_mask_expanded.<span class="hljs-built_in">sum</span>(<span class="hljs-number">1</span>), <span class="hljs-built_in">min</span>=<span class="hljs-number">1e-9</span>) 
+    <span class="hljs-comment"># Return the average as a single vector </span>
+    <span class="hljs-keyword">return</span> sum_embeddings / sum_mask 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">embed_text</span>(<span class="hljs-params">examples</span>): 
+    inputs = tokenizer(examples[<span class="hljs-string">"text"</span>], padding=<span class="hljs-literal">True</span>, truncation=<span class="hljs-literal">True</span>, max_length=<span class="hljs-number">128</span>, return_tensors=<span class="hljs-string">"pt"</span>) 
+    <span class="hljs-keyword">with</span> torch.no_grad():
         model_output = model(**inputs) 
-    pooled_embeds = mean_pooling(model_output, inputs["attention_mask"]) 
-    return {"embedding": pooled_embeds.cpu().numpy()}
-</code></pre><p>现在我们可以得到每个分割的嵌入。请注意，GPT风格的模型没有填充标记，因此我们需要添加一个，然后才能像前面的代码中实现的那样以分批的方式获得嵌入。我们将为此目的回收字符串末尾的标记:</p>
-<pre><code>tokenizer.pad_token = tokenizer.eos_token 
-embs_train = ds["train"].map(embed_text, batched=True, batch_size=16) 
-embs_valid = ds["valid"].map(embed_text, batched=True, batch_size=16) 
-embs_test = ds["test"].map(embed_text, batched=True, batch_size=16)
-</code></pre><p>现在我们有了所有的嵌入，我们需要建立一个系统来搜索它们。我们可以写一个函数来计算，比如说，我们要查询的一个新的文本嵌入和训练集中现有的嵌入之间的余弦相似度。另外，我们也可以使用数据集的一个内置结构，叫做FAISS索引。我们已经在第七章中遇到了FAISS。你可以把它看作是一个嵌入的搜索引擎，我们一会儿会仔细看看它是如何工作的。我们可以通过add_faiss_index()使用数据集的一个现有字段来创建一个FAISS索引，也可以通过add_faiss_index_from_external_arrays()将新的嵌入数据加载到数据集。让我们使用前一个函数将我们的训练嵌入物添加到数据集中，如下所示:</p>
-<pre><code>embs_train.add_faiss_index("embedding")
-</code></pre><p>这创建了一个新的FAISS索引，称为嵌入。我们现在可以通过调用函数get_nearest_examples()来进行最近的邻居查询。它返回最近的邻居，以及每个邻居的匹配分数。我们需要指定查询的嵌入以及要检索的最近的邻居的数量。让我们转一转，看一看与一个例子最接近的文件:</p>
-<pre><code>i, k = 0, 3
-# Select the first query and 3 nearest neighbors 
-rn, nl = "\r\n\r\n", "\n"
-# Used to remove newlines in text for compact display 
-query = np.array(embs_valid[i]["embedding"], dtype=np.float32) 
-scores, samples = embs_train.get_nearest_examples("embedding", query, k=k) 
-print(f"QUERY LABELS: {embs_valid[i]['labels']}") 
-print(f"QUERY TEXT:\n{embs_valid[i]['text'][:200].replace(rn, nl)} [...]\n") 
-print("="*50) 
-print(f"Retrieved documents:") 
-for score, label, text in zip(scores, samples["labels"], samples["text"]): 
-    print("="*50) 
-    print(f"TEXT:\n{text[:200].replace(rn, nl)} [...]") 
-    print(f"SCORE: {score:.2f}") 
-    print(f"LABELS: {label}") 
+    pooled_embeds = mean_pooling(model_output, inputs[<span class="hljs-string">"attention_mask"</span>]) 
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"embedding"</span>: pooled_embeds.cpu().numpy()}
+</code></pre>
+<p>现在我们可以得到每个分割的嵌入。请注意，GPT风格的模型没有填充标记，因此我们需要添加一个，然后才能像前面的代码中实现的那样以分批的方式获得嵌入。我们将为此目的回收字符串末尾的标记:</p>
+<pre><code class="lang-python">tokenizer.pad_token = tokenizer.eos_token 
+embs_train = ds[<span class="hljs-string">"train"</span>].<span class="hljs-built_in">map</span>(embed_text, batched=<span class="hljs-literal">True</span>, batch_size=<span class="hljs-number">16</span>) 
+embs_valid = ds[<span class="hljs-string">"valid"</span>].<span class="hljs-built_in">map</span>(embed_text, batched=<span class="hljs-literal">True</span>, batch_size=<span class="hljs-number">16</span>) 
+embs_test = ds[<span class="hljs-string">"test"</span>].<span class="hljs-built_in">map</span>(embed_text, batched=<span class="hljs-literal">True</span>, batch_size=<span class="hljs-number">16</span>)
+</code></pre>
+<p>现在我们有了所有的嵌入，我们需要建立一个系统来搜索它们。我们可以写一个函数来计算，比如说，我们要查询的一个新的文本嵌入和训练集中现有的嵌入之间的余弦相似度。另外，我们也可以使用数据集的一个内置结构，叫做FAISS索引。我们已经在第七章中遇到了FAISS。你可以把它看作是一个嵌入的搜索引擎，我们一会儿会仔细看看它是如何工作的。我们可以通过add_faiss_index()使用数据集的一个现有字段来创建一个FAISS索引，也可以通过add_faiss_index_from_external_arrays()将新的嵌入数据加载到数据集。让我们使用前一个函数将我们的训练嵌入物添加到数据集中，如下所示:</p>
+<pre><code class="lang-python">embs_train.add_faiss_index(<span class="hljs-string">"embedding"</span>)
+</code></pre>
+<p>这创建了一个新的FAISS索引，称为嵌入。我们现在可以通过调用函数get_nearest_examples()来进行最近的邻居查询。它返回最近的邻居，以及每个邻居的匹配分数。我们需要指定查询的嵌入以及要检索的最近的邻居的数量。让我们转一转，看一看与一个例子最接近的文件:</p>
+<pre><code class="lang-python">i, k = <span class="hljs-number">0</span>, <span class="hljs-number">3</span>
+<span class="hljs-comment"># Select the first query and 3 nearest neighbors </span>
+rn, nl = <span class="hljs-string">"\r\n\r\n"</span>, <span class="hljs-string">"\n"</span>
+<span class="hljs-comment"># Used to remove newlines in text for compact display </span>
+query = np.array(embs_valid[i][<span class="hljs-string">"embedding"</span>], dtype=np.float32) 
+scores, samples = embs_train.get_nearest_examples(<span class="hljs-string">"embedding"</span>, query, k=k) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"QUERY LABELS: <span class="hljs-subst">{embs_valid[i][<span class="hljs-string">'labels'</span>]}</span>"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"QUERY TEXT:\n<span class="hljs-subst">{embs_valid[i][<span class="hljs-string">'text'</span>][:<span class="hljs-number">200</span>].replace(rn, nl)}</span> [...]\n"</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"="</span>*<span class="hljs-number">50</span>) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Retrieved documents:"</span>) 
+<span class="hljs-keyword">for</span> score, label, text <span class="hljs-keyword">in</span> <span class="hljs-built_in">zip</span>(scores, samples[<span class="hljs-string">"labels"</span>], samples[<span class="hljs-string">"text"</span>]): 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">"="</span>*<span class="hljs-number">50</span>) 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"TEXT:\n<span class="hljs-subst">{text[:<span class="hljs-number">200</span>].replace(rn, nl)}</span> [...]"</span>) 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"SCORE: <span class="hljs-subst">{score:<span class="hljs-number">.2</span>f}</span>"</span>) 
+    <span class="hljs-built_in">print</span>(<span class="hljs-string">f"LABELS: <span class="hljs-subst">{label}</span>"</span>) 
 
 
-QUERY LABELS: ['new model'] 
+QUERY LABELS: [<span class="hljs-string">'new model'</span>] 
 QUERY TEXT: 
-Implementing efficient self attention in T5 # New model addition My teammates and I (including @ice-americano) would like to use efficient self attention methods such as Linformer, Performer and [...]
+Implementing efficient <span class="hljs-variable language_">self</span> attention <span class="hljs-keyword">in</span> T5 <span class="hljs-comment"># New model addition My teammates and I (including @ice-americano) would like to use efficient self attention methods such as Linformer, Performer and [...]</span>
 ================================================== 
 Retrieved documents: 
 ================================================== 
 TEXT: Add Linformer model 
 
-# New model addition 
-## Model description 
-### Linformer: Self-Attention with Linear Complexity 
+<span class="hljs-comment"># New model addition </span>
+<span class="hljs-comment">## Model description </span>
+<span class="hljs-comment">### Linformer: Self-Attention with Linear Complexity </span>
 
-Paper published June 9th on ArXiv: https://arxiv.org/abs/2006.04768 La [...] SCORE: 54.92 LABELS: ['new model'] 
+Paper published June 9th on ArXiv: https://arxiv.org/<span class="hljs-built_in">abs</span>/<span class="hljs-number">2006.04768</span> La [...] SCORE: <span class="hljs-number">54.92</span> LABELS: [<span class="hljs-string">'new model'</span>] 
 ================================================== 
 TEXT: Add FAVOR+ / Performer attention 
-# FAVOR+ / Performer attention addition Are there any plans to add this new attention approximation block to 
+<span class="hljs-comment"># FAVOR+ / Performer attention addition Are there any plans to add this new attention approximation block to </span>
 Transformers library?
-## Model description The n [...] 
-SCORE: 57.90 
-LABELS: ['new model']
+<span class="hljs-comment">## Model description The n [...] </span>
+SCORE: <span class="hljs-number">57.90</span> 
+LABELS: [<span class="hljs-string">'new model'</span>]
 ================================================== 
 TEXT: 
-Implement DeLighT: Very Deep and Light-weight Transformers 
+Implement DeLighT: Very Deep <span class="hljs-keyword">and</span> Light-weight Transformers 
 
-# New model addition ## Model description DeLight, that delivers similar or better performance than transformer-based models with sign [...] 
-SCORE: 60.12 
-LABELS: ['new model']
-</code></pre><p>很好! 这正是我们所希望的：我们通过嵌入查找得到的三个检索文件都有相同的标签，我们已经可以从标题中看到它们都非常相似。查询以及检索到的文件都是围绕着增加新的、高效的转化器模型进行的。然而，问题仍然是，什么是k的最佳值？同样地，我们应该如何汇总检索到的文件的标签？例如，我们是否应该检索三个文档，并分配所有至少出现两次的标签？或者我们应该检索20个，使用所有至少出现5次的标签？让我们系统地研究一下这个问题：我们将尝试几个k的值，然后用一个辅助函数改变标签分配的阈值m &lt; k。我们将记录每个设置的宏观和微观性能，这样我们就可以在以后决定哪一个运行表现最好。我们可以利用函数get_nearest_examples_batch()，它接受一批查询，而不是在验证集中的每个样本上循环:</p>
-<pre><code>def get_sample_preds(sample, m): 
-    return (np.sum(sample["label_ids"], axis=0) &gt;= m).astype(int) 
-def find_best_k_m(ds_train, valid_queries, valid_labels, max_k=17):
-    max_k = min(len(ds_train), max_k) 
+<span class="hljs-comment"># New model addition ## Model description DeLight, that delivers similar or better performance than transformer-based models with sign [...] </span>
+SCORE: <span class="hljs-number">60.12</span> 
+LABELS: [<span class="hljs-string">'new model'</span>]
+</code></pre>
+<p>很好! 这正是我们所希望的：我们通过嵌入查找得到的三个检索文件都有相同的标签，我们已经可以从标题中看到它们都非常相似。查询以及检索到的文件都是围绕着增加新的、高效的转化器模型进行的。然而，问题仍然是，什么是k的最佳值？同样地，我们应该如何汇总检索到的文件的标签？例如，我们是否应该检索三个文档，并分配所有至少出现两次的标签？或者我们应该检索20个，使用所有至少出现5次的标签？让我们系统地研究一下这个问题：我们将尝试几个k的值，然后用一个辅助函数改变标签分配的阈值m &lt; k。我们将记录每个设置的宏观和微观性能，这样我们就可以在以后决定哪一个运行表现最好。我们可以利用函数get_nearest_examples_batch()，它接受一批查询，而不是在验证集中的每个样本上循环:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_sample_preds</span>(<span class="hljs-params">sample, m</span>): 
+    <span class="hljs-keyword">return</span> (np.<span class="hljs-built_in">sum</span>(sample[<span class="hljs-string">"label_ids"</span>], axis=<span class="hljs-number">0</span>) &gt;= m).astype(<span class="hljs-built_in">int</span>) 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">find_best_k_m</span>(<span class="hljs-params">ds_train, valid_queries, valid_labels, max_k=<span class="hljs-number">17</span></span>):
+    max_k = <span class="hljs-built_in">min</span>(<span class="hljs-built_in">len</span>(ds_train), max_k) 
     perf_micro = np.zeros((max_k, max_k)) 
     perf_macro = np.zeros((max_k, max_k)) 
-    for k in range(1, max_k): 
-        for m in range(1, k + 1):
-            _, samples = ds_train.get_nearest_examples_batch("embedding", valid_queries, k=k) 
-            y_pred = np.array([get_sample_preds(s, m) for s in samples]) 
+    <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, max_k): 
+        <span class="hljs-keyword">for</span> m <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, k + <span class="hljs-number">1</span>):
+            _, samples = ds_train.get_nearest_examples_batch(<span class="hljs-string">"embedding"</span>, valid_queries, k=k) 
+            y_pred = np.array([get_sample_preds(s, m) <span class="hljs-keyword">for</span> s <span class="hljs-keyword">in</span> samples]) 
             clf_report = classification_report(valid_labels, y_pred
-target_names=mlb.classes_, zero_division=0, output_dict=True) 
-            perf_micro[k, m] = clf_report["micro avg"]["f1-score"] 
-            perf_macro[k, m] = clf_report["macro avg"]["f1-score"] 
-    return perf_micro, perf_macro
-</code></pre><p>让我们检查一下所有训练样本的最佳值是多少，并将所有k和m配置的分数可视化:</p>
-<pre><code>valid_labels = np.array(embs_valid["label_ids"]) 
-valid_queries = np.array(embs_valid["embedding"], dtype=np.float32) 
+target_names=mlb.classes_, zero_division=<span class="hljs-number">0</span>, output_dict=<span class="hljs-literal">True</span>) 
+            perf_micro[k, m] = clf_report[<span class="hljs-string">"micro avg"</span>][<span class="hljs-string">"f1-score"</span>] 
+            perf_macro[k, m] = clf_report[<span class="hljs-string">"macro avg"</span>][<span class="hljs-string">"f1-score"</span>] 
+    <span class="hljs-keyword">return</span> perf_micro, perf_macro
+</code></pre>
+<p>让我们检查一下所有训练样本的最佳值是多少，并将所有k和m配置的分数可视化:</p>
+<pre><code class="lang-python">valid_labels = np.array(embs_valid[<span class="hljs-string">"label_ids"</span>]) 
+valid_queries = np.array(embs_valid[<span class="hljs-string">"embedding"</span>], dtype=np.float32) 
 perf_micro, perf_macro = find_best_k_m(embs_train, valid_queries, valid_labels) 
-fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(10, 3.5), sharey=True) 
+fig, (ax0, ax1) = plt.subplots(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, figsize=(<span class="hljs-number">10</span>, <span class="hljs-number">3.5</span>), sharey=<span class="hljs-literal">True</span>) 
 ax0.imshow(perf_micro)
 ax1.imshow(perf_macro) 
-ax0.set_title("micro scores")
-ax0.set_ylabel("k") 
-ax1.set_title("macro scores") 
-for ax in [ax0, ax1]: 
-    ax.set_xlim([0.5, 17 - 0.5]) 
-    ax.set_ylim([17 - 0.5, 0.5]) 
-    ax.set_xlabel("m") 
+ax0.set_title(<span class="hljs-string">"micro scores"</span>)
+ax0.set_ylabel(<span class="hljs-string">"k"</span>) 
+ax1.set_title(<span class="hljs-string">"macro scores"</span>) 
+<span class="hljs-keyword">for</span> ax <span class="hljs-keyword">in</span> [ax0, ax1]: 
+    ax.set_xlim([<span class="hljs-number">0.5</span>, <span class="hljs-number">17</span> - <span class="hljs-number">0.5</span>]) 
+    ax.set_ylim([<span class="hljs-number">17</span> - <span class="hljs-number">0.5</span>, <span class="hljs-number">0.5</span>]) 
+    ax.set_xlabel(<span class="hljs-string">"m"</span>) 
 plt.show()
-</code></pre><p><img src="images/chapter9/image-20220215101419621.png" alt="image-20220215101419621"></img></p>
+</code></pre>
+<p><img src="images/chapter9/image-20220215101419621.png" alt="image-20220215101419621"></img></p>
 <p>从图中我们可以看出，有一个模式：对于给定的k，选择m过大或过小都会产生次优结果。当选择大约m/k=1/3的比例时，会产生最佳的性能。让我们看看哪一个k和m在整体上能产生最好的结果:</p>
-<pre><code>k, m = np.unravel_index(perf_micro.argmax(), perf_micro.shape) 
-print(f"Best k: {k}, best m: {m}") 
-Best k: 15, best m: 5
-</code></pre><p>当我们选择k=15和m=5时，或者换句话说，当我们检索15个最近的邻居，然后分配至少出现5次的标签时，表现最好。现在我们有了一个很好的方法来寻找嵌入查找的最佳值，我们可以玩和Naive Bayes分类器一样的游戏，我们通过训练集的切片来评估性能。在我们对数据集进行切片之前，我们需要删除索引，因为我们不能像数据集那样对FAISS索引进行切片。循环的其余部分完全保持不变，只是增加了使用验证集来获得最佳的k和m值:</p>
-<pre><code>embs_train.drop_index("embedding") 
-test_labels = np.array(embs_test["label_ids"]) 
-test_queries = np.array(embs_test["embedding"], dtype=np.float32) 
-for train_slice in train_slices: 
-# Create a Faiss index from training slice 
+<pre><code class="lang-python">k, m = np.unravel_index(perf_micro.argmax(), perf_micro.shape) 
+<span class="hljs-built_in">print</span>(<span class="hljs-string">f"Best k: <span class="hljs-subst">{k}</span>, best m: <span class="hljs-subst">{m}</span>"</span>) 
+Best k: <span class="hljs-number">15</span>, best m: <span class="hljs-number">5</span>
+</code></pre>
+<p>当我们选择k=15和m=5时，或者换句话说，当我们检索15个最近的邻居，然后分配至少出现5次的标签时，表现最好。现在我们有了一个很好的方法来寻找嵌入查找的最佳值，我们可以玩和Naive Bayes分类器一样的游戏，我们通过训练集的切片来评估性能。在我们对数据集进行切片之前，我们需要删除索引，因为我们不能像数据集那样对FAISS索引进行切片。循环的其余部分完全保持不变，只是增加了使用验证集来获得最佳的k和m值:</p>
+<pre><code class="lang-python">embs_train.drop_index(<span class="hljs-string">"embedding"</span>) 
+test_labels = np.array(embs_test[<span class="hljs-string">"label_ids"</span>]) 
+test_queries = np.array(embs_test[<span class="hljs-string">"embedding"</span>], dtype=np.float32) 
+<span class="hljs-keyword">for</span> train_slice <span class="hljs-keyword">in</span> train_slices: 
+<span class="hljs-comment"># Create a Faiss index from training slice </span>
     embs_train_tmp = embs_train.select(train_slice)     
-    embs_train_tmp.add_faiss_index("embedding")
-    # Get best k, m values with validation set 
+    embs_train_tmp.add_faiss_index(<span class="hljs-string">"embedding"</span>)
+    <span class="hljs-comment"># Get best k, m values with validation set </span>
     perf_micro, _ = find_best_k_m(embs_train_tmp, valid_queries, valid_labels) 
     k, m = np.unravel_index(perf_micro.argmax(), perf_micro.shape) 
-    # Get predictions on test set 
-    _, samples = embs_train_tmp.get_nearest_examples_batch("embedding", test_queries, k=int(k)) 
-    y_pred = np.array([get_sample_preds(s, m) for s in samples]) 
-    # Evaluate predictions 
-    clf_report = classification_report(test_labels, y_pred, target_names=mlb.classes_, zero_division=0, output_dict=True,) 
-    macro_scores["Embedding"].append(clf_report["macro avg"]["f1-score"]) 
-    micro_scores["Embedding"].append(clf_report["micro avg"]["f1-score"]
+    <span class="hljs-comment"># Get predictions on test set </span>
+    _, samples = embs_train_tmp.get_nearest_examples_batch(<span class="hljs-string">"embedding"</span>, test_queries, k=<span class="hljs-built_in">int</span>(k)) 
+    y_pred = np.array([get_sample_preds(s, m) <span class="hljs-keyword">for</span> s <span class="hljs-keyword">in</span> samples]) 
+    <span class="hljs-comment"># Evaluate predictions </span>
+    clf_report = classification_report(test_labels, y_pred, target_names=mlb.classes_, zero_division=<span class="hljs-number">0</span>, output_dict=<span class="hljs-literal">True</span>,) 
+    macro_scores[<span class="hljs-string">"Embedding"</span>].append(clf_report[<span class="hljs-string">"macro avg"</span>][<span class="hljs-string">"f1-score"</span>]) 
+    micro_scores[<span class="hljs-string">"Embedding"</span>].append(clf_report[<span class="hljs-string">"micro avg"</span>][<span class="hljs-string">"f1-score"</span>]
 
-plot_metrics(micro_scores, macro_scores, train_samples, "Embedding")
-</code></pre><p><img src="images/chapter9/image-20220215101642477.png" alt="image-20220215101642477"></img></p>
+plot_metrics(micro_scores, macro_scores, train_samples, <span class="hljs-string">"Embedding"</span>)
+</code></pre>
+<p><img src="images/chapter9/image-20220215101642477.png" alt="image-20220215101642477"></img></p>
 <p>嵌入查找法在微观分数上与以前的方法有竞争性，同时只有两个 "可学习 "的参数，即k和m，但在宏观分数上的表现略差。</p>
 <p>对这些结果持谨慎态度；哪种方法最有效在很大程度上取决于领域。零拍流水线的训练数据与我们正在使用的GitHub问题数据集有很大不同，后者包含了大量模型以前可能没有遇到过的代码。对于一个更常见的任务，如评论的情感分析，该流水线可能工作得更好。同样地，嵌入的质量也取决于模型和它所训练的数据。我们尝试了半打模型，如sentence-transformers/stsb-roberta-large，它被训练为提供高质量的句子嵌入，以及microsoft/codebertbase和dbernsohn/roberta-python，它们被训练为代码和文档。对于这个特定的用例，在Python代码上训练的GPT-2效果最好。</p>
 <p>因为除了替换模型检查点名称以测试另一个模型外，你实际上不需要改变你的代码中的任何东西，一旦你建立了评估流水线，你可以快速尝试一些模型。现在让我们把这个简单的嵌入技巧与在有限的数据上简单地微调一个转化器进行比较。</p>
@@ -923,51 +971,57 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Embedding")
 <p><strong>小技巧</strong> </p>
 <p>对于许多应用来说，从一个预训练的类似BERT的模型开始是一个好主意。然而，如果你的语料库的领域与预训练语料库（通常是维基百科）有很大的不同，你应该探索在Hugging Face Hub上的许多模型。很有可能有人已经在你的领域上预训练了一个模型!</p>
 <p>让我们从加载预训练的标记器开始，对我们的数据集进行标记，并去掉我们在训练和评估中不需要的列:</p>
-<pre><code>import torch 
-from transformers import (AutoTokenizer, AutoConfig, AutoModelForSequenceClassification) 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch 
+<span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> (AutoTokenizer, AutoConfig, AutoModelForSequenceClassification) 
 
-model_ckpt = "bert-base-uncased" 
+model_ckpt = <span class="hljs-string">"bert-base-uncased"</span> 
 tokenizer = AutoTokenizer.from_pretrained(model_ckpt) 
-def tokenize(batch): 
-    return tokenizer(batch["text"], truncation=True, max_length=128) 
-ds_enc = ds.map(tokenize, batched=True) 
-ds_enc = ds_enc.remove_columns(['labels', 'text'])
-</code></pre><p>多标签损失函数希望标签的类型是浮动的，因为它也允许类概率而不是离散的标签。因此，我们需要改变列 label_ids 的类型。由于从元素上改变列的格式与Arrow的类型格式不相称，我们将做一个小小的变通。首先，我们创建一个带有标签的新列。该列的格式是由第一个元素推断出来的。然后，我们删除原来的列，重命名新的列以取代原来的列:</p>
-<pre><code>ds_enc.set_format("torch") 
-ds_enc = ds_enc.map(lambda x: {"label_ids_f": x["label_ids"].to(torch.float)}, remove_columns=["label_ids"]) 
-ds_enc = ds_enc.rename_column("label_ids_f", "label_ids")
-</code></pre><p>由于训练数据的规模有限，我们很可能很快过度拟合，所以我们设置load_best_model_at_end=True，并根据微观F - score选择最佳模型:</p>
-<pre><code>from transformers import Trainer, TrainingArguments 
-training_args_fine_tune = TrainingArguments( output_dir="./results", num_train_epochs=20, learning_rate=3e-5, lr_scheduler_type='constant', per_device_train_batch_size=4, per_device_eval_batch_size=32, weight_decay=0.0, evaluation_strategy="epoch", save_strategy="epoch",logging_strategy="epoch", load_best_model_at_end=True, metric_for_best_model='micro f1', save_total_limit=1, log_level='error')
-</code></pre><p>我们需要F-score来选择最佳模型，所以我们需要确保在评估期间计算它。因为模型返回的是对数，我们首先需要用sigmoid函数对预测进行归一化，然后可以用一个简单的阈值对其进行二进制化。然后，我们从分类报告中返回我们感兴趣的分数:</p>
-<pre><code>from scipy.special import expit as sigmoid 
-def compute_metrics(pred): 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">tokenize</span>(<span class="hljs-params">batch</span>): 
+    <span class="hljs-keyword">return</span> tokenizer(batch[<span class="hljs-string">"text"</span>], truncation=<span class="hljs-literal">True</span>, max_length=<span class="hljs-number">128</span>) 
+ds_enc = ds.<span class="hljs-built_in">map</span>(tokenize, batched=<span class="hljs-literal">True</span>) 
+ds_enc = ds_enc.remove_columns([<span class="hljs-string">'labels'</span>, <span class="hljs-string">'text'</span>])
+</code></pre>
+<p>多标签损失函数希望标签的类型是浮动的，因为它也允许类概率而不是离散的标签。因此，我们需要改变列 label_ids 的类型。由于从元素上改变列的格式与Arrow的类型格式不相称，我们将做一个小小的变通。首先，我们创建一个带有标签的新列。该列的格式是由第一个元素推断出来的。然后，我们删除原来的列，重命名新的列以取代原来的列:</p>
+<pre><code class="lang-python">ds_enc.set_format(<span class="hljs-string">"torch"</span>) 
+ds_enc = ds_enc.<span class="hljs-built_in">map</span>(<span class="hljs-keyword">lambda</span> x: {<span class="hljs-string">"label_ids_f"</span>: x[<span class="hljs-string">"label_ids"</span>].to(torch.<span class="hljs-built_in">float</span>)}, remove_columns=[<span class="hljs-string">"label_ids"</span>]) 
+ds_enc = ds_enc.rename_column(<span class="hljs-string">"label_ids_f"</span>, <span class="hljs-string">"label_ids"</span>)
+</code></pre>
+<p>由于训练数据的规模有限，我们很可能很快过度拟合，所以我们设置load_best_model_at_end=True，并根据微观F - score选择最佳模型:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> Trainer, TrainingArguments 
+training_args_fine_tune = TrainingArguments( output_dir=<span class="hljs-string">"./results"</span>, num_train_epochs=<span class="hljs-number">20</span>, learning_rate=<span class="hljs-number">3e-5</span>, lr_scheduler_type=<span class="hljs-string">'constant'</span>, per_device_train_batch_size=<span class="hljs-number">4</span>, per_device_eval_batch_size=<span class="hljs-number">32</span>, weight_decay=<span class="hljs-number">0.0</span>, evaluation_strategy=<span class="hljs-string">"epoch"</span>, save_strategy=<span class="hljs-string">"epoch"</span>,logging_strategy=<span class="hljs-string">"epoch"</span>, load_best_model_at_end=<span class="hljs-literal">True</span>, metric_for_best_model=<span class="hljs-string">'micro f1'</span>, save_total_limit=<span class="hljs-number">1</span>, log_level=<span class="hljs-string">'error'</span>)
+</code></pre>
+<p>我们需要F-score来选择最佳模型，所以我们需要确保在评估期间计算它。因为模型返回的是对数，我们首先需要用sigmoid函数对预测进行归一化，然后可以用一个简单的阈值对其进行二进制化。然后，我们从分类报告中返回我们感兴趣的分数:</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> scipy.special <span class="hljs-keyword">import</span> expit <span class="hljs-keyword">as</span> sigmoid 
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">compute_metrics</span>(<span class="hljs-params">pred</span>): 
     y_true = pred.label_ids
     y_pred = sigmoid(pred.predictions) 
-    y_pred = (y_pred&gt;0.5).astype(float) 
-    clf_dict = classification_report(y_true, y_pred, target_names=all_labels, zero_division=0, output_dict=True) 
-    return {"micro f1": clf_dict["micro avg"]["f1-score"], "macro f1": clf_dict["macro avg"]["f1-score"]}
-</code></pre><p>现在，我们已经准备好了。对于每个训练集片，我们从头开始训练一个分类器，在训练循环结束时加载最佳模型，并将结果存储在测试集上:</p>
-<pre><code>config = AutoConfig.from_pretrained(model_ckpt) 
-config.num_labels = len(all_labels) 
-config.problem_type = "multi_label_classification" 
-for train_slice in train_slices: 
+    y_pred = (y_pred&gt;<span class="hljs-number">0.5</span>).astype(<span class="hljs-built_in">float</span>) 
+    clf_dict = classification_report(y_true, y_pred, target_names=all_labels, zero_division=<span class="hljs-number">0</span>, output_dict=<span class="hljs-literal">True</span>) 
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">"micro f1"</span>: clf_dict[<span class="hljs-string">"micro avg"</span>][<span class="hljs-string">"f1-score"</span>], <span class="hljs-string">"macro f1"</span>: clf_dict[<span class="hljs-string">"macro avg"</span>][<span class="hljs-string">"f1-score"</span>]}
+</code></pre>
+<p>现在，我们已经准备好了。对于每个训练集片，我们从头开始训练一个分类器，在训练循环结束时加载最佳模型，并将结果存储在测试集上:</p>
+<pre><code class="lang-python">config = AutoConfig.from_pretrained(model_ckpt) 
+config.num_labels = <span class="hljs-built_in">len</span>(all_labels) 
+config.problem_type = <span class="hljs-string">"multi_label_classification"</span> 
+<span class="hljs-keyword">for</span> train_slice <span class="hljs-keyword">in</span> train_slices: 
     model = AutoModelForSequenceClassification.from_pretrained(model_ckpt, config=config) 
-    trainer = Trainer( model=model, tokenizer=tokenizer, args=training_args_fine_tune, compute_metrics=compute_metrics, train_dataset=ds_enc["train"].select(train_slice), eval_dataset=ds_enc["valid"],) 
+    trainer = Trainer( model=model, tokenizer=tokenizer, args=training_args_fine_tune, compute_metrics=compute_metrics, train_dataset=ds_enc[<span class="hljs-string">"train"</span>].select(train_slice), eval_dataset=ds_enc[<span class="hljs-string">"valid"</span>],) 
     trainer.train() 
-    pred = trainer.predict(ds_enc["test"]) 
+    pred = trainer.predict(ds_enc[<span class="hljs-string">"test"</span>]) 
     metrics = compute_metrics(pred) 
-    macro_scores["Fine-tune (vanilla)"].append(metrics["macro f1"]) 
-    micro_scores["Fine-tune (vanilla)"].append(metrics["micro f1"]) 
+    macro_scores[<span class="hljs-string">"Fine-tune (vanilla)"</span>].append(metrics[<span class="hljs-string">"macro f1"</span>]) 
+    micro_scores[<span class="hljs-string">"Fine-tune (vanilla)"</span>].append(metrics[<span class="hljs-string">"micro f1"</span>]) 
 
-plot_metrics(micro_scores, macro_scores, train_samples, "Fine-tune (vanilla)")
-</code></pre><p><img src="images/chapter9/image-20220215103020543.png" alt="image-20220215103020543"></img></p>
+plot_metrics(micro_scores, macro_scores, train_samples, <span class="hljs-string">"Fine-tune (vanilla)"</span>)
+</code></pre>
+<p><img src="images/chapter9/image-20220215103020543.png" alt="image-20220215103020543"></img></p>
 <p>首先，我们看到，当我们有机会接触到大约64个例子时，在数据集上简单地微调一个虚构的BERT模型就能得到有竞争力的结果。我们还看到，在这之前，行为有点不稳定，这也是由于在小样本上训练模型，其中一些标签可能是不利的不平衡的。在我们利用我们的数据集的无标签部分之前，让我们快速看一下另一种有前途的方法，即在少有的领域中使用语言模型。</p>
 <h3 id="基于提示的上下文学习和少样本学习">基于提示的上下文学习和少样本学习</h3>
 <p>我们在本章前面看到，我们可以使用像BERT或GPT-2这样的语言模型，并通过使用提示语和解析模型的标记预测来使其适应监督任务。这与添加一个特定任务的头并为任务调整模型参数的经典方法不同。从好的方面看，这种方法不需要任何训练数据，但从坏的方面看，如果我们有机会获得标签数据，似乎就不能利用。有一个中间地带，我们有时可以利用它，叫做in-context或sew-shot学习。</p>
 <p>为了说明这个概念，请考虑一个英语到法语的翻译任务。在0-shot范式中，我们将构建一个提示，可能看起来如下：</p>
-<pre><code>prompt = """\ Translate English to French: thanks =&gt; """
-</code></pre><p>这希望能促使模型预测 "merci "这个词的标记。我们在第六章中使用GPT-2进行总结时已经看到，在文本中加入 "TL;DR "会促使模型产生一个总结，而不需要明确地进行训练。GPT-3论文的一个有趣的发现是大型语言模型能够有效地从提示中提出的例子中学习--因此，前面的翻译例子可以用几个英译德的例子来增加，这将使模型在这个任务中表现得更好。</p>
+<pre><code class="lang-python">prompt = <span class="hljs-string">"""\ Translate English to French: thanks =&gt; """</span>
+</code></pre>
+<p>这希望能促使模型预测 "merci "这个词的标记。我们在第六章中使用GPT-2进行总结时已经看到，在文本中加入 "TL;DR "会促使模型产生一个总结，而不需要明确地进行训练。GPT-3论文的一个有趣的发现是大型语言模型能够有效地从提示中提出的例子中学习--因此，前面的翻译例子可以用几个英译德的例子来增加，这将使模型在这个任务中表现得更好。</p>
 <p>此外，作者发现，模型的规模越大，它们在使用语境中的例子时就越好，从而导致性能的大幅提升。尽管GPT-3大小的模型在生产中的使用具有挑战性，但这是一个令人兴奋的新兴研究领域，人们已经建立了很酷的应用，比如一个自然语言的外壳，用自然语言输入命令并由GPT-3解析为外壳命令。</p>
 <p>使用标记数据的另一种方法是创建提示和预期预测的例子，并在这些例子上继续训练语言模型。一种名为ADAPET的新方法采用了这种方法，并在各种任务上击败了GPT-3，用生成的提示语来调整模型。Hugging Face的研究人员最近的工作表明，这样的方法可以比微调一个自定义的头更具有数据效率。</p>
 <p>在这一节中，我们简要地看了各种方法，以很好地利用我们所拥有的少数标记的例子。很多时候，除了标注的例子之外，我们还可以获得大量未标注的数据；在下一节，我们将讨论如何很好地利用这些数据。</p>
@@ -979,64 +1033,72 @@ plot_metrics(micro_scores, macro_scores, train_samples, "Fine-tune (vanilla)")
 <h3 id="对语言模型进行微调">对语言模型进行微调</h3>
 <p>在这一节中，我们将在数据集的未标记部分用屏蔽语言建模来微调预训练的BERT模型。要做到这一点，我们只需要两个新的概念：在对数据进行标记时的一个额外步骤和一个特殊的数据整理器。让我们从标记化开始。</p>
 <p>除了文本中的普通标记外，标记器还将特殊标记添加到序列中，如用于分类和下句预测的[CLS]和[SEP]标记。当我们做屏蔽式语言建模时，我们要确保我们不会训练模型来预测这些标记。出于这个原因，我们将它们从损失中屏蔽掉，我们可以通过设置return_special_tokens_mask=True，在标记化时得到一个屏蔽。让我们用这个设置对文本进行重新标记。</p>
-<pre><code>def tokenize(batch):
-    return tokenizer(batch["text"], truncation=True, max_length=128, return_special_tokens_mask=True) 
-    ds_mlm = ds.map(tokenize, batched=True) 
-    ds_mlm = ds_mlm.remove_columns(["labels", "text", "label_ids"])
-</code></pre><p>在开始进行遮蔽语言建模时，缺少的是在输入序列中遮蔽标记并在输出中拥有目标标记的机制。我们可以采取的一种方法是，设置一个掩蔽随机标记的函数，并为这些序列创建标签。但这将使数据集的大小增加一倍，因为我们还要在数据集中存储目标序列，而且这意味着我们将在每个时代使用相同的序列掩码。</p>
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">tokenize</span>(<span class="hljs-params">batch</span>):
+    <span class="hljs-keyword">return</span> tokenizer(batch[<span class="hljs-string">"text"</span>], truncation=<span class="hljs-literal">True</span>, max_length=<span class="hljs-number">128</span>, return_special_tokens_mask=<span class="hljs-literal">True</span>) 
+    ds_mlm = ds.<span class="hljs-built_in">map</span>(tokenize, batched=<span class="hljs-literal">True</span>) 
+    ds_mlm = ds_mlm.remove_columns([<span class="hljs-string">"labels"</span>, <span class="hljs-string">"text"</span>, <span class="hljs-string">"label_ids"</span>])
+</code></pre>
+<p>在开始进行遮蔽语言建模时，缺少的是在输入序列中遮蔽标记并在输出中拥有目标标记的机制。我们可以采取的一种方法是，设置一个掩蔽随机标记的函数，并为这些序列创建标签。但这将使数据集的大小增加一倍，因为我们还要在数据集中存储目标序列，而且这意味着我们将在每个时代使用相同的序列掩码。</p>
 <p>一个更优雅的解决方案是使用一个数据整理器。记住，数据整理器是在数据集和模型调用之间建立桥梁的函数。一个批次从数据集中取样，数据整理器准备好批次中的元素并将其送入模型。在我们遇到的最简单的情况下，它只是将每个元素的张量连接成一个张量。在我们的案例中，我们可以用它来做屏蔽和标签的生成。这样我们就不需要存储标签，而且每次采样都会得到新的掩码。这个任务的数据整理器被称为DataCollatorForLanguageModeling。我们用模型的标记器和我们想通过mlm_probability参数掩盖的标记的比例来初始化它。我们将使用这个整理器来屏蔽15%的标记，这与BERT论文中的程序一致：</p>
-<pre><code>from transformers import DataCollatorForLanguageModeling, set_seed 
-data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
-</code></pre><p>让我们快速看一下数据整理器的运行情况，看看它到底做了什么。为了在DataFrame中快速显示结果，我们将标记器和数据整理器的返回格式切换为NumPy：</p>
-<pre><code>set_seed(3) 
-data_collator.return_tensors = "np" 
-inputs = tokenizer("Transformers are awesome!", return_tensors="np") 
-outputs = data_collator([{"input_ids": inputs["input_ids"][0]}])
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> DataCollatorForLanguageModeling, set_seed 
+data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=<span class="hljs-number">0.15</span>)
+</code></pre>
+<p>让我们快速看一下数据整理器的运行情况，看看它到底做了什么。为了在DataFrame中快速显示结果，我们将标记器和数据整理器的返回格式切换为NumPy：</p>
+<pre><code class="lang-python">set_seed(<span class="hljs-number">3</span>) 
+data_collator.return_tensors = <span class="hljs-string">"np"</span> 
+inputs = tokenizer(<span class="hljs-string">"Transformers are awesome!"</span>, return_tensors=<span class="hljs-string">"np"</span>) 
+outputs = data_collator([{<span class="hljs-string">"input_ids"</span>: inputs[<span class="hljs-string">"input_ids"</span>][<span class="hljs-number">0</span>]}])
 
-pd.DataFrame({ "Original tokens": tokenizer.convert_ids_to_tokens(inputs["input_ids"] [0]), "Masked tokens": tokenizer.convert_ids_to_tokens(outputs["input_ids"][0]), "Original input_ids": original_input_ids, "Masked input_ids": masked_input_ids, "Labels": outputs["labels"][0]}).T
-</code></pre><p><img src="images/chapter9/image-20220215103800026.png" alt="image-20220215103800026"></img></p>
+pd.DataFrame({ <span class="hljs-string">"Original tokens"</span>: tokenizer.convert_ids_to_tokens(inputs[<span class="hljs-string">"input_ids"</span>] [<span class="hljs-number">0</span>]), <span class="hljs-string">"Masked tokens"</span>: tokenizer.convert_ids_to_tokens(outputs[<span class="hljs-string">"input_ids"</span>][<span class="hljs-number">0</span>]), <span class="hljs-string">"Original input_ids"</span>: original_input_ids, <span class="hljs-string">"Masked input_ids"</span>: masked_input_ids, <span class="hljs-string">"Labels"</span>: outputs[<span class="hljs-string">"labels"</span>][<span class="hljs-number">0</span>]}).T
+</code></pre>
+<p><img src="images/chapter9/image-20220215103800026.png" alt="image-20220215103800026"></img></p>
 <p>我们看到对应于感叹号的令牌已经被替换成了一个屏蔽令牌。此外，数据整理器返回了一个标签数组，其中原始令牌为-100，被屏蔽的令牌为令牌ID。正如我们之前看到的，在计算损失时，包含-100的条目被忽略。让我们把数据整理器的格式换回PyTorch：</p>
-<pre><code>data_collator.return_tensors = "pt"
-</code></pre><p>随着标记器和数据整理器的到位，我们准备对屏蔽的语言模型进行微调。我们像往常一样设置TrainingArguments和Trainer：</p>
-<pre><code>from transformers import AutoModelForMaskedLM 
+<pre><code class="lang-python">data_collator.return_tensors = <span class="hljs-string">"pt"</span>
+</code></pre>
+<p>随着标记器和数据整理器的到位，我们准备对屏蔽的语言模型进行微调。我们像往常一样设置TrainingArguments和Trainer：</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoModelForMaskedLM 
 
-training_args = TrainingArguments( output_dir = f"{model_ckpt}-issues-128", per_device_train_batch_size=32, logging_strategy="epoch", evaluation_strategy="epoch", save_strategy="no", num_train_epochs=16, push_to_hub=True, log_level="error", report_to="none") 
+training_args = TrainingArguments( output_dir = <span class="hljs-string">f"<span class="hljs-subst">{model_ckpt}</span>-issues-128"</span>, per_device_train_batch_size=<span class="hljs-number">32</span>, logging_strategy=<span class="hljs-string">"epoch"</span>, evaluation_strategy=<span class="hljs-string">"epoch"</span>, save_strategy=<span class="hljs-string">"no"</span>, num_train_epochs=<span class="hljs-number">16</span>, push_to_hub=<span class="hljs-literal">True</span>, log_level=<span class="hljs-string">"error"</span>, report_to=<span class="hljs-string">"none"</span>) 
 
-trainer = Trainer( model=AutoModelForMaskedLM.from_pretrained("bert-base-uncased"), tokenizer=tokenizer, args=training_args, data_collator=data_collator, train_dataset=ds_mlm["unsup"], eval_dataset=ds_mlm["train"]) 
+trainer = Trainer( model=AutoModelForMaskedLM.from_pretrained(<span class="hljs-string">"bert-base-uncased"</span>), tokenizer=tokenizer, args=training_args, data_collator=data_collator, train_dataset=ds_mlm[<span class="hljs-string">"unsup"</span>], eval_dataset=ds_mlm[<span class="hljs-string">"train"</span>]) 
 
 trainer.train() 
-trainer.push_to_hub("Training complete!")
-</code></pre><p>我们可以访问训练器的日志历史，查看模型的训练和验证损失。所有的日志都存储在trainer.state.log_history中，作为一个字典列表，我们可以很容易地加载到Pandas DataFrame中。由于训练和验证损失是在不同的步骤中记录的，所以数据框架中存在缺失值。出于这个原因，我们在绘制指标之前，先把缺失的值删除：</p>
-<pre><code>df_log = pd.DataFrame(trainer.state.log_history) 
+trainer.push_to_hub(<span class="hljs-string">"Training complete!"</span>)
+</code></pre>
+<p>我们可以访问训练器的日志历史，查看模型的训练和验证损失。所有的日志都存储在trainer.state.log_history中，作为一个字典列表，我们可以很容易地加载到Pandas DataFrame中。由于训练和验证损失是在不同的步骤中记录的，所以数据框架中存在缺失值。出于这个原因，我们在绘制指标之前，先把缺失的值删除：</p>
+<pre><code class="lang-python">df_log = pd.DataFrame(trainer.state.log_history) 
 
-(df_log.dropna(subset=["eval_loss"]).reset_index()["eval_loss"] .plot(label="Validation")) 
+(df_log.dropna(subset=[<span class="hljs-string">"eval_loss"</span>]).reset_index()[<span class="hljs-string">"eval_loss"</span>] .plot(label=<span class="hljs-string">"Validation"</span>)) 
 
-df_log.dropna(subset=["loss"]).reset_index()["loss"].plot(label="Train")
-plt.xlabel("Epochs") 
-plt.ylabel("Loss") 
-plt.legend(loc="upper right")
+df_log.dropna(subset=[<span class="hljs-string">"loss"</span>]).reset_index()[<span class="hljs-string">"loss"</span>].plot(label=<span class="hljs-string">"Train"</span>)
+plt.xlabel(<span class="hljs-string">"Epochs"</span>) 
+plt.ylabel(<span class="hljs-string">"Loss"</span>) 
+plt.legend(loc=<span class="hljs-string">"upper right"</span>)
 plt.show()
-</code></pre><p><img src="images/chapter9/image-20220215104139493.png" alt="image-20220215104139493"></img></p>
+</code></pre>
+<p><img src="images/chapter9/image-20220215104139493.png" alt="image-20220215104139493"></img></p>
 <p>看来，训练和验证损失都大大降低了。因此，让我们检查一下，当我们对基于这个模型的分类器进行微调时，是否也能看到改进。</p>
 <h3 id="对分类器进行微调">对分类器进行微调</h3>
 <p>现在，我们将重复微调程序，但有一点不同的是，我们将加载我们自己的自定义模型：</p>
-<pre><code>model_ckpt = f'{model_ckpt}-issues-128' 
+<pre><code class="lang-python">model_ckpt = <span class="hljs-string">f'<span class="hljs-subst">{model_ckpt}</span>-issues-128'</span> 
 config = AutoConfig.from_pretrained(model_ckpt) 
-config.num_labels = len(all_labels) 
-config.problem_type = "multi_label_classification" 
-for train_slice in train_slices: 
+config.num_labels = <span class="hljs-built_in">len</span>(all_labels) 
+config.problem_type = <span class="hljs-string">"multi_label_classification"</span> 
+<span class="hljs-keyword">for</span> train_slice <span class="hljs-keyword">in</span> train_slices: 
     model = AutoModelForSequenceClassification.from_pretrained(model_ckpt, config=config) 
     trainer = Trainer( model=model, tokenizer=tokenizer, args=training_args_fine_tune, compute_metrics=compute_metrics
-train_dataset=ds_enc["train"].select(train_slice), eval_dataset=ds_enc["valid"], )
+train_dataset=ds_enc[<span class="hljs-string">"train"</span>].select(train_slice), eval_dataset=ds_enc[<span class="hljs-string">"valid"</span>], )
     trainer.train() 
-    pred = trainer.predict(ds_enc['test'])
+    pred = trainer.predict(ds_enc[<span class="hljs-string">'test'</span>])
      metrics = compute_metrics(pred) 
-     # DA refers to domain adaptation 
-     macro_scores['Fine-tune (DA)'].append(metrics['macro f1']) 
-     micro_scores['Fine-tune (DA)'].append(metrics['micro f1'])
-</code></pre><p>将结果与基于vanilla BERT的微调进行比较，我们看到，我们得到了一个优势，特别是在低数据领域。在有更多标记数据的情况下，我们也获得了几个百分点：</p>
-<pre><code>plot_metrics(micro_scores, macro_scores, train_samples, "Fine-tune (DA)")
-</code></pre><p><img src="images/chapter9/image-20220215105444900.png" alt="image-20220215105444900"></img></p>
+     <span class="hljs-comment"># DA refers to domain adaptation </span>
+     macro_scores[<span class="hljs-string">'Fine-tune (DA)'</span>].append(metrics[<span class="hljs-string">'macro f1'</span>]) 
+     micro_scores[<span class="hljs-string">'Fine-tune (DA)'</span>].append(metrics[<span class="hljs-string">'micro f1'</span>])
+</code></pre>
+<p>将结果与基于vanilla BERT的微调进行比较，我们看到，我们得到了一个优势，特别是在低数据领域。在有更多标记数据的情况下，我们也获得了几个百分点：</p>
+<pre><code class="lang-python">plot_metrics(micro_scores, macro_scores, train_samples, <span class="hljs-string">"Fine-tune (DA)"</span>)
+</code></pre>
+<p><img src="images/chapter9/image-20220215105444900.png" alt="image-20220215105444900"></img></p>
 <p>这突出表明，领域适应可以通过未标记的数据和少量的努力为模型的性能提供轻微的提升。自然，未标注的数据越多，标注的数据越少，你用这种方法得到的影响就越大。在结束本章之前，我们将向你展示一些利用无标签数据的更多技巧。</p>
 <h3 id="高级方法">高级方法</h3>
 <p>在调整分类头之前对语言模型进行微调是一个简单而可靠的方法，可以提高性能。然而，还有一些复杂的方法比可以进一步利用未标记的数据。我们在此总结了其中的一些方法，如果你需要更多的性能，这些方法应该提供一个很好的起点。</p>
@@ -1097,7 +1159,7 @@ train_dataset=ds_enc["train"].select(train_slice), eval_dataset=ds_enc["valid"],
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"处理少标签或无标签任务","level":"1.11","depth":1,"next":{"title":"从零开始训练Transformers","level":"1.12","depth":1,"path":"chapter10.md","ref":"chapter10.md","articles":[]},"previous":{"title":"优化Transformers性能","level":"1.10","depth":1,"path":"chapter8.md","ref":"chapter8.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter9.md","mtime":"2024-08-23T19:12:41.450Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"处理少标签或无标签任务","level":"1.11","depth":1,"next":{"title":"从零开始训练Transformers","level":"1.12","depth":1,"path":"chapter10.md","ref":"chapter10.md","articles":[]},"previous":{"title":"优化Transformers性能","level":"1.10","depth":1,"path":"chapter8.md","ref":"chapter8.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter9.md","mtime":"2025-01-05T17:59:00.401Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -1151,10 +1213,6 @@ train_dataset=ds_enc["train"].select(train_slice), eval_dataset=ds_enc["valid"],
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -1171,7 +1229,7 @@ train_dataset=ds_enc["train"].select(train_slice), eval_dataset=ds_enc["valid"],
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 

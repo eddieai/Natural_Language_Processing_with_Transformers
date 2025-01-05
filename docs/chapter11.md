@@ -185,7 +185,7 @@
 
 ViT集成在Transformers中，使用它与我们在本书中使用的NLP管道非常相似。让我们从加载一只相当有名的狗的图像开始。
 
-```
+```python
 from PIL import Image import matplotlib.pyplot as plt 
 image = Image.open("images/doge.jpg") 
 plt.imshow(image) 
@@ -198,7 +198,7 @@ plt.show()
 
 要加载一个ViT模型，我们只需要指定图像分类管道，然后输入图像来提取预测的类别:
 
-```
+```python
 import pandas as pd 
 from transformers import pipeline 
 image_classifier = pipeline("image-classification") 
@@ -229,7 +229,7 @@ TAPAS（Table Parser的缩写）来拯救我们了 这个模型将Transformer架
 
 让我们来看看TAPAS在实践中是如何工作的一个例子。我们创建了一个本书目录的虚构版本。它包含章节编号、章节名称以及章节的起始页和结束页：
 
-```
+```python
 book_data = [ 
 {"chapter": 0, "name": "Introduction", "start_page": 1, "end_page": 11}, 
 {"chapter": 1, "name": "Text classification", "start_page": 12, "end_page": 48}, 
@@ -243,7 +243,7 @@ book_data = [
 
 我们也可以用现有的字段轻松地添加每章的页数。为了与TAPAS模型很好地配合，我们需要确保所有列都是str类型：
 
-```
+```python
 table = pd.DataFrame(book_data) 
 table['number_of_pages'] = table['end_page']-table['start_page'] 
 table = table.astype(str) table
@@ -254,14 +254,14 @@ table = table.astype(str) table
 
 现在你应该知道这个程序了。我们首先加载表-问题回答管道。
 
-```
+```python
 table_qa = pipeline("table-question-answering")
 
 ```
 
 然后通过一些查询来提取答案：
 
-```
+```python
 table_qa = pipeline("table-question-answering") 
 queries = ["What's the topic in chapter 4?", "What is the total number of pages?", "On which page does the chapter about question-answering start?", "How many chapters have more than 20 pages?"] 
 preds = table_qa(table, queries)
@@ -270,7 +270,7 @@ preds = table_qa(table, queries)
 
 这些预测将表的操作类型与答案一起存储在一个聚合器字段中。让我们看看TAPAS在我们的问题上表现得如何：
 
-```
+```python
 for query, pred in zip(queries, preds): 
 	print(query) 
 	if pred["aggregator"] == "NONE": 
@@ -301,14 +301,14 @@ for query, pred in zip(queries, preds):
 
 wav2vec 2.0模型集成在Transformers中，你不会惊讶地发现，加载和使用它们遵循我们在本书中看到的熟悉步骤。让我们加载一个经过预训练的模型，这个模型是在960小时的语音音频上训练的：
 
-```
+```python
 asr = pipeline("automatic-speech-recognition")
 
 ```
 
 为了将这个模型应用于一些音频文件，我们将使用SUPERB数据集的ASR子集，这也是该模型预训练的数据集。由于该数据集相当大，我们将只加载一个例子用于我们的演示目的：
 
-```
+```python
 from datasets import load_dataset 
 ds = load_dataset("superb", "asr", split="validation[:1]") 
 print(ds[0]) 
@@ -320,7 +320,7 @@ print(ds[0])
 
 在这里我们可以看到，文件列中的音频是以FLAC编码格式存储的，而预期的转录则由文本列给出。为了将音频转换为浮点数组，我们可以使用SoundFile库，用map()读取我们数据集中的每个文件：
 
-```
+```python
 import soundfile as sf 
 def map_to_array(batch): 
 	speech, _ = sf.read(batch["file"]) 
@@ -332,7 +332,7 @@ ds = ds.map(map_to_array)
 
 如果你使用的是Jupyter笔记本，你可以用下面的IPython小工具轻松播放声音文件：
 
-```
+```python
 from IPython.display import Audio 
 display(Audio(ds[0]['speech'], rate=16000))
 
@@ -340,7 +340,7 @@ display(Audio(ds[0]['speech'], rate=16000))
 
 最后，我们可以将输入传递给管道，并检查预测结果：
 
-```
+```python
 pred = asr(ds[0]["speech"]) 
 print(pred) 
 
@@ -390,7 +390,7 @@ DALL-E是一个结合了视觉和文本的生成任务的模型。它使用GPT�
 
 CLIP的零样本图像分类性能显著，与完全监督训练的视觉模型竞争，同时在新的类别方面更加灵活。CLIP也完全集成在Transformers中，所以我们可以试用它。对于图像到文本的任务，我们实例化了一个处理器，由一个特征提取器和一个标记器组成。特征提取器的作用是将图像转换成适合于模型的形式，而标记器负责将模型的预测解码成文本。
 
-```
+```python
 from transformers import CLIPProcessor, CLIPModel 
 clip_ckpt = "openai/clip-vit-base-patch32" 
 model = CLIPModel.from_pretrained(clip_ckpt) 
@@ -400,7 +400,7 @@ processor = CLIPProcessor.from_pretrained(clip_ckpt)
 
 那么我们需要一个合适的图片来尝试。有什么会比擎天柱的照片更合适呢？
 
-```
+```python
 image = Image.open("images/optimusprime.jpg") 
 plt.imshow(image) 
 plt.axis("off") 
@@ -412,7 +412,7 @@ plt.show()
 
 接下来，我们设置了文本，将图像与之进行比较，并通过模型进行传递：
 
-```
+```python
 import torch 
 texts = ["a photo of a transformer", "a photo of a robot", "a photo of agi"] 
 inputs = processor(text=texts, images=image, return_tensors="pt", padding=True) 

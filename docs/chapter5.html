@@ -6,7 +6,7 @@
         <title>文本生成 · HonKit</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
-        <meta name="generator" content="HonKit 5.1.4">
+        <meta name="generator" content="HonKit 6.0.2">
         
         
         
@@ -24,7 +24,7 @@
                 
             
                 
-                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                <link rel="stylesheet" href="gitbook/@honkit/honkit-plugin-fontsettings/website.css">
                 
             
         
@@ -49,7 +49,7 @@
     
     
     <meta name="HandheldFriendly" content="true"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
@@ -348,7 +348,7 @@
 <p>从模型的连续输出中获得离散标记的最简单的解码方法是贪婪地选择每个时间点上概率最大的标记：</p>
 <p><img src="images/chapter5/image-20220214201712067.png" alt="image-20220214201712067"></img></p>
 <p>为了了解贪婪搜索是如何工作的，让我们先用语言建模头加载15亿参数版本的GPT-2：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> torch 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch 
 <span class="hljs-keyword">from</span> transformers <span class="hljs-keyword">import</span> AutoTokenizer, AutoModelForCausalLM 
 device = <span class="hljs-string">"cuda"</span> <span class="hljs-keyword">if</span> torch.cuda.is_available() <span class="hljs-keyword">else</span> <span class="hljs-string">"cpu"</span> 
 model_name = <span class="hljs-string">"gpt2-xl"</span> 
@@ -356,7 +356,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 </code></pre>
 <p>现在让我们来生成一些文本! 尽管Transformers为GPT-2这样的自回归模型提供了一个generate()函数，但我们将自己实现这个解码方法，看看引擎盖下发生了什么。为了热身，我们将采取图5-3所示的相同的迭代方法：我们将使用 "变形金刚是 "作为输入提示，并运行八个时间段的解码。在每个时间步骤中，我们为提示中的最后一个符号挑选出模型的对数，并用softmax包起来，得到一个概率分布。然后，我们挑选出概率最高的下一个符号，将其添加到输入序列中，并再次运行该过程。下面的代码完成了这项工作，并且还在每个时间段存储了五个最有可能的标记，这样我们就可以直观地看到备选方案：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
 input_txt = <span class="hljs-string">"Transformers are the"</span> 
 input_ids = tokenizer(input_txt, return_tensors=<span class="hljs-string">"pt"</span>)[<span class="hljs-string">"input_ids"</span>].to(device) 
 iterations = [] 
@@ -385,13 +385,13 @@ pd.DataFrame(iterations)
 <p><img src="images/chapter5/image-20220214202106391.png" alt="image-20220214202106391"></img></p>
 <p>通过这种简单的方法，我们能够生成 "变形金刚是世界上最受欢迎的玩具系列 "的句子。有趣的是，这表明GPT-2已经内化了一些关于变形金刚媒体系列的知识，它是由两家玩具公司（Hasbro和Takara Tomy）创造的。我们还可以看到每一步都有其他可能的延续，这显示了文本生成的迭代性质。与序列分类等其他任务不同的是，在序列分类中，单一的前向传递就足以产生预测，而在文本生成中，我们需要一次一次地对输出标记进行解码。</p>
 <p>实现贪婪搜索并不难，但我们要使用Transformers内置的generate()函数来探索更复杂的解码方法。为了重现我们的简单例子，让我们 确保采样被关闭（默认情况下是关闭的，除非你加载检查点的模型的具体配置另有规定），并为新生成的标记数量指定max_new_tokens：</p>
-<pre><code class="lang-py">input_ids = tokenizer(input_txt, return_tensors=<span class="hljs-string">"pt"</span>)[<span class="hljs-string">"input_ids"</span>].to(device) 
+<pre><code class="lang-python">input_ids = tokenizer(input_txt, return_tensors=<span class="hljs-string">"pt"</span>)[<span class="hljs-string">"input_ids"</span>].to(device) 
 output = model.generate(input_ids, max_new_tokens=n_steps, do_sample=<span class="hljs-literal">False</span>) 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output[<span class="hljs-number">0</span>]))
 </code></pre>
 <pre><code>Transformers are the most popular toy line in the world,
 </code></pre><p>现在让我们尝试一些更有趣的东西：我们能重现OpenAI的独角兽故事吗？正如我们之前所做的，我们将用标记器对提示进行编码，并且我们将为max_length指定一个较大的值，以生成一个较长的文本序列：</p>
-<pre><code class="lang-py">max_length = <span class="hljs-number">128</span> 
+<pre><code class="lang-python">max_length = <span class="hljs-number">128</span> 
 input_txt = <span class="hljs-string">"""In a shocking finding, scientist discovered \ a herd of unicorns living in a remote, previously unexplored \ valley, in the Andes Mountains. Even more surprising to the \ researchers was the fact that the unicorns spoke perfect English.\n\n """</span> 
 input_ids = tokenizer(input_txt, return_tensors=<span class="hljs-string">"pt"</span>)[<span class="hljs-string">"input_ids"</span>].to(device) 
 output_greedy = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">False</span>) 
@@ -407,26 +407,26 @@ The researchers were surprised to find that the unicorns were able
 <p>Beam搜索不是在每一步解码概率最高的标记，而是跟踪前b个最有可能的下一个标记，其中b被称为波束或部分假说的数量。下一组波束的选择是考虑现有波束的所有可能的下一个标记的扩展，并选择b个最可能的扩展。这个过程重复进行，直到我们达到最大长度或EOS标记，然后根据对数概率对b个波束进行排序，选择最可能的序列。图5-4中显示了一个Beam搜索的例子。</p>
 <p><img src="images/chapter5/image-20220214202454948.png" alt="image-20220214202454948"></img></p>
 <p>为什么我们要用对数概率而不是概率本身对序列进行评分？计算一个序列的总体概率P（y1，y2，...，yt|x）涉及计算条件概率P（yt|y&lt;t，x）的乘积是一个原因。由于每个条件概率通常是[0，1]范围内的一个小数字，取它们的乘积会导致总的概率很容易出现下溢。这意味着计算机不能再精确地表示计算的结果。例如，假设我们有一个由t = 1024个标记组成的序列，并慷慨地假设每个标记的概率为0.5。这个序列的总体概率是一个极小的数字：</p>
-<pre><code class="lang-py"><span class="hljs-number">0.5</span> ** <span class="hljs-number">1024</span> 
+<pre><code class="lang-python"><span class="hljs-number">0.5</span> ** <span class="hljs-number">1024</span> 
 <span class="hljs-number">5.562684646268003e-309</span>
 </code></pre>
 <p>导致数值不稳定，因为我们遇到了下溢。我们可以通过计算一个相关项，即对数概率来避免这种情况。如果我们将对数应用于联合概率和条件概率，那么在对数的乘积规则的帮助下，我们可以得到：</p>
 <p><img src="images/chapter5/image-20220214202552207.png" alt="image-20220214202552207"></img></p>
 <p>换句话说，我们之前看到的概率乘积变成了对数概率之和，这就更不可能遇到数字不稳定的情况。例如，计算之前同一个例子的对数概率，可以得到：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np 
 <span class="hljs-built_in">sum</span>([np.log(<span class="hljs-number">0.5</span>)] * <span class="hljs-number">1024</span>) 
 -<span class="hljs-number">709.7827128933695</span>
 </code></pre>
 <p>这是一个我们可以轻松处理的数字，而且这种方法对更小的数字仍然有效。由于我们只想比较相对概率，我们可以直接用对数概率来做。</p>
 <p>让我们计算并比较贪婪和Beam搜索产生的文本的对数概率，看看Beam搜索是否能提高整体概率。由于Transformers模型返回的是给定输入标记的下一个标记的未归一化对数，我们首先需要将对数归一化，以便为序列中的每个标记创建整个词汇的概率分布。然后，我们需要只选择序列中存在的标记概率。下面的函数实现了这些步骤。</p>
-<pre><code class="lang-py"><span class="hljs-keyword">import</span> torch.nn.functional <span class="hljs-keyword">as</span> F 
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> torch.nn.functional <span class="hljs-keyword">as</span> F 
 <span class="hljs-keyword">def</span> <span class="hljs-title function_">log_probs_from_logits</span>(<span class="hljs-params">logits, labels</span>): 
     logp = F.log_softmax(logits, dim=-<span class="hljs-number">1</span>) 
     logp_label = torch.gather(logp, <span class="hljs-number">2</span>, labels.unsqueeze(<span class="hljs-number">2</span>)).squeeze(-<span class="hljs-number">1</span>) 
     <span class="hljs-keyword">return</span> logp_label
 </code></pre>
 <p>这给我们提供了单个标记的对数概率，所以要得到一个序列的总对数概率，我们只需要将每个标记的对数概率相加：</p>
-<pre><code class="lang-py"><span class="hljs-keyword">def</span> <span class="hljs-title function_">sequence_logprob</span>(<span class="hljs-params">model, labels, input_len=<span class="hljs-number">0</span></span>): 
+<pre><code class="lang-python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">sequence_logprob</span>(<span class="hljs-params">model, labels, input_len=<span class="hljs-number">0</span></span>): 
     <span class="hljs-keyword">with</span> torch.no_grad(): 
         output = model(labels) 
         log_probs = log_probs_from_logits( output.logits[:, :-<span class="hljs-number">1</span>, :], labels[:, <span class="hljs-number">1</span>:])
@@ -435,7 +435,7 @@ The researchers were surprised to find that the unicorns were able
 </code></pre>
 <p>注意，我们忽略了输入序列的对数概率，因为它们不是由模型生成的。我们还可以看到，将对数和标签对齐是很重要的；因为模型预测了下一个标记，所以我们没有得到第一个标签的对数，我们也不需要最后一个对数，因为我们没有它的地面真相标记。</p>
 <p>让我们用这些函数来首先计算OpenAI提示上的贪婪解码器的序列对数概率。</p>
-<pre><code class="lang-py">logp = sequence_logprob(model, output_greedy, input_len=<span class="hljs-built_in">len</span>(input_ids[<span class="hljs-number">0</span>])) 
+<pre><code class="lang-python">logp = sequence_logprob(model, output_greedy, input_len=<span class="hljs-built_in">len</span>(input_ids[<span class="hljs-number">0</span>])) 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_greedy[<span class="hljs-number">0</span>])) 
 <span class="hljs-built_in">print</span>(<span class="hljs-string">f"\nlog-prob: <span class="hljs-subst">{logp:<span class="hljs-number">.2</span>f}</span>"</span>)
 </code></pre>
@@ -446,7 +446,7 @@ The researchers were surprised to find that the unicorns were able to communicat
 The researchers were surprised to find that the unicorns were able 
 log-prob: -87.43
 </code></pre><p>现在让我们把它与用Beam搜索生成的序列进行比较。要用generate()函数激活Beam搜索，我们只需要用num_beams参数指定波束的数量。我们选择的波束越多，可能得到的结果就越好；然而，生成过程会变得更慢，因为我们为每个波束生成平行序列：</p>
-<pre><code class="lang-py">output_beam = model.generate(input_ids, max_length=max_length, num_beams=<span class="hljs-number">5</span>, do_sample=<span class="hljs-literal">False</span>) 
+<pre><code class="lang-python">output_beam = model.generate(input_ids, max_length=max_length, num_beams=<span class="hljs-number">5</span>, do_sample=<span class="hljs-literal">False</span>) 
 logp = sequence_logprob(model, output_beam, input_len=<span class="hljs-built_in">len</span>(input_ids[<span class="hljs-number">0</span>]))
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_beam[<span class="hljs-number">0</span>])) 
 <span class="hljs-built_in">print</span>(<span class="hljs-string">f"\nlog-prob: <span class="hljs-subst">{logp:<span class="hljs-number">.2</span>f}</span>"</span>)
@@ -458,7 +458,7 @@ The scientists were conducting a study of the Andes Mountains when they discover
 
 log-prob: -55.23
 </code></pre><p>我们可以看到，我们用Beam搜索得到的对数概率（越高越好）比用简单的贪婪解码得到的要好。然而，我们可以看到，Beam搜索也受到重复文本的影响。解决这个问题的一个方法是用no_repeat_ngram_size参数施加一个n-gram惩罚，跟踪哪些n-gram已经被看到，并将下一个token的概率设置为零，如果它将产生一个以前看到的n-gram：</p>
-<pre><code class="lang-py">output_beam = model.generate(input_ids, max_length=max_length, num_beams=<span class="hljs-number">5</span>, do_sample=<span class="hljs-literal">False</span>, no_repeat_ngram_size=<span class="hljs-number">2</span>) 
+<pre><code class="lang-python">output_beam = model.generate(input_ids, max_length=max_length, num_beams=<span class="hljs-number">5</span>, do_sample=<span class="hljs-literal">False</span>, no_repeat_ngram_size=<span class="hljs-number">2</span>) 
 logp = sequence_logprob(model, output_beam, input_len=<span class="hljs-built_in">len</span>(input_ids[<span class="hljs-number">0</span>])
 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_beam[<span class="hljs-number">0</span>]))
@@ -477,7 +477,7 @@ log-prob: -93.12
 <p>通过调整T，我们可以控制概率分布的形状。当T≪1≫时，分布在原点周围变得尖锐，罕见的标记被压制。另一方面，当T≫1时，分布变得平缓，每个令牌的可能性相同。温度对标记概率的影响见图5-5。</p>
 <p><img src="images/chapter5/image-20220214203209475.png" alt="image-20220214203209475"></img></p>
 <p>为了看看我们如何利用温度来影响生成的文本，让我们通过在generate()函数中设置温度参数，以T=2为例进行采样（我们将在下一节解释top_k参数的含义）：</p>
-<pre><code class="lang-py">output_temp = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, temperature=<span class="hljs-number">2.0</span>, top_k=<span class="hljs-number">0</span>) 
+<pre><code class="lang-python">output_temp = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, temperature=<span class="hljs-number">2.0</span>, top_k=<span class="hljs-number">0</span>) 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_temp[<span class="hljs-number">0</span>]))
 </code></pre>
 <pre><code>In a shocking finding, scientist discovered a herd of unicorns living in a remote, previously unexplored valley, in the Andes Mountains. Even more surprising to the researchers was the fact that the unicorns spoke perfect English. 
@@ -486,7 +486,7 @@ While the station aren protagonist receive Pengala nostalgiates tidbitRegarding
 
 Jenny loclonju AgreementCON irrational �rite Continent seaf A jer Turner Dorbecue WILL Pumpkin mere Thatvernuildagain YoAniamond disse * Runewitingkusstemprop});b zo coachinginventorymodules deflation press Vaticanpres Wrestling chargesThingsctureddong Ty physician PET KimBi66 graz Oz at aff da temporou MD6 radi iter
 </code></pre><p>我们可以清楚地看到，高温产生了大部分的胡言乱语；通过强调罕见的标记，我们使模型产生了奇怪的语法和相当多的生造词！让我们看看如果我们把温度降下来会发生什么？让我们看看如果我们降低温度会发生什么：</p>
-<pre><code class="lang-py">output_temp = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, temperature=<span class="hljs-number">0.5</span>, top_k=<span class="hljs-number">0</span>) 
+<pre><code class="lang-python">output_temp = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, temperature=<span class="hljs-number">0.5</span>, top_k=<span class="hljs-number">0</span>) 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_temp[<span class="hljs-number">0</span>]))
 </code></pre>
 <pre><code>In a shocking finding, scientist discovered a herd of unicorns living in a remote, previously unexplored valley, in the Andes Mountains. Even more surprising to the researchers was the fact that the unicorns spoke perfect English. The scientists were searching for the source of the mysterious sound, which was making the animals laugh and cry.
@@ -503,7 +503,7 @@ The unicorns were living in a remote valley in the Andes mountains 'When we firs
 <p>在下图中，我们按概率降序排列标记，并计算前10,000个标记的累积总和（GPT-2的词汇中总共有50,257个标记）。弧线代表挑选前面任何一个标记的概率。例如，在概率最高的1,000个标记中，大约有96%的机会挑选任何一个标记。我们看到，该概率迅速上升到90%以上，但在几千个标记之后才饱和，接近100%。该图 显示，有1/100的概率没有选到任何甚至不在前2000名的标记。</p>
 <p>虽然这些数字乍看之下可能很小，但它们变得很重要，因为在生成文本时，我们对每个标记取样一次。因此，即使只有1/100或1/1000的机会，如果我们取样数百次，就有很大的机会在某一时刻选到一个不可能的标记，而且在取样时选到这样的标记会严重影响生成文本的质量。出于这个原因，我们通常希望避免这些非常不可能的标记。这就是top-k和top-p采样发挥作用的地方。</p>
 <p>top-k抽样背后的想法是通过只从概率最高的k个标记中抽样来避免低概率的选择。这就在分布的长尾上设置了一个固定的切口，确保我们只从可能的选择中取样。回到图5-6，top-k抽样相当于定义一条垂直线并从左边的标记中抽样。同样，generate()函数通过top_k参数提供了一个简单的方法来实现这一点:</p>
-<pre><code class="lang-py">output_topk = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, top_k=<span class="hljs-number">50</span>) 
+<pre><code class="lang-python">output_topk = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, top_k=<span class="hljs-number">50</span>) 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_topk[<span class="hljs-number">0</span>]))
 </code></pre>
 <pre><code>In a shocking finding, scientist discovered a herd of unicorns living in a remote, previously unexplored valley, in the Andes Mountains. Even more surprising to the researchers was the fact that the unicorns spoke perfect English.
@@ -514,7 +514,7 @@ The researchers came across about 50 of the animals in the valley. They had live
 years that
 </code></pre><p>这可以说是我们迄今为止生成的最像人类的文本。但是我们如何选择k呢？k的值是手动选择的，对序列中的每个选择都是一样的，与实际的输出分布无关。序列中的每个选择都是一样的，与实际的输出分布无关。我们可以通过查看一些文本质量指标来找到一个好的k值，我们将在下一章探讨这个问题--但这个固定的截止值可能并不十分令人满意。</p>
 <p>另一种方法是使用动态截断。在核抽样或顶抽样中，我们不是选择一个固定的截断值，而是设定一个截断的时间条件。这个条件就是在选择中达到一定的概率质量时。比方说，我们把这个值设定为95%。然后我们按概率降序排列所有标记，并从列表的顶部开始一个接一个地添加标记，直到所选标记的概率之和达到95%。回到图5-6，p的值在概率累积总和图上定义了一条水平线，我们只从该线以下的标记中取样。根据输出分布，这可能只是一个（非常可能的）标记，也可能是一百个（同样可能的）标记。在这一点上，你可能对generate()函数也提供了一个激活top-p抽样的参数而不感到惊讶。让我们来试试吧:</p>
-<pre><code class="lang-py">output_topp = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, top_p=<span class="hljs-number">0.90</span>) 
+<pre><code class="lang-python">output_topp = model.generate(input_ids, max_length=max_length, do_sample=<span class="hljs-literal">True</span>, top_p=<span class="hljs-number">0.90</span>) 
 <span class="hljs-built_in">print</span>(tokenizer.decode(output_topp[<span class="hljs-number">0</span>]))
 </code></pre>
 <pre><code>In a shocking finding, scientist discovered a herd of unicorns living in a remote, previously unexplored valley, in the Andes Mountains. Even more surprising to the researchers was the fact that the unicorns spoke perfect English. 
@@ -574,7 +574,7 @@ Since their migration, the animals have been adapting to
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"文本生成","level":"1.7","depth":1,"next":{"title":"文本摘要","level":"1.8","depth":1,"path":"chapter6.md","ref":"chapter6.md","articles":[]},"previous":{"title":"多语言命名实体识别","level":"1.6","depth":1,"path":"chapter4.md","ref":"chapter4.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":["livereload"],"pluginsConfig":{"livereload":{},"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter5.md","mtime":"2024-08-23T19:12:41.447Z","type":"markdown"},"gitbook":{"version":"5.1.4","time":"2024-08-23T19:30:23.973Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"文本生成","level":"1.7","depth":1,"next":{"title":"文本摘要","level":"1.8","depth":1,"path":"chapter6.md","ref":"chapter6.md","articles":[]},"previous":{"title":"多语言命名实体识别","level":"1.6","depth":1,"path":"chapter4.md","ref":"chapter4.md","articles":[]},"dir":"ltr"},"config":{"gitbook":"*","theme":"default","variables":{},"plugins":[],"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56},"embedFonts":false},"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"}},"file":{"path":"chapter5.md","mtime":"2025-01-05T17:59:00.391Z","type":"markdown"},"gitbook":{"version":"6.0.2","time":"2025-01-05T17:59:14.847Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
@@ -628,10 +628,6 @@ Since their migration, the animals have been adapting to
     <script src="gitbook/theme.js"></script>
     
         
-        <script src="gitbook/gitbook-plugin-livereload/plugin.js"></script>
-        
-    
-        
         <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
         
     
@@ -648,7 +644,7 @@ Since their migration, the animals have been adapting to
         
     
         
-        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        <script src="gitbook/@honkit/honkit-plugin-fontsettings/fontsettings.js"></script>
         
     
 
